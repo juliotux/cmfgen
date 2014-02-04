@@ -1,0 +1,368 @@
+22,16   		!Output formatting parameters.
+
+General listing of options in Maingen. Options are ordered under subject.
+Associated with each option are requested inputs. Some inputs are not
+prompted for, and can only be changed from their default values by specifying
+them in the call. eg.
+
+		       CJBB(JONS=T)
+
+Such input are placed in [ ]. If you see a hidden option which is not
+described, check maingen.f. The option use may be obvious.
+
+Many options, eg DC (departure coefficients) operate on many species.
+The species is specified by direct attachment to the option call. For
+example to plot departure coefficient for C2, issue command
+
+			DC_C2
+
+Options require species addenda are specified by a * --- eg DC_*.
+All logs are base 10, unless specifically noted otherwise.
+
+SVE and BOX file
+	Default is to write file MAIN_OPT_STR.sve
+	Append sve=filename write a new .sve file (no brackets)
+	Type box=filename to write a .box file containing several .sve files
+	Type .filename to read .sve file
+	Type #filename to read .box file
+
+
+X Axis options:
+    XLOGR	Set X axis to log(r/R*).
+    XLINR	Set X axis to r/R*.
+    XARC        Set X axis to arcseconds
+                    [LIN=T] give linear axis
+    XAU         Set X axis to units of AU   
+                    [LIN=T] give linear axis
+    XRSUN       Set X axis to units of Rsun 
+                    [LIN=T] gives linear axis
+    XED		Set X axis to log(Ne).
+    XROSS	Set X axis to log(Tau(Ross)).
+    XCOLD	Set X axis to log(column density).
+    XATOM    	Set X axis to log(Ni) where Ni is the atom/ion density.
+    XN      	Set X axis to vector index I
+    XTEMP      	Set X axis to Temperature (units 10^4 K).
+    XVEL    	Set X axis to vector index Vel(km/s)
+    XLOGV   	Set X axis to vector index Log( Vel(km/s) )
+    XTAUC       Set X axis to Log(Tau) [Continuum wavelength requested]
+
+Graphing options
+    TIT		Allows title (or revised) TITLE to be set
+    GR		General purpose Graphing routine.
+    GRNL	General purpose Graphing routine. As for GR but ignores labels.
+    GRED	Indicates electron density on top axis. Assumes default X-axis.
+                   Ne is assumed have linear relationship (between grid points) 
+                   with the X-axis variable.
+
+Parameter options
+    SET-ATM     Set atmosphere to wind or exponential. For use in calculating
+                   Tau at outer boundary.
+    SET-METH    Sets the method for evaluating derivatives for use when computing
+                   the optical depth scale. options zer LOGMON, LOGLOG, and ZERO.
+
+Model info options
+    WRFREQ      Output frequencies (in units of 10^15 Hz), corresponding to
+                   the bound-free edges of all levels, to EDGE_FREQ.`
+    WRN 	Output summary of model atoms to screen (species & number of
+                   levels).
+    WRID_*      Output summary of levels to screen
+                  [LIMS] --- from level LIM(1) to level LIM(2)
+                  Lists level and level name.
+    WRTRANS     Outputs a summary of all bound-bound wavelengths between
+                  2 wavelength limits (format as in CMFGEN).
+    LNID        Creates a line ID file for stars with weak winds.
+                  Option selects line for which the optical depth exceeds some 
+                  limiting values at tauc=2/3. Can be read in by PLT_SPEC.
+                  Still under development.
+Y Axis options
+    ED		Set Y axis to log(Electron density).
+    YR		Set Y axis to log(r/R*)
+    LOGT	Set Y axis to log(T(10^4K)).
+    T		Set Y axis to T(10^4K).
+    DTDP        Set Y axis to dlnT/dlnP
+    VEL		Set Y axis to V(km/s)').
+    LOGV	Set Y axis to Log(V(km/s)).
+    SIGMA	Set Y axis to Log(dlnv/dlnr) [log(sigma+1)].
+
+    YATOM  	Set Y axis to log(N) where N is the (total) atom density.
+    YION  	Set Y axis to log(Ni) where Ni is the (total) ion density.
+
+    YROSS	Set X axis to log(Tau(Ross)).
+    TGREY	Set Y axis to grey temperature scale (if already computed by
+	          GREY option).
+    GREY	Evaluate grey temperature structure after first computing 
+		  Rosseland mean opacity. X-axis setting is ignored, and
+		  T(grey) is plotted against log(Tauross). You will generally
+                  need to reset the default X-axis after using this option.
+		[ELEC] Plots log(T[grey]).
+    TRAT        Plots T/TGREY (assumes grey temperature distribution has been
+                 created).
+
+Control Options:  These options were more useful in an earlier version, and 
+                are generally no longer used.
+
+    HZ_IN	Switches frequency input units to 10^15 Hz (def)
+    KEV_IN	Switches frequency input units to KeV
+    ANG_IN	Switches frequency input units to Angstrom
+
+Switches for testing.
+    XRAY	Switches on/of K-shell X ray opacities.
+    CLUMP       Switches on/off clumping (should be consistent with original 
+                   model). This option is only for experimenting and testing ---
+                   it generally does not need not be used. Default is set when
+                   model is read in.
+    DIS         Switches on/off level dissolution. This option is only for 
+                   experimenting and testing --- it generally does not need 
+                   not be used. Default is set when model is read in.
+
+Continuum options:
+	        LAM		Wavelength (Ang) or if neg in units of 10^15 Hz.
+	        ELEC            Include electron scattering opacity?
+
+    OP		Continuum opacity [/cm].
+    TAUC	Continuum optical depth.
+    DTAUC       Continuum optical depth increments (/\Tau).
+    MEANOPAC    Output Opacities, Optical depth scales and optical depth
+                  increments to file in an identical format to MEANOPAC created
+                  by CMFGEN.
+    RAY         Plot the Rayleigh scattering opacity due to Hydrogen as
+                  a function of depth.
+    RAYL        Plots the Rayleigh scattering cross section as a function
+                  of wavelength. It is normalized by N(g.s). times the
+                  Thompson electron scattering cross-section.
+
+    CJBB	Plot J/BB for continuum against current X axis (def).
+		  [TPLT]   Set X axis to log(Tau[continuum]) - X label corrupted.
+	   	  [JONS]   Plot J/S for continuum (F).
+                  [JONLY]  Plot J
+    JEXT	Allows comparison between J computed using ray-by-ray
+		  solution (NEWJSOLD) on ND grid, and J computed use 
+	          Eddington factors (JFEAUNEW) on a more refined depth
+		  grid:
+		      3(ND-1)+1 if ND < 50
+		      2(ND-1)+1 if ND < 80 : ND otherwise.
+		  Error defined by 200.(J[E]-J([R]))/(J[e]+J[R])).
+		  [LOGE] - Plots log of absolute value of the error.
+
+Multi-frequency continuum options:
+    RTAU    	Computes R at the given continuum TAU value for a set of 
+                  user provided frequencies.
+		  [LINX] : Determines whether to plot a linear X axis.
+		  [LINY] : Determines whether to plot a linear Y axis.
+    TAUR    	Computes TAU at the given R value for a set of user provided
+		  frequencies.
+	          [LINX] : Determines whether to plot a linear X axis.
+	          [LINY] : Determines whether to plot a linear Y axis.
+
+Output options.
+    WRDC	Output departure coefficients in CMFGEN format for all
+                  species present. These files may be used as input for
+                  CMFGEN.
+    WRPOP   	Output populations for all species present.
+    WRTX	Outputs excitation temperature (relative to ion) for
+		  all species. Similar format to WRDC. Can be read by WR_F_TO_S
+                  to create am input departure file for a new, higher, 
+                  ionization stage.
+                
+                  [OWIN] : Indicates depths at which populations are not
+                           output. Up to 5 pairs (S1,E1,S2,E2 etc) may be input 
+                           at once. Depths between S1 and E1 inclusive, will be 
+                           omitted, etc.
+
+    WRC         Output R, T, SIGMA, V, ETA, CHI_TH, ESEC to old format
+                   file (i.e. column format). CHIL and ETAL are set to
+                   1.0E-10.
+
+    WRL_*	Output line data for computation of line profiles by
+		  other programs. R, T, V, SIGMA, ETA, CHI, ESEC, ETAL
+		  and CHIL are output. Two data formats are available:
+                  A column format for single lines, and a row format for
+                  multiple lines.
+
+Ionization Specifiers
+    I      2      III     IV      V      SIX    SEV    VIII
+    IX     X      XI      XII
+
+Species Specifiers
+    HYD    HE     CARB    NIT     OXY     NEON 
+    SOD    MAG    ALUM    SIL     PHOS    SUL    CHL   ARG   
+    POT    CAL    YIT     CHRO    MAN     IRON   COB   NICK
+
+Species options.
+    IF_*	Plot ratio of population relative to total ion population
+		  for each ionization sate.
+	          [SPEC_FRAC=T] Plots relative to total species abundance.
+    SCL_* 	Scales a given population by a set factor for all depths
+                  beyond some depth K (i.e. for depths 1 to K).
+                  NB: Scale factor should be generally less than unity.
+                  TO scale populations between depths L and K only do the
+                  following:
+	              SCL(SCL_FAX=X,Depth=K)
+	              SCL(SCL_FAX=1/X,Depth=L)
+                  Option available to adjust populations for input to CMFGEN.
+                  An LTE option should be issued before calling WRDC.
+
+Ionization state specifiers (ie. *).
+    HI     H2    HEI     HE2    HEIII
+    CI     C2    CIII    CIV    CV
+    NI     N2    NIII    NIV    NV    NSIX
+    OI     O2    OIII    OIV    OV    OSIX    OSEV
+    FeI    Fe2   FeIII   FeIV   FeV   FeSIX   FeSEV  FeVIII  FeIX   FeX
+
+Level Options.
+    DC_*	Plot departure coefficients for specified levels.
+		  Levels specified as 1,2,3,4,6 or 1:4,6. A maximum
+	          of 10 levels can be input.
+    POP_*	Plot populations for specified levels.
+    RAT_*    	Plots summed population of species. Can also be used for
+		  highest ionization state. Then Equivalent to D*/.
+		  Can be use to indicate region a particular ion is
+		  dominant.
+    ION_*    	Plots ionization ratio. Population for any species
+		  is summed over all levels in that species. ION*
+	          refers to the * species, and the next ionization
+	          stage.
+    QF_*        Computes the column density for all ionization stages belonging,
+                   to a species, and for the atom. If XV is the column density 
+                   for species XzV, the program returns XV/X where X is the 
+                   species column density. Inserted for comparison with SETI 
+                   results.
+    DION_*      Population of highest ionization stage.
+ 		  e.g., DION_He2 plots He++
+    RR_*	Computes integrated recombination coefficient, which
+		can be plotted. Units are such that the line flux is
+		       RR*ALPHA/d^2/lambda     ergs/cm^2/sec.
+		Alpha is the effective recombination rate in units of
+		10^{-12}, d is the distance in kpc and lambda is the
+	        transition wavelength in mum.
+		[TVAR]  Assume recombination rate varies with T (F).
+			Computed recombination rate is normalized to 10^4 K.
+		[EXP]   Exponent for T variation (Recombination assumed to
+		          vary as 1/(T^EXP) (0.8).
+    WLD_*       Plot occupation probabilities as a function of depth.
+
+Line options.
+    SOBR_*	Computes net rate using Sobolev approximation.
+    NETR_*	Computes net rate using full CMF solution. If the FORM method is
+                    adopted (see below) J, H, CHI{L}.H, and M {fore multiplier}
+                    can be plotted at selected depths.
+		[COL_OPT] Solution method: FORM, FG, HAM.
+                          The FORM method has a large number of options designed
+                             for testing the radiative transfer. 
+                [HAM]	  Use second order frequency differencing (F).
+		[SKIPEW]  Skip Equivalent Width computation (F).
+		[EWACC]	  Required % accuracy of WE computation (0.05%).
+                If the FG or HAM option is specified, the atomic mass is taken 
+                    as 4 for all species.
+
+    MOMR_*	Similar to NETR* but use Eddington factors for solution.
+		[HAM]	  Use second order frequency differencing (F).
+		[FULESS]  Include line photons scattered in resonance zone? (T)
+		[EWACC]	  Required % accuracy of WE computation (0.05%).
+		
+    BETA_*	Computes Sobolev Escape Probability.
+    EW_*	Computes line EW, and plots line formation region.
+		  EW takes into account absorption of continuum radiation
+		  by the line when indicating the line formation region.
+		  EP* does not.
+    EP_*	Plots line formation region.
+	   	[ELEC] Ignores electron scattering opacity (T). Preferred
+		       option as electron scattering does not destroy photons.
+		[NEW]  Include continuum absorption of line photons (T).
+		[LINV] Plot against linear R scale ? (F)
+    DIE_*       Compute EW for a dielectronic line (parameters input)
+	          
+    TAUL_*   	Sobolev Optical line depth.
+		[STAT] Computes stationary line optical depth (assumes
+		       a Doppler velocity of 10km/s and that the macroscopic
+		       velocity field is zero.
+    SRCE_*	Plots log(SL) --- SL is  line source function.
+    SRCEBB_*	Plots log(SL/BB) where BB is black body.
+    SRCEJC_*	Plots log(SL/Jc) where Jc is mean continuum intensity.
+
+Line Options (thickness)
+    CAKT        Plots the CAK (Castor, Abbot, and Klein) parameter.
+    TAUSOB      Plots the Sobolev optical depth scale. Assume fg=1, and uses
+                  atom density for the level population.
+    GF_*        Plot gf values in a fixed wavelength interval as a function of 
+                  wavelength.
+    DIST_*      Plots the logarithmic Sobolev optical depth (radial, or 
+                  angle averaged) for every line in a given wavelength interval
+                  as a function of the line wavelength. Lines with a negative 
+                  optical depth are set to -20.
+    NV_*        Plot the number of lines with optical depth > TAU_MIN in a given
+                   velocity interval.
+    LTAU_*      Computes the optical depth of lines of a given ionization stage
+                   and species at a given depth in the atmosphere. Either the
+                   radial or tangential Sobolev optical depth is used. When 
+                   plotting, use the V mode with the C(onnect) option.
+                   Alternatively it is possible to plot a line strength defined 
+                   by
+                            1.0D-15 . CHI{Line} . (10 kms/C) / (sigma Ne)
+                   which is a "mean" line opacity normalized by the electron
+                   scattering opacity.
+
+    DCHI        Create an image of the  partial opacities (i.e., the opacities 
+                   due to each ionization stage) at a given frequency as a 
+                   function of depth. The images are scaled by the TOTAL opacity
+                   at that depth.
+
+    LCHI       Creates an image of the fractional contribution to the opacity
+                   as a function of species and wavelength.
+      
+    MCHI_*     Does one of two things:
+                    1. Creates an image of the fractional contribution to the 
+                         opacity and emissivity of a single species as a function
+                         of depth and wavelength.
+                    2. When no species is specified, the maximum fractional 
+                         contribution of each species at ANY depth is output to 
+                         the terminal
+
+
+Model correction options. Designed to fudge populations and temperatures.
+    These fudged values can be output, and used to restart a model which is
+    failing to converge.
+    
+    FIXT2   	Computes new T distribution based on GREY temperature
+	          distribution. GREY option must be called first. Populations 
+	          are adjusted under the assumption that the departure 
+                  coefficients are constant. The electron density is self-
+	          consistently estimated. Needs to be iterated.
+	          [SCALE] - Optical depth below T remains approximately fixed.
+    FIXT        Old temperature correction procedure. No adjustment to ED.
+	          Must do GREY, FIXT, and finally LTE option.
+	          [SCALE[ - Optical depth below T remains approximately fixed.
+    LTE         Recomputes LTE populations.
+    NEWRG       Creates a new R grid, equally spaced on some Log(TAU) scale. 
+    SCL_#       Scales the populations of all levels belonging to a
+                   species below some depth (see under species options).
+    TSTV        Allows velocity law to be plotted.
+    CHKV        Estimates V at some inner radius (r <R*) for the current V(r)
+    SM_         Smooths the level populations (or departure coefficients) 
+                   over depth. Not very sophisticated.
+    MODSUM      Corrects the MOD_SUM file for CMFGEN which was corrupted in
+                   versions prior to 01-Sep-199? 
+
+Atomic data options.
+    GNTFF	Computes free-free gaunt factor for Hydrogenic ion.
+    GNTBF  	Computes bound-free gaunt factor for Hydrogenic ion.
+    COL_*       Compute and outputs average collision strength, OMEGA(I,J)
+    COLR_*      Compute collision rates are a specified depth.
+                   Net rates, downward rate, of cooling rate can be output.
+    PHOT_*      Outputs photoionization cross-sections at a given 
+                   frequency, or at the ionization edge (nu=0).
+    PLTPHOT_*   Plot photoionization cross-section for a given level.
+
+Miscellaneous options.
+    LAM		Computes Lambda for current line frequency. In vac for
+		  Lambda < 2000 Ang, otherwise in air.
+		  [FREQ]  Frequency for which lambda required.
+    INTERP	Routine interpolates and sets Y axis for the last plotted 
+		  variable against R (crude).
+    CHKV	Determines Radius (and velocity) where Rosseland optical
+		depth is (Def=100)?
+		[TAU] - Rosseland optical depth at which R and V are to
+			  be determined (def=100).
+    EXIT	Exit from display package
+    EX		Exit from display package
+    

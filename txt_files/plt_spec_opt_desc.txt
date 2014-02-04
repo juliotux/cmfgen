@@ -1,0 +1,108 @@
+22,16   		!Output formatting parameters.
+
+General listing of options in PLT_SPEC Options are ordered under subject.
+Associated with each option are requested inputs. Some inputs are not
+prompted for, and can only be changed from their default values by specifying
+them in the call. eg.
+
+		       RD_MOD(OVER=T)
+
+Such inputs are placed in [ ].
+
+SVE and BOX file:
+	Default is to write file MAIN_OPT_STR.sve
+	Append sve=filename to write a new .sve file (no brackets)
+	Type box=filename to write a .box file containing several .sve files
+	Type .filename to read .sve file
+	Type #filename to read .box file
+
+        NB: RD_OBS and RD_OBS1 (etc) are presnetly treated as the same option,
+            but write different sve files with different names.
+
+Input/output:
+
+    RD_MOD  	Read in a different model spectrum, and plot it. The existing
+		  model spectrum is not corrupted unless OVER=.TRUE.
+                [OVER] Read in new model spectrum replacing the existing
+                  model spectrum. No plots are done.
+                [SCALE] : Value to normalize PLOT data by [Logical].
+			    (not done if OVER=T).
+
+    RD_CONT  	Read in a model spectrum, and plot it. The existing
+    		  model spectrum is not corrupted unless OVER=.TRUE.
+	          This option can be used to read in a continuum.
+	          (Similar to RD_MOD with OVER=.FALSE.)
+		[WR] - Write data to file.
+                [SCALE] : Value to normalize data by [Logical].
+                     
+    NORM        Read in a spectrum, and divide the present model spectrum
+                  by it. The existing model spectrum is not corrupted.
+		  [WR] - Write data to file.
+
+    RD_OBS	READ in a OBSERVATION and plot it using existing switch
+                  settings.
+                [SCALE] : Value to normalize data by [Logical].
+		[CLEAN] : Remove data points with zero flux. Useful for operating
+			    on UV data[Logical].
+		[SMOOTH]: Indicates whether data is to be smoothed. Only option 
+			    presently available is HAN.
+		[RAD_VEL]: Specifies a radial velocity. This option needs work, so
+				don't rely on it.
+	        [TREAT_AS_MOD] : Write observations into model vectors. The
+                                   obs can then be reddened, or deredenned, 
+                                   for example.
+		[WR] - Write data to file.
+
+X Axis Options
+    LX		Switch between logarithmic and linear X-AXIS
+    LOGX        (i.e. do opposite to current setting)
+    LINX
+
+    XU		Change units for X-axis. Options are:
+    XUNITS	   Hz
+		   um
+		   Ang
+		   keV
+	           eV
+		   km/s
+
+Y Axis Options
+    LY		Switch between logarithmic and linear Y-AXIS
+    LOGY        (i.e. do opposite to current setting)
+    LINY
+
+    YU		   Change Y plot parameter. Options are:
+    Y_UNITS 	      Flam    (ergs/cm^2/s/Ang)
+		      FNU     (Jy)
+		      NU_FNU  (ergs/cm^2/s)
+
+Continuum flux options.
+    FLAM	Plots model energy distribution:
+	          The type of axes are determined by the X and Y axis
+	          options.
+	          E(B-V) and a distance are requested. Defaults are
+		    zero and 1kpc.
+    FNU		Same as FLAM
+    WRFL	Same as FLAM except data written to unit 50. 
+    BB		Black_body spectrum normalized by radius or flux.
+
+    CUM		Plots cumulative luminosity as function of lambda.
+    EBMV        Plots A(Lambda) as a function of X unit.
+	          R_EXT --- (==A(V)/EBMV)
+                  If R_EXT is non zero, the interstellar extinction
+                   formulation of Clayton, Cardelli, and Mathis is used.
+                  IF R_EXT is zero, the R_EXT is set to 3.1, and the
+                    galactic extinction and LMC extinction laws summarized
+                    by Howarth (1983, MNRAS, 203, 301) are used.
+
+
+    ZAN		Output Zanstra parameters (Working??).
+    MAG		Output continuum magnitudes to file (MAG).
+
+Control Options:
+    HZ_IN	Switches frequency input units to 10^15 Hz (def)
+    KEV_IN	Switches frequency input units to KeV
+    ANG_IN	Switches frequency input units to Angstroms
+    XRAY_..	Switches on K-shell X ray opacities for CNO elements.
+
+Miscellaneous options.

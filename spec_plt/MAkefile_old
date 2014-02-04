@@ -1,0 +1,89 @@
+#Include file with system dependent definitions
+
+include ../Makefile_definitions
+
+#
+LIB=$(LIB_DIR)libspec.a
+#
+# These names are for the fortran linker
+#
+LN1=tools
+LN2=pgplt
+LN3=subs
+LN4=disp
+#
+# These names refer to the full file name
+#
+FN1=$(LIB_DIR)lib$(LN1).a
+FN2=$(LIB_DIR)lib$(LN2).a
+FN3=$(LIB_DIR)lib$(LN3).a
+FN4=$(LIB_DIR)lib$(LN4).a
+#
+# We only make dispgen.exe if there has been a changen to the main *.f files,
+# or if the libraries have changed since the last link.
+#
+OBJ    = $(LIB)(adjust_jes_v2.o)\
+         $(LIB)(filt_pass_band.o)\
+         $(LIB)(cnvlv_es_one_par_v2.o)\
+         $(LIB)(cnvlv_es_two_par_v2.o)\
+         $(LIB)(cnvrt.o)\
+         $(LIB)(cnvrt_j.o)\
+         $(LIB)(poidev.o)\
+         $(LIB)(ran2.o)\
+         $(LIB)(rd_ew.o)\
+         $(LIB)(rd_mod.o)\
+         $(LIB)(rd_obs_data_v2.o)
+  
+LIS  = $(EXE_DIR)plt_jh.exe\
+       $(EXE_DIR)plt_rj.exe\
+       $(EXE_DIR)plt_scr.exe\
+       $(EXE_DIR)new_plt_rj.exe\
+       $(EXE_DIR)plt_spec.exe
+
+all : ABS $(LIB) BEXE
+	mv -f *.mod $(MOD_DIR)
+$(LIB) : $(OBJ)
+#
+# Give the dependencies of dispgen.exe and how it is created.
+#
+
+BEXE : $(FN1) $(FN2) $(FN3) $(FN4) $(LIS)  
+
+$(LIB)(%.o) : %.f
+	$(F90) -c $(FG) $<
+	ar ruv $(LIB) $*.o
+#	rm -f $*.o
+
+%.o : %.f
+	$(F90) -c $(FG) $<
+
+$(EXE_DIR)%.exe : %.o 
+	$(F90) $*.o \
+             -L$(LIB_DIR) -lspec  -l$(LN4) -l$(LN2) -l$(LN3) -l$(LN1) -l$(LN3) \
+               $(LOCLIB) $(PGLIB) $(X11LIB) $(G2CLIB) \
+              -o $(EXE_DIR)$*.exe
+
+ABS:
+	(cd abs; make)
+
+$(FN1) : lib1
+$(FN2) : lib2
+$(FN3) : lib3
+$(FN4) : lib4
+
+# We now MAKE the required libraries.
+
+lib1:
+	(cd ../tools; make )
+lib2:
+	(cd ../pgplt; make )
+lib3:
+	(cd ../subs; make ) 
+lib4:
+	(cd ../disp/subs; make ) 
+
+#clean :
+#	rm -f *.o
+
+clean_lib :
+	rm -f $(LIB)

@@ -1,0 +1,10 @@
+!             IF(NEWPOP(K,L) .LT. 0.1D0*POPS(K,L))THEN
+!               T1=MIN( T1, 0.9D0*POPS(K,L)/(POPS(K,L)-NEWPOP(K,L)) )
+!             ELSE IF(NEWPOP(K,L) .GT. 10.0D0*POPS(K,L))THEN
+!               NEWPOP(K,L)=MIN( T1, 9.0D0*POPS(K,L)/(NEWPOP(K,L)-POPS(K,L)) )
+!             END IF
+            END DO
+!           DO K=1,NT
+!              NEWPOP(K,L)=POPS(K,L)+T1*(NEWPOP(K,L)-POPS(K,L))
+!           END DO
+

@@ -1,0 +1,119 @@
+	SUBROUTINE REVISE_OBS_P(P_OBS,NP_OBS,NP_OBS_MAX,NC_OBS,NC,R,ND,LUIN,LUSCR)
+	IMPLICIT NONE
+!
+	INTEGER NP_OBS
+	INTEGER NP_OBS_MAX
+	INTEGER NC_OBS
+	INTEGER NC
+	INTEGER ND
+	INTEGER LUIN
+	INTEGER LUSCR
+!
+	REAL*8 P_OBS(NP_OBS_MAX)
+	REAL*8 R(ND)
+!
+	REAL*8 dR
+	INTEGER NC_INS
+	INTEGER NP_INS
+	CHARACTER(LEN=6) INS_METH
+!
+	REAL*8 T1,T2
+	INTEGER IOS
+	INTEGER I,J,K,LS
+	INTEGER LU_ERR,ERROR_LU
+	EXTERNAL ERROR_LU
+!
+	INTEGER, PARAMETER :: IZERO=0
+	LOGICAL, PARAMETER :: L_FALSE=.FALSE.
+	LOGICAL, PARAMETER :: L_TRUE=.TRUE.
+!
+! *************************************************************************
+!
+! Read in parameters describing the new model.
+!
+	LU_ERR=ERROR_LU()
+	CALL GEN_ASCI_OPEN(LUIN,'REVISE_P_PARAMS','OLD',' ','READ',IZERO,IOS)
+	IF(IOS .NE. 0)THEN
+	  WRITE(LU_ERR,*)'Error opening REVISE_P_PARAMS in REVISE_P_OBS, IOS=',IOS
+	  WRITE(LU_ERR,*)'Will use default values'
+	  NC_INS=1; INS_METH='INS'; NP_INS=1
+	ELSE
+	  NC_INS=1; INS_METH='INS'; NP_INS=1
+	  CALL RD_OPTIONS_INTO_STORE(LUIN,LUSCR)
+	  CALL RD_STORE_INT(NC_INS,'NC_INS',L_FALSE,'Number of hydro iterations remaining')
+	  CALL RD_STORE_CHAR(INS_METH,'INS_METH',L_FALSE,'Method to insert extra rays')
+	  IF(INS_METH .EQ. 'INS')THEN
+            CALL RD_STORE_INT(NP_INS,'NP_INS',L_TRUE,'Number of extra rays to insert')
+	  ELSE IF(INS_METH .EQ. 'dR')THEN
+            CALL RD_STORE_DBLE(dR,'dR_FRAC',L_TRUE,'Fraction change in R befre inserting new ray')
+	  ELSE
+	    WRITE(LU_ERR,*)'Invalid insertion method in REVISE_P_PARMS: INS_METH=',TRIM(INS_METH)
+	    WRITE(LU_ERR,*)'Will use default values'
+	    NC_INS=1; INS_METH='INS'; NP_INS=1
+	  END IF
+!
+	  CALL CLEAN_RD_STORE()
+	  CLOSE(UNIT=LUIN)
+	  CLOSE(UNIT=LUSCR)
+	END IF
+!
+	NC_OBS=NC*(NC_INS+1)
+	T1=1.0D0/NC_OBS
+	P_OBS(1)=0.0
+	DO LS=2,NC_OBS
+	  P_OBS(LS)=R(ND)*SQRT(1.0D0-(T1*(NC_OBS-LS+1))**2)
+	END DO
+	P_OBS(NC_OBS+1)=R(ND)
+	LS=NC_OBS+1
+!
+	IF(INS_METH .EQ. 'INS')THEN
+	  DO I=ND-1,1,-1
+	    T2=(R(I)-R(I+1))/(NP_INS+1)
+	    DO K=1,NP_INS
+	      LS=LS+1
+	      IF(LS .GT. NP_OBS_MAX)GOTO 50
+	      P_OBS(LS)=R(I+1)+K*T2
+	    END DO
+	    LS=LS+1
+	    IF(LS .GT. NP_OBS_MAX)GOTO 50
+	    P_OBS(LS)=R(I)
+	  END DO
+	  NP_OBS=LS
+	ELSE
+	  DO I=ND-1,1,-1
+	    T1=(R(I)-R(I+1))/R(I)
+	    IF(T1 .GT.dR)THEN
+	      J=T1/dR
+	      T2=(R(I)-R(I+1))/(J+1)
+	      DO K=1,J
+	        LS=LS+1
+	        IF(LS .GT. NP_OBS_MAX)GOTO 50
+	        P_OBS(LS)=R(I+1)+K*T2
+	      END DO
+	    END IF
+	    LS=LS+1
+	    IF(LS .GT. NP_OBS_MAX)GOTO 50
+	    P_OBS(LS)=R(I)
+	  END DO
+	  NP_OBS=LS
+	END IF
+!
+	T2=P_OBS(2)-P_OBS(1)
+	T1=SIGN(1.0D0,T2)
+	DO LS=1,NP_OBS-1
+	  IF( (P_OBS(LS+1)-P_OBS(LS))*T1 .LT. 0.0D0)THEN
+	    WRITE(LU_ERR,*)'Error in REVISE_OBS_P: P not monotonic'
+	    WRITE(LU_ERR,*)P_OBS(MAX(LS-4,1):MIN(NP_OBS,LS+4))
+	    STOP
+	  END IF
+	END DO
+!
+	RETURN
+!
+50	CONTINUE
+	WRITE(LU_ERR,*)'Error in REVISE_OBS_P: NP_OBS_MAX is too small'
+	WRITE(LU_ERR,*)'NP_OBS_MAX=',NP_OBS_MAX
+	WRITE(LU_ERR,*)'P(NP_OBS_MAX)=',P_OBS(LS)
+	STOP
+!
+	END

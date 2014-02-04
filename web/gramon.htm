@@ -1,0 +1,1148 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns:mv="http://macVmlSchemaUri" xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta name=Title content="GRAMON_PGPLOT">
+<meta name=Keywords content="">
+<meta http-equiv=Content-Type content="text/html; charset=macintosh">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 14">
+<meta name=Originator content="Microsoft Word 14">
+<link rel=File-List href="gramon_files/filelist.xml">
+<title>GRAMON_PGPLOT</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>John Hillier</o:Author>
+  <o:LastAuthor>Desmond John Hillier</o:LastAuthor>
+  <o:Revision>2</o:Revision>
+  <o:TotalTime>90</o:TotalTime>
+  <o:LastPrinted>2013-09-08T14:42:00Z</o:LastPrinted>
+  <o:Created>2013-09-08T14:43:00Z</o:Created>
+  <o:LastSaved>2013-09-08T14:43:00Z</o:LastSaved>
+  <o:Pages>4</o:Pages>
+  <o:Words>1037</o:Words>
+  <o:Characters>5912</o:Characters>
+  <o:Company>University of Pittsburgh</o:Company>
+  <o:Lines>49</o:Lines>
+  <o:Paragraphs>13</o:Paragraphs>
+  <o:CharactersWithSpaces>6936</o:CharactersWithSpaces>
+  <o:Version>14.0</o:Version>
+ </o:DocumentProperties>
+ <o:OfficeDocumentSettings>
+  <o:PixelsPerInch>96</o:PixelsPerInch>
+ </o:OfficeDocumentSettings>
+</xml><![endif]-->
+<link rel=themeData href="gramon_files/themedata.xml">
+<!--[if gte mso 9]><xml>
+ <w:WordDocument>
+  <w:TrackMoves/>
+  <w:TrackFormatting/>
+  <w:PunctuationKerning/>
+  <w:ValidateAgainstSchemas/>
+  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+  <w:DoNotPromoteQF/>
+  <w:LidThemeOther>EN-US</w:LidThemeOther>
+  <w:LidThemeAsian>JA</w:LidThemeAsian>
+  <w:LidThemeComplexScript>X-NONE</w:LidThemeComplexScript>
+  <w:Compatibility>
+   <w:BreakWrappedTables/>
+   <w:SnapToGridInCell/>
+   <w:WrapTextWithPunct/>
+   <w:UseAsianBreakRules/>
+   <w:DontGrowAutofit/>
+   <w:SplitPgBreakAndParaMark/>
+  </w:Compatibility>
+  <m:mathPr>
+   <m:mathFont m:val="Cambria Math"/>
+   <m:brkBin m:val="before"/>
+   <m:brkBinSub m:val="&#45;-"/>
+   <m:smallFrac m:val="off"/>
+   <m:dispDef m:val="off"/>
+   <m:lMargin m:val="0"/>
+   <m:rMargin m:val="0"/>
+   <m:defJc m:val="centerGroup"/>
+   <m:wrapRight/>
+   <m:intLim m:val="subSup"/>
+   <m:naryLim m:val="subSup"/>
+  </m:mathPr></w:WordDocument>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <w:LatentStyles DefLockedState="false" DefUnhideWhenUsed="false"
+  DefSemiHidden="false" DefQFormat="false" LatentStyleCount="276">
+  <w:LsdException Locked="false" QFormat="true" Name="Normal"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 1"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 2"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 3"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 4"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 5"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 6"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 7"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 8"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 9"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="caption"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Title"/>
+  <w:LsdException Locked="false" Priority="1" Name="Default Paragraph Font"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Subtitle"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Strong"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Emphasis"/>
+  <w:LsdException Locked="false" Priority="99" Name="No List"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 1"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 2"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 3"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 4"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 5"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 6"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 7"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 8"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Note Level 9"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   Name="Placeholder Text"/>
+  <w:LsdException Locked="false" Priority="1" SemiHidden="true" QFormat="true"
+   Name="No Spacing"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 1"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true" Name="Revision"/>
+  <w:LsdException Locked="false" Priority="34" QFormat="true"
+   Name="List Paragraph"/>
+  <w:LsdException Locked="false" Priority="29" QFormat="true" Name="Quote"/>
+  <w:LsdException Locked="false" Priority="30" QFormat="true"
+   Name="Intense Quote"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 1"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 1"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 1"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 2"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 2"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 2"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 2"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 3"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 3"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 3"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 3"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 4"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 4"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 4"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 4"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 5"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 5"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 5"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 5"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 6"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 6"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 6"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 6"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="19" QFormat="true"
+   Name="Subtle Emphasis"/>
+  <w:LsdException Locked="false" Priority="21" QFormat="true"
+   Name="Intense Emphasis"/>
+  <w:LsdException Locked="false" Priority="31" QFormat="true"
+   Name="Subtle Reference"/>
+  <w:LsdException Locked="false" Priority="32" QFormat="true"
+   Name="Intense Reference"/>
+  <w:LsdException Locked="false" Priority="33" QFormat="true" Name="Book Title"/>
+  <w:LsdException Locked="false" Priority="37" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Bibliography"/>
+  <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+   UnhideWhenUsed="true" QFormat="true" Name="TOC Heading"/>
+ </w:LatentStyles>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Arial;
+	panose-1:2 11 6 4 2 2 2 2 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:auto;
+	mso-font-pitch:variable;
+	mso-font-signature:-536859905 -1073711037 9 0 511 0;}
+@font-face
+	{font-family:"Courier New";
+	panose-1:2 7 3 9 2 2 5 2 4 4;
+	mso-font-charset:0;
+	mso-generic-font-family:auto;
+	mso-font-pitch:variable;
+	mso-font-signature:-536859905 -1073711037 9 0 511 0;}
+@font-face
+	{font-family:"Courier New";
+	panose-1:2 7 3 9 2 2 5 2 4 4;
+	mso-font-charset:0;
+	mso-generic-font-family:auto;
+	mso-font-pitch:variable;
+	mso-font-signature:-536859905 -1073711037 9 0 511 0;}
+@font-face
+	{font-family:"MS Mincho";
+	mso-font-alt:"\FF2D\FF33 \660E\671D";
+	mso-font-charset:128;
+	mso-generic-font-family:modern;
+	mso-font-pitch:fixed;
+	mso-font-signature:-536870145 1791491579 18 0 131231 0;}
+@font-face
+	{font-family:Elephant;
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:Elephant;}
+h1
+	{mso-style-update:auto;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:16.0pt;
+	font-family:Arial;
+	mso-bidi-font-family:Arial;
+	color:blue;
+	mso-font-kerning:16.0pt;}
+h2
+	{mso-style-update:auto;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 2 Char";
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	font-size:14.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"MS Mincho";
+	mso-bidi-font-family:Elephant;
+	color:green;
+	mso-bidi-font-weight:normal;}
+p.MsoToc1, li.MsoToc1, div.MsoToc1
+	{mso-style-update:auto;
+	mso-style-noshow:yes;
+	mso-style-unhide:no;
+	mso-style-next:Normal;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:Elephant;}
+p.MsoToc2, li.MsoToc2, div.MsoToc2
+	{mso-style-update:auto;
+	mso-style-noshow:yes;
+	mso-style-unhide:no;
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:12.0pt;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:Elephant;}
+a:link, span.MsoHyperlink
+	{mso-style-unhide:no;
+	color:blue;
+	text-decoration:underline;
+	text-underline:single;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-unhide:no;
+	color:purple;
+	mso-themecolor:followedhyperlink;
+	text-decoration:underline;
+	text-underline:single;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-unhide:no;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:Elephant;}
+span.Heading2Char
+	{mso-style-name:"Heading 2 Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 2";
+	mso-ansi-font-size:14.0pt;
+	font-family:"Courier New";
+	mso-ascii-font-family:"Courier New";
+	mso-fareast-font-family:"MS Mincho";
+	mso-hansi-font-family:"Courier New";
+	mso-bidi-font-family:Elephant;
+	color:green;
+	mso-ansi-language:EN-US;
+	mso-fareast-language:EN-US;
+	mso-bidi-language:AR-SA;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.Style1, li.Style1, div.Style1
+	{mso-style-name:Style1;
+	mso-style-unhide:no;
+	mso-style-parent:"Heading 2";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	font-size:14.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"MS Mincho";
+	mso-bidi-font-family:Elephant;
+	color:green;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	mso-default-props:yes;
+	font-size:10.0pt;
+	mso-ansi-font-size:10.0pt;
+	mso-bidi-font-size:10.0pt;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.WordSection1
+	{page:WordSection1;}
+-->
+</style>
+<!--[if gte mso 10]>
+<style>
+ /* Style Definitions */
+table.MsoNormalTable
+	{mso-style-name:"Table Normal";
+	mso-tstyle-rowband-size:0;
+	mso-tstyle-colband-size:0;
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-parent:"";
+	mso-padding-alt:0in 5.4pt 0in 5.4pt;
+	mso-para-margin:0in;
+	mso-para-margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Times New Roman";}
+</style>
+<![endif]--><!--[if gte mso 9]><xml>
+ <o:shapedefaults v:ext="edit" spidmax="1027"/>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <o:shapelayout v:ext="edit">
+  <o:idmap v:ext="edit" data="1"/>
+ </o:shapelayout></xml><![endif]-->
+</head>
+
+<body lang=EN-US link=blue vlink=purple style='tab-interval:.5in'>
+
+<div class=WordSection1>
+
+<p class=MsoNormal align=center style='text-align:center'><a
+name="_Toc189907048"><b style='mso-bidi-font-weight:normal'><span
+style='font-size:18.0pt;mso-fareast-font-family:"MS Mincho";color:red'>GRAMON_PGPLOT</span></b></a><b
+style='mso-bidi-font-weight:normal'><span style='font-size:18.0pt;mso-fareast-font-family:
+"MS Mincho";color:red'><o:p></o:p></span></b></p>
+
+<p class=MsoNormal align=center style='text-align:center'><b style='mso-bidi-font-weight:
+normal'><span style='font-size:18.0pt;mso-fareast-font-family:"MS Mincho";
+color:red'><o:p>&nbsp;</o:p></span></b></p>
+
+<p class=MsoToc1 style='tab-stops:right dotted 467.5pt'><!--[if supportFields]><span
+style='mso-bidi-font-size:12.0pt;mso-fareast-font-family:"MS Mincho"'><span
+style='mso-element:field-begin'></span><span
+style="mso-spacerun:yes">&nbsp;</span>TOC \o &quot;1-3&quot; \h \z \u <span
+style='mso-element:field-separator'></span></span><![endif]--><a
+href="#_Toc189909462"><span style='mso-fareast-font-family:"MS Mincho";
+mso-no-proof:yes'>Introduction</span><span style='color:windowtext;display:
+none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:none'><span
+style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909462 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>1<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360032000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc1 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909463"><span
+style='mso-no-proof:yes'>Plot options</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909463 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>2<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360033000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909464"><span
+style='mso-no-proof:yes'>Basic</span><span style='color:windowtext;display:
+none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:none'><span
+style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909464 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>2<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360034000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909465"><span
+style='mso-no-proof:yes'>Axis and plot format</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909465 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>2<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360035000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909466"><span
+style='mso-no-proof:yes'>Line styles</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909466 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>3<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360036000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909467"><span
+style='mso-no-proof:yes'>Profile options (for an analyzing spectra)</span><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909467 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>3<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360037000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909468"><span
+style='mso-no-proof:yes'>Line and string options</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909468 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>4<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360038000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909469"><span
+style='mso-no-proof:yes'>Data IO</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909469 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>4<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400360039000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909470"><span
+style='mso-no-proof:yes'>Simple plot manipulation.</span><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909470 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>5<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400370030000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoToc2 style='tab-stops:right dotted 467.5pt'><a href="#_Toc189909471"><span
+style='mso-no-proof:yes'>History mechanism</span><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-tab-count:1 dotted'> </span></span><!--[if supportFields]><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'><span style='mso-element:field-begin'></span>
+PAGEREF _Toc189909471 \h <span style='mso-element:field-separator'></span></span><![endif]--><span
+style='color:windowtext;display:none;mso-hide:screen;mso-no-proof:yes;
+text-decoration:none;text-underline:none'>5<!--[if gte mso 9]><xml>
+ <w:data>08D0C9EA79F9BACE118C8200AA004BA90B02000000080000000E0000005F0054006F0063003100380039003900300039003400370031000000</w:data>
+</xml><![endif]--></span><!--[if supportFields]><span style='color:windowtext;
+display:none;mso-hide:screen;mso-no-proof:yes;text-decoration:none;text-underline:
+none'><span style='mso-element:field-end'></span></span><![endif]--></a><span
+style='mso-bidi-font-size:12.0pt;font-family:"Times New Roman";mso-no-proof:
+yes'><o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-right:-.75in'><!--[if supportFields]><span
+style='font-size:12.0pt;mso-fareast-font-family:"MS Mincho"'><span
+style='mso-element:field-end'></span></span><![endif]--><span style='font-size:
+12.0pt;mso-fareast-font-family:"MS Mincho"'><o:p>&nbsp;</o:p></span></p>
+
+<h1><a name="_Toc189909462"><span style='mso-fareast-font-family:"MS Mincho"'>Introduction</span></a><span
+style='mso-fareast-font-family:"MS Mincho"'><o:p></o:p></span></h1>
+
+<p class=MsoNormal><span style='mso-fareast-font-family:"MS Mincho"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal><span style='mso-fareast-font-family:"MS Mincho"'>Basic
+plotting subroutine which is option driven. Basic calling method can be seen in
+PLT_SPEC or DISPGEN. Package has a lot of options for making pretty plots. At
+present it does not allow multiple panels on the same page. This is not a
+limitation --- postscript files can easily be combined to give a panel format
+either by editing, or by running simple scripts (programs). <b
+style='mso-bidi-font-weight:normal'><span style='color:#993366'>n_col_merge.exe,
+land_col_merge.exe, n_multi_merge.exe &amp; land_multi_merge.exe</span></b> are
+fortran programs designed to facilitate plot merging. .sve files are not
+utilized by GRAMON_PGPLOT.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'><br>
+Data is passed to GRAMON_PGPLOT by calls of the form<br>
+<br>
+<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span><b
+style='mso-bidi-font-weight:normal'><span style='color:red'>CALL
+DP_CURVE(NPTS,XVEC,YVEC)</span></b><br>
+<br>
+or similar variants. Up to 50 plots, of “arbitrary” length, can be passed.
+Error bars can also be passed. The plot package is called by<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'><span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span><b
+style='mso-bidi-font-weight:normal'><span style='color:red'>CALL
+GRAMON_PGPLOT(XLABEL,YLABEL,TITLE,OPTIONS)</span></b><o:p></o:p></span></p>
+
+<p class=MsoNormal><span style='mso-bidi-font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal><span style='mso-fareast-font-family:"MS Mincho"'>All
+arguments are CHARACTER, and may be blank.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-size:12.0pt;mso-fareast-font-family:
+"MS Mincho"'>Basic philosophy is that plot package should provide reasonable
+default plots. These defaults can then be modified to make pretty plots. Once
+the user is a happy with a plot, it can be written to a hard file using the Z
+option. For pretty plots with strings, it advisable to set an explicit aspect
+ratio (the default aspect ratio is device dependent). When this is done, the
+hardcopy plot should look identical to that on the screen(except for the
+vagaries of color).<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='mso-fareast-font-family:"MS Mincho"'><br
+style='mso-special-character:line-break'>
+<![if !supportLineBreakNewLine]><br style='mso-special-character:line-break'>
+<![endif]><o:p></o:p></span></p>
+
+<h1><a name="_Toc189909463">Plot options</a></h1>
+
+<h2><a name="_Toc189909464"><span style='mso-bidi-font-size:12.0pt'>Basic</span></a><span
+style='mso-bidi-font-size:12.0pt'><o:p></o:p></span></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>H<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Help<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>P<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Plot
+graphs (default)<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-top:0in;margin-right:-.5in;margin-bottom:0in;
+margin-left:45.0pt;margin-bottom:.0001pt;text-indent:-45.0pt;tab-stops:1.25in;
+mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>NOI<span style='mso-tab-count:1'>&nbsp;&nbsp; </span>Leave
+data intact on exit (actually a switch). Default is to destroy data on exit.
+Make sure to cancel VEL option before issuing this command. <o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>E<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Exit
+from PLOT package<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>CL<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Clear
+Graphics Screen<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>LP<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Long
+plot. This adjusts the plotting window with the device CPS so that long plots
+(e.g., 2m) can be produced. When the resulting postscript file is converted to
+PDF, the can be easily scrolled.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>LOC<span style='mso-tab-count:1'>&nbsp;&nbsp; </span>Use
+cursors to read of (X,Y) positions on a graph. On many systems you need to hit
+Mouse button 1 (MB1) to activate the plot window and hence the cursor (this may
+also be necessary after every output to the terminal). Use “a” or “MB1” to read
+the cursor position, and “x” or “MB3” to exit. <span
+style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>Z<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Hardcopy
+(ZN=Asks for new hard device). Plots are automatically numbered as pgplot_1.ps
+pgplot_2.ps etc, although the file name can be changed.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:.5in;text-indent:-63.0pt;tab-stops:1.25in;
+mso-layout-grid-align:none;text-autospace:none'><span style='font-size:10.0pt;
+mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<h2><a name="_Toc189909465">Axis and plot format</a></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>A<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Define
+basic axis Parameters (Xstart, Xend etc)<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>2A<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Define
+parameters for axis on right hand side.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>F<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Change
+default axis parameters<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>L<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Modify
+Axis Labels and Titles<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>N<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Set
+aspect ratio of plot. Change size of labels, tick marks, and plot borders.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt 99.0pt;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>LY<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Switch between LINEAR/LOG Y
+axis labeling.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'>LXY<span style='mso-tab-count:1'>&nbsp;&nbsp; </span>Switch
+between LINEAR/LOG labeling for X and Y axes.<o:p></o:p></span></p>
+
+<span style='font-size:12.0pt;font-family:"Courier New";mso-fareast-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='mso-special-character:line-break;
+page-break-before:always'>
+</span>
+
+<p class=MsoNormal><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt;mso-layout-grid-align:none;text-autospace:none'><span style='mso-bidi-font-size:
+12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<h2 style='mso-pagination:widow-orphan lines-together'><a name="_Toc189909466">Line
+styles</a><span style='mso-tab-count:1'>&nbsp;&nbsp; </span></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>B<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Switch
+error bars on/off<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>C<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Indicate
+how curves are to be connected<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>L<span
+style='mso-tab-count:1'>&nbsp; </span>Normal line<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>E<span
+style='mso-tab-count:1'>&nbsp; </span>Non-monotonic<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>B<span
+style='mso-tab-count:1'>&nbsp; </span>Broken<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>I<span
+style='mso-tab-count:1'>&nbsp; </span>Invisible<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>V<span
+style='mso-tab-count:1'>&nbsp; </span>Vertical lines<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>A<span
+style='mso-tab-count:1'>&nbsp; </span>Histogram - X vert<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><span style='mso-tab-count:2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>H<span
+style='mso-tab-count:1'>&nbsp; </span>Histogram<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>CC<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Change
+color settings<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>CP<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Change
+pens (Color Index)<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>D<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Switch
+dashed lines on/off<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>DE<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Edit
+dashed lines one by one<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>W<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Change
+thickness (line weights) of curves<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>WE<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Edit
+line weights one by one<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>M<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp; </span>Switch
+marking of data points on/off<a name="_Toc189909467"><o:p></o:p></a></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:1.25in;mso-layout-grid-align:none;
+text-autospace:none'><span style='mso-bookmark:_Toc189909467'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></span></p>
+
+<h2><span style='mso-bookmark:_Toc189909467'>Profile options (for an analyzing
+spectra)</span></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:45.0pt 99.0pt right 1.5in;mso-layout-grid-align:
+none;text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>DC<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Define
+a straight line continuum for EW<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:45.0pt 99.0pt right 1.5in;mso-layout-grid-align:
+none;text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>EW<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Measure
+the EW or AREA of a single line in a plot. If the continuum has not been
+previously defined, the continuum is assumed to be normalized to unity.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:45.0pt 99.0pt right 1.5in;mso-layout-grid-align:
+none;text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>GF<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Fit a
+set of Gaussians (with an exponent not necessarily=2)to a section of normalized
+spectrum. The parameters of the Gaussian, and the EWs are output. Rerunning GF
+allows previous fit parameters to be used/edited.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:45.0pt 99.0pt right 1.5in;mso-layout-grid-align:
+none;text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>MGF<span style='mso-tab-count:1'>&nbsp;&nbsp; </span>Fit
+multiple plots with Gaussians. Use GF on a representative plot to first define
+approximate parameters of fit. This option will then fit multiple data sets
+that have been read into the plot buffer. NB: Don’t forget that the BOX option
+can be used to read in multiple file to PLT_SPC.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;mso-pagination:
+widow-orphan lines-together;tab-stops:45.0pt 99.0pt right 1.5in;mso-layout-grid-align:
+none;text-autospace:none'><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'>DG<span style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Draw
+the Gaussian fits (in black) (allows the plot screen to be cleared an updated.<o:p></o:p></span></p>
+
+<span style='font-size:12.0pt;font-family:"Courier New";mso-fareast-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='mso-special-character:line-break;
+page-break-before:always'>
+</span>
+
+<p class=MsoNormal><span style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:
+"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt 99.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<h2><a name="_Toc189909468">Line and string options</a></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>VC<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Define line vectors on the
+plot using cursor control.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>VF<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Read vector definitions from
+a file.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>VE<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Online edit of vectors
+(colors, size, location etc).<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>SC<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Define strings on the plot
+using cursor control. String location is done by the numeric keypad (1 to 9).<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>SF<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Read string definitions from
+a file.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>SE<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Online edit of strings
+(colors, size etc).<a name="_Toc189909469"><o:p></o:p></a></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+45.0pt right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bookmark:_Toc189909469'><span style='mso-bidi-font-size:12.0pt;
+mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></span></p>
+
+<h2><span style='mso-bookmark:_Toc189909469'>Data IO</span></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>RID<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Read line ID’s from data file
+created using DISPGEN (option LNID). This can be then used to automatically
+identify lines on plot. Only reads line for current plot window (not whole
+spectrum). Works best in optical where there are relatively few lines. Use SID
+to change defaults.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>RP<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Read plots from a (WP) direct
+access file. WP and RP are useful to transfer plots between different programs
+or models. This option and WP can be used to compare plots from different
+models. RUN DISPGEN in two windows, and use these options to transfer data
+between the programs. On program can open a null window for plotting.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>RPF<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>As for RP but file name can be
+changed.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'><span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>WXY<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Write a simple ascii data file in
+column format<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.0in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>WP<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Write plots to a direct
+access file. Plots are labeled, and these labels are subsequently used by RP to
+access the plot. <o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>WPF<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>As for WP but file name can be
+changed.<span style="mso-spacerun:yes">&nbsp; </span><o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>RXY<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Read a simple data file that is in
+ascii format.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>SXY<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Writes ascii format in column
+format with id, I, and x(i), y(i) given sequentially for all plots.<o:p></o:p></span></p>
+
+<span style='font-size:12.0pt;font-family:"Courier New";mso-fareast-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='mso-special-character:line-break;
+page-break-before:always'>
+</span>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<h2><a name="_Toc189909470">Simple plot manipulation.</a></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>NM<span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp; </span>Scale plot level to unity, or
+to match another plot<b style='mso-bidi-font-weight:normal'>.<o:p></o:p></b></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>VEL<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Convert X axis to use km<sup> </sup>s<sup>-1</sup>.
+Entering 0 will return you to the original input axis.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>XAR<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Simple X axis arithmetic with a
+constant (-,+,*,/, R=[const/X], Log, ALOG). The default constant for the R
+option allows conversion between wavelength (Angstroms) and Frequency (in units
+of 10<sup>15</sup> Hz).<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>YAR<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Simple Y axis arithmetic with a
+constant (-,+,*,/,R[=1/Y] <span style="mso-spacerun:yes">&nbsp;</span>Log,
+ALOG)<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>VAR<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Simple arithmetic on two plots.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'><o:p>&nbsp;</o:p></span></p>
+
+<h2><a name="_Toc189909471">History mechanism</a></h2>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>OLF<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Open file to log commands.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>CLF <span
+style='mso-tab-count:1'>&nbsp; </span>Close log file.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>OIF<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Open a previously generated log
+file for input. Cumbersome, as some commands can’t be used in this mode, and
+previously issued commands can be important.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+1.25in right 1.5in;mso-layout-grid-align:none;text-autospace:none'><span
+style='mso-bidi-font-size:12.0pt;mso-bidi-font-family:"Courier New"'>CIF<span
+style='mso-tab-count:1'>&nbsp;&nbsp; </span>Return to terminal IO.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:45.0pt;text-indent:-45.0pt;tab-stops:
+right 1.5in'><o:p>&nbsp;</o:p></p>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+2c2
+< ! Data module for MOM_J_CMF_V6. Data placed in this module is automatically
+---
+> ! Data module for MOM_J_CMF_V7. Data placed in this module is automatically
+5c5
+< 	MODULE MOD_MOM_J_V6
+---
+> 	MODULE MOD_MOM_J_V7
+57a58
+> 	REAL*8, ALLOCATABLE :: H(:)
+103c104
+< 	END MODULE MOD_MOM_J_V6
+---
+> 	END MODULE MOD_MOM_J_V7
+132c133
+< 	SUBROUTINE MOM_J_CMF_V6(ETA_SM,CHI_SM,ESEC_SM,
+---
+> 	SUBROUTINE MOM_J_CMF_V7(ETA_SM,CHI_SM,ESEC_SM,
+141c142
+< 	USE MOD_MOM_J_V6
+---
+> 	USE MOD_MOM_J_V7
+144c145,148
+< ! Altered:   28-Feb-2002: Extensive modifications and cleaning.
+---
+> ! Altered:  12-May-2003: Change to use RH THOMAS algorithim. Code was getting numerical
+> !                           inaccuracies for small optical depths which were found for
+> !                           O star moels with low mass-loss rates.
+> ! Altered:  28-Feb-2002: Extensive modifications and cleaning.
+146c150
+< !                           purposes. This option shoul NOT be used with CMFGEN.
+---
+> !                           purposes. This option should NOT be used with CMFGEN.
+321c325
+< 	     WRITE(2,*)'Unable to allocate COEF memory in MOM_J_CMF_V6'
+---
+> 	     WRITE(2,*)'Unable to allocate COEF memory in MOM_J_CMF_V7'
+354a359
+> 	  ALLOCATE ( H(ND) )
+416c421
+< 	      WRITE(LUER,*)'Error in MOM_J_CMF_V6'
+---
+> 	      WRITE(LUER,*)'Error in MOM_J_CMF_V7'
+496c501
+< 	CALL QFROMF(F,Q,R,TA,TB,ND)	!TA work vector
+---
+> 	CALL QFROMF(F,Q,R,TA,TB,ND)	!TA, TB work vectors
+589a595,603
+> ! The equations have the form
+> !
+> !       TA(I)X(I-1) +  TB(I)X(I) + TC(I)X(I+1)= XM(I)
+> ! or
+> !       TA(I)X(I-1) -  (H(I)+TA(I)+TC(I))X(I) + TC(I)X(I+1)= XM(I)
+> ! Thus
+> !       H(I)=-TB(I)-TA(I)-TC(I)
+> !
+> ! For the later form, we need to call THOMAS_RH.
+595c609
+< 	    TB(I)=DTAUONQ(I)*(1.0D0-COH_VEC(I)) + PSI(I) + HL(I) + HU(I-1)
+---
+> 	    H(I) =-DTAUONQ(I)*(1.0D0-COH_VEC(I)) - PSI(I) + (HU(I)-HL(I)) + (HL(I-1)-HU(I-1))
+604,605c618,619
+< 	    TB(I)=DTAUONQ(I)*(1.0D0-COH_VEC(I)) + PSI(I) + HL(I) + HU(I-1)
+< 	1               -EPS(I-1)+EPS(I)
+---
+> 	    H(I)=-DTAUONQ(I)*(1.0D0-COH_VEC(I)) - PSI(I) + (HU(I)-HL(I)) + (HL(I-1)-HU(I-1))
+> 	1               +2.0D0*(EPS(I-1)-EPS(I))
+615c629
+< 	TB(1)=F(1)*Q(1)/DTAU(1) + PSI(1) + HBC
+---
+> 	H(1)=(F(2)*Q(2)-F(1)*Q(1))/DTAU(1)-PSI(1)-HBC
+623c637
+< 	  TB(ND)=F(ND)/DTAU(ND-1)
+---
+> 	  H(ND)=(F(ND-1)*Q(ND-1)-F(ND))/DTAU(ND-1)
+626c640
+< 	  TB(ND)=F(ND)/DTAU(ND-1)+IN_HBC
+---
+> 	  H(ND)=(F(ND-1)*Q(ND-1)-F(ND))/DTAU(ND-1)-IN_HBC
+640c654
+< 	    XM(I)=XM(I) + VB(I)*RSQHNU_PREV(I-1) + VC(I)*RSQHNU_PREV(I)
+---
+> 	    XM(I)=XM(I) + (VB(I)*RSQHNU_PREV(I-1) + VC(I)*RSQHNU_PREV(I))
+647c661
+< 	    XM(I)=XM(I) + VB(I)*RSQHNU_PREV(I-1) + VC(I)*RSQHNU_PREV(I)
+---
+> 	    XM(I)=XM(I) + (VB(I)*RSQHNU_PREV(I-1) + VC(I)*RSQHNU_PREV(I))
+649,650c663,664
+< 	1          - EPS_PREV(I-1)*(RSQJNU_PREV(I-1)+RSQJNU_PREV(I))
+< 	1          + EPS_PREV(I)*(RSQJNU_PREV(I)+RSQJNU_PREV(I+1))
+---
+> 	1          + (EPS_PREV(I)*RSQJNU_PREV(I+1)-EPS_PREV(I-1)*RSQJNU_PREV(I-1))
+> 	1          + RSQJNU_PREV(I)*(EPS_PREV(I)-EPS_PREV(I-1))
+655c669,670
+< ! Solve for the radiation field along ray for this frequency.
+---
+> ! Solve for the radiation field along ray for this frequency. We us the Rybicki
+> ! Hummer algorithim so that we can treat very small optical depths.
+657c672
+< 	CALL THOMAS(TA,TB,TC,XM,ND,1)
+---
+> 	CALL THOMAS_RH(TA,H,TC,XM,ND,1)

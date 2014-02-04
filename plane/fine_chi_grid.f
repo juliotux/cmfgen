@@ -1,0 +1,80 @@
+	SUBROUTINE FINE_CHI_GRID(ETA_SM,CHI_SM,ESEC_SM,R_SM,
+	1                  INIT,NEW_FREQ,ND_SM)
+	USE MOD_FINE_R_GRID
+	IMPLICIT NONE
+!
+! Created:
+!
+	INTEGER ND_SM
+	REAL*8 ETA_SM(ND_SM)
+	REAL*8 CHI_SM(ND_SM)
+	REAL*8 ESEC_SM(ND_SM)
+	REAL*8 R_SM(ND_SM)
+	LOGICAL INIT
+	LOGICAL NEW_FREQ
+!
+! Local variables.
+!
+	REAL*8 TA(ND_SM)
+	REAL*8 T1,T2
+	INTEGER I,J,K
+!
+! Deallocate all arrayes if we have changed VDOP_FRAC. This will only
+! be done in testing this routine (e.g., using DISPGEN).
+!
+	IF(NEW_R_GRID .AND. ALLOCATED(ETA))THEN
+	  DEALLOCATE ( ETA, ETA_COEF )
+	  DEALLOCATE ( ESEC, ESEC_COEF )
+	  DEALLOCATE ( CHI,  CHI_COEF )
+	END IF
+!
+!
+	IF( NEW_R_GRID )THEN
+	  ALLOCATE ( ETA(ND) )
+	  ALLOCATE ( ESEC(ND) )
+	  ALLOCATE ( CHI(ND) )
+	  ALLOCATE ( ETA_COEF(ND,4) )
+	  ALLOCATE ( ESEC_COEF(ND,4) )
+	  ALLOCATE ( CHI_COEF(ND,4) )
+	END IF
+!
+	IF(ND .GT. ND_SM)THEN
+!
+! Interpolate quantities onto revised grid.
+!
+	  IF(NEW_FREQ)THEN
+	    TA(1:ND_SM)=LOG(CHI_SM(1:ND_SM))
+	    CALL MON_INT_FUNS_V2(CHI_COEF,TA,LOG_R_SM,ND_SM)
+	    TA(1:ND_SM)=LOG(ESEC_SM(1:ND_SM))
+	    CALL MON_INT_FUNS_V2(ESEC_COEF,TA,LOG_R_SM,ND_SM)
+	    TA(1:ND_SM)=LOG(ETA_SM(1:ND_SM))
+	    CALL MON_INT_FUNS_V2(ETA_COEF,TA,LOG_R_SM,ND_SM)
+!
+	    DO I=1,ND
+	      K=R_PNT(I)
+	      T1=LOG(R(I)/R_SM(K))
+	      T2=((CHI_COEF(K,1)*T1+CHI_COEF(K,2))*T1+CHI_COEF(K,3))*T1+CHI_COEF(K,4)
+	      CHI(I)=EXP(T2)
+	      T2=((ESEC_COEF(K,1)*T1+ESEC_COEF(K,2))*T1+ESEC_COEF(K,3))*T1+ESEC_COEF(K,4)
+	      ESEC(I)=EXP(T2)
+	      T2=((ETA_COEF(K,1)*T1+ETA_COEF(K,2))*T1+ETA_COEF(K,3))*T1+ETA_COEF(K,4)
+	      ETA(I)=EXP(T2)
+	    END DO
+	  ELSE
+	    TA(1:ND_SM)=LOG(ETA_SM(1:ND_SM))
+	    CALL MON_INT_FUNS_V2(ETA_COEF,TA,LOG_R_SM,ND_SM)
+	    DO I=1,ND
+	      K=R_PNT(I)
+	      T1=LOG(R(I)/R_SM(K))
+	      T2=((ETA_COEF(K,1)*T1+ETA_COEF(K,2))*T1+ETA_COEF(K,3))*T1+ETA_COEF(K,4)
+	      ETA(I)=EXP(T2)
+	    END DO
+	  END IF
+	ELSE
+	  ESEC(1:ND)=ESEC_SM(1:ND)
+	  CHI(1:ND)=CHI_SM(1:ND)
+	  ETA(1:ND)=ETA_SM(1:ND)
+	END IF
+!
+	RETURN
+	END

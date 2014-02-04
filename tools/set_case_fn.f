@@ -1,0 +1,46 @@
+C
+C Function which returens a string in either upper or lower case.
+C
+	FUNCTION LC(STRING)
+!
+! Altered 28-Mar-2003: END_STR now limited to 30 characteres.
+!
+	IMPLICIT NONE
+	CHARACTER*30 LC
+	CHARACTER*(*) STRING
+	INTEGER VAL,J,END_STR,ST_STR
+C
+	ST_STR=1
+	END_STR=MIN(30,LEN(STRING))
+	LC=STRING
+	DO J=ST_STR,END_STR
+	  IF( LC(J:J) .GE. 'A' .AND. LC(J:J) .LE. 'Z' )THEN
+	    VAL=ICHAR(LC(J:J))
+	    VAL=VAL+32
+	    LC(J:J)=CHAR(VAL)
+	  END IF
+	END DO
+C
+	RETURN
+	END
+C	
+C  
+	FUNCTION UC(STRING)
+	IMPLICIT NONE
+	CHARACTER*30 UC
+	CHARACTER*(*) STRING
+	INTEGER VAL,J,END_STR,ST_STR
+C
+	ST_STR=1
+	END_STR=MIN(30,LEN(STRING))
+	UC=STRING
+	DO J=ST_STR,END_STR
+	  IF( UC(J:J) .GE. 'a' .AND. UC(J:J) .LE. 'z' )THEN
+	    VAL=ICHAR(UC(J:J))
+	    VAL=VAL-32
+	    UC(J:J)=CHAR(VAL)
+	  END IF
+	END DO
+C
+	RETURN
+	END

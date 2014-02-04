@@ -1,0 +1,151 @@
+!
+! Simple program to plot a set of CMFGEN SN spectra for a model sequence.
+! The spectra directory must be specified in the file DIRECTORIES.
+!
+! The program also plots the comoving and observer's frame luminosity (at the outer boundary).
+!
+! Program reads:
+!              VADAT
+!              RVTJ
+!              OBSFLUX
+! from the specified directory.
+!
+	PROGRAM PLT_MANY_SN_SPEC
+	USE MOD_COLOR_PEN_DEF
+	USE GEN_IN_INTERFACE
+	IMPLICIT NONE
+!
+	INTEGER, PARAMETER :: NMAX=200
+	INTEGER, PARAMETER :: NCF_MAX=500000
+!
+	REAL*8 OBS_LUM(NMAX)
+	REAL*8 CMF_LUM(NMAX)
+	REAL*8 SN_AGE(NMAX)
+	REAL*8 VINF(NMAX)
+	INTEGER ND(NMAX)
+!
+	REAL*8 T1
+	REAL*8 OBS_FREQ(NCF_MAX)
+	REAL*8 OBS_FLUX(NCF_MAX)
+	REAL*8 LAMC
+!
+! For plotting.
+!
+	REAL*4 XV(NCF_MAX)
+	REAL*4 YV(NCF_MAX)
+!
+	INTEGER NCF
+	INTEGER NMOD
+	INTEGER I,K
+	INTEGER IOS
+!
+	CHARACTER(LEN=20) DIR_NAME(NMAX)
+	CHARACTER(LEN=50) FILE_NAME
+	CHARACTER(LEN=200) STRING
+!
+	CHARACTER(LEN=30) X_UNIT,Y_PLT_OPT
+	CHARACTER(LEN=30) X_LAB,Y_LAB
+!
+	INTEGER, PARAMETER :: IZERO=0
+	LOGICAL, PARAMETER :: L_FALSE=.FALSE.
+!
+	OBS_LUM=0.0D0; CMF_LUM=0.0D0
+	SN_AGE=0.0D0; VINF=0.0D0
+	ND=0
+	X_UNIT='Ang'
+	Y_PLT_OPT='FNU'
+!
+	
+!
+	OPEN(UNIT=10,FILE='DIRECTORIES',STATUS='OLD',ACTION='READ')
+	DO I=1,NMAX
+	  READ(10,'(A)',END=100)DIR_NAME(I)
+	  NMOD=I
+	END DO
+100	CLOSE(UNIT=10)
+	WRITE(6,*)'Number of directory names read is:',NMOD
+!
+	DO I=1,NMOD
+	  FILE_NAME=TRIM(DIR_NAME(I))//'/OUTGEN'
+	  OPEN(UNIT=10,FILE=FILE_NAME,STATUS='OLD',ACTION='READ')
+	  DO WHILE(1 .EQ. 1)
+	    READ(10,'(A)',END=200)STRING
+	    IF(INDEX(STRING,'Luminosity of star is :') .NE. 0)THEN
+	      K=INDEX(STRING,':')+1
+	      READ(STRING(K:),*)CMF_LUM(I)
+	    END IF
+	  END DO
+200	  CLOSE(UNIT=10)
+	END DO
+	WRITE(6,*)'Read in CMF luminosities'
+!
+	DO I=1,NMOD
+	  FILE_NAME=TRIM(DIR_NAME(I))//'/VADAT'
+	  OPEN(UNIT=10,FILE=FILE_NAME,STATUS='OLD',ACTION='READ')
+	  DO WHILE(SN_AGE(I) .EQ. 0)
+	    READ(10,'(A)')STRING
+	    IF(INDEX(STRING,'[SN_AGE]') .NE. 0)THEN
+	      READ(STRING,*)SN_AGE(I)
+	      CLOSE(UNIT=10)
+	    END IF
+	  END DO
+	END DO
+	WRITE(6,*)'Read in SN ages'
+!
+	DO I=1,NMOD
+	  FILE_NAME=TRIM(DIR_NAME(I))//'/RVTJ'
+	  OPEN(UNIT=10,FILE=FILE_NAME,STATUS='OLD',ACTION='READ')
+	  DO WHILE(ND(I) .EQ. 0)
+	    READ(10,'(A)')STRING
+	    IF(INDEX(STRING,'ND:') .NE. 0)THEN
+	      K=INDEX(STRING,':')+1
+	      READ(STRING(K:),*)ND(I)
+	    END IF
+	  END DO
+	  DO WHILE(VINF(I) .EQ. 0)
+	    READ(10,'(A)')STRING
+	    IF(INDEX(STRING,'Velocity') .NE. 0)THEN
+	      READ(10,*)VINF(I)
+	      CLOSE(UNIT=10)
+	    END IF
+	  END DO
+	END DO
+	WRITE(6,*)'Read in SN terminal velocities'
+	WRITE(6,'(A,T20,A,4X,A,3X,A)')'Model','Age(days)','dlogt','Vinf(kms)'
+	DO I=1,NMOD
+	  WRITE(6,'(A,T20,F9.3,3X,F6.3,4X,F8.1)')TRIM(DIR_NAME(I)),SN_AGE(I),
+	1            SN_AGE(I)/SN_AGE(MAX(I-1,1)),VINF(I)
+	END DO
+	WRITE(6,'(A)',ADVANCE='NO')'Input any character to continue:'
+	READ(5,'(A)')STRING
+!
+	CALL GEN_IN(X_UNIT,'Ang, Hz,  keV, um (not case sensitive)')
+	CALL SET_CASE_UP(X_UNIT,IZERO,IZERO)
+	CALL GEN_IN(Y_PLT_OPT,'FNU, NUFNU, FLAM')
+	CALL SET_CASE_UP(Y_PLT_OPT,IZERO,IZERO)
+	T1=16*ATAN(1.0D0)*1.0D+15*1.0D-23*((3.0856D+21)**2)/3.826D+33
+	DO I=1,NMOD
+	  FILE_NAME=TRIM(DIR_NAME(I))//'/OBSFLUX'
+	  CALL RD_MOD(OBS_FREQ,OBS_FLUX,NCF_MAX,NCF,FILE_NAME,IOS)
+	  OBS_LUM(I)=0.0D0
+	  DO K=2,NCF
+	    OBS_LUM(I)=OBS_LUM(I)+(OBS_FREQ(K-1)-OBS_FREQ(K))*(OBS_FLUX(K)+OBS_FLUX(K+1))
+	  END DO
+	  OBS_LUM(I)=T1*OBS_LUM(I)*0.5D0
+	  XV(1:NCF)=OBS_FREQ(1:NCF); YV(1:NCF)=OBS_FLUX(1:NCF)
+	  CALL CNVRT(XV,YV,NCF,L_FALSE,L_FALSE,X_UNIT,Y_PLT_OPT,LAMC,X_LAB,Y_LAB,L_FALSE)
+	  CALL CURVE(NCF,XV,YV)
+	END DO
+	CALL GRAMON_PGPLOT(X_LAB,Y_LAB,' ',' ')
+!
+	WRITE(6,'(A)')RED_PEN
+	WRITE(6,'(A)')'The red curve show the luminosity in the comoving-frame'//BLUE_PEN
+	WRITE(6,'(A)')'The blue curve show the luminosity in the observers'' frame'
+	WRITE(6,'(A)')DEF_PEN
+!
+	CALL DP_CURVE(NMOD,SN_AGE,CMF_LUM)
+	CALL DP_CURVE(NMOD,SN_AGE,OBS_LUM)
+	CALL GRAMON_PGPLOT('Age(days)','Luminosity(Lsun)',' ',' ')
+!
+	STOP
+	END

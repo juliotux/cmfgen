@@ -1,0 +1,79 @@
+!
+	SUBROUTINE ADJUST_JES_V2(NU,J_ES,NCF,T_ELEC,ONE_PAR,OPTION,T_OUT)
+	IMPLICIT NONE
+!
+! ALtered 27-Apr-2000 : Changed to V2 with T_OUT inserted in CALL.
+!                       Now utilize V2 of CNVL routines.
+!
+	INTEGER NCF
+	REAL*8 NU(NCF)
+	REAL*8 J_ES(NCF)
+	REAL*8 T_ELEC
+	LOGICAL ONE_PAR
+	CHARACTER*(*) OPTION
+	INTEGER T_OUT
+!
+	REAL*8 PLANCK_FN(NCF)
+	REAL*8 PLANCK_ES(NCF)
+	REAL*8 LOG_J_ES(NCF)
+	REAL*8 PLANCK_NU(NCF)
+	REAL*8 D(NCF)
+!
+	COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
+	COMMON/LINE/ OPLIN,EMLIN               
+	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ,OPLIN,EMLIN
+!
+	REAL*8 T1
+	INTEGER ML,I
+!
+	PLANCK_FN(1:NCF)=TWOHCSQ*(NU(1:NCF)**3)/
+	1                    (EXP(HDKT*NU(1:NCF)/T_ELEC)-1.0D0)
+	IF(ONE_PAR)THEN
+	  CALL CNVLV_ES_ONE_PAR_V2(NU,PLANCK_FN,PLANCK_ES,T_elec,T_OUT,NCF)
+	ELSE
+	  CALL CNVLV_ES_TWO_PAR_V2(NU,PLANCK_FN,PLANCK_ES,T_elec,T_OUT,NCF)
+	END IF
+	PLANCK_FN=LOG(PLANCK_FN)
+	PLANCK_ES=LOG(PLANCK_ES)
+!
+! Shift and scale e.s. funtion so still have Planck function
+!
+	PLANCK_NU(1)=NU(1)
+	I=2
+	ML=1
+	DO WHILE(NU(I) .GT. 1.5D0*T_ELEC)
+	  DO WHILE(PLANCK_ES(I) .GT. PLANCK_FN(ML))
+	    ML=ML+1
+	  END DO
+	  DO WHILE(PLANCK_ES(I) .LT. PLANCK_FN(ML-1))
+	    ML=ML+1
+	  END DO
+	  T1=(PLANCK_ES(I)-PLANCK_FN(ML))/(PLANCK_FN(ML-1)-PLANCK_FN(ML))
+          PLANCK_NU(I)=T1*NU(ML-1)+(1.0D0-T1)*NU(ML)
+	  I=I+1                   
+	END DO
+C
+	T1=1/NU(I-1)-1/PLANCK_NU(I-1)		!Wavelength shift
+	DO ML=I,NCF
+	  PLANCK_NU(ML)=1.0D0/( 1.0D0/NU(ML) - T1)
+	END DO
+C
+C Perform a simple linear interpolation back onto the old frequency grid.
+C
+	LOG_J_ES(:)=LOG(J_ES(:))
+	J_ES(:)=LOG_J_ES(:)		!Boundary points
+	D(:)=PLANCK_ES(:)
+	I=1
+	DO ML=2,NCF-2
+	  DO WHILE (NU(ML) .LT. PLANCK_NU(I+1))
+	    I=I+1
+	  END DO
+	  T1=(NU(ML)-PLANCK_NU(I))/(PLANCK_NU(I+1)-PLANCK_NU(I))
+	  PLANCK_ES(ML)=T1*D(I+1)+(1.0D0-T1)*D(I)
+	  J_ES(ML)=T1*LOG_J_ES(I+1)+(1.0D0-T1)*LOG_J_ES(I)
+	END DO
+C
+	J_ES(:)=EXP( J_ES(:)+PLANCK_FN(:)-PLANCK_ES(:) )
+C
+	RETURN
+	END

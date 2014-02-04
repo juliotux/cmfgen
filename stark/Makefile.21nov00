@@ -1,0 +1,45 @@
+# Include local system definitions
+
+include ../Makefile_definitions
+
+# Library where object files will/are stored
+
+LIB=$(LIB_DIR)libsubs.a
+LIB2=$(LIB_DIR)libsubs.a
+                         
+OBJ = prof_mod.o init_prof_module.o set_prof_v3.o \
+      griem_stark_mod.o griem_v2.o set_prof_limits_v2.o \
+      conv_strk_v1.o rd_strk_list.o strk_bs_hhe.o \
+      rd_bs_strk_tab.o voigtn.o
+
+NEWF = strk_hei_ir.o strk_ds.o
+
+all : $(LIB) $(LIB2)
+	rm -f *.o
+	mv -f *.mod $(MOD_DIR)
+
+$(LIB) : $(LIB)($(OBJ))
+$(LIB2) : $(LIB2)($(NEWF))
+
+# General rules to make obects in a library and object files
+
+$(LIB)(%.o) : %.f
+	$(F90) -c $(FG)  $<
+	ar ruv $(LIB) $*.o
+                           
+$(LIB2)(%.o) : %.f90
+	$(F90) -c $(FFREE)  $<
+	ar ruv $(LIB) $*.o
+                           
+# Dependencies
+
+prof_mod.o             : prof_mod.f 
+init_prof_module.o     : init_prof_module.f   prof_mod.f 
+set_prof_v3.o          : set_prof_v3.f        prof_mod.f  rd_strk_list.f
+set_prof_limits_v2.o   : set_prof_limits_v1.f prof_mod.f 
+strk_bs_hhe.o          : strk_bs_hhe.f        rd_bs_strk_tab.f
+                                         
+.dummy : clean
+clean :
+	rm -f *.o
+	rm -f $(TARGET) $(MASTER)

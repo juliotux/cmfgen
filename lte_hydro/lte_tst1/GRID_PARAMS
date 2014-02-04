@@ -1,0 +1,3 @@
+25  37                !# of T values; # of Electron density values
+1.0 15.0              !Tmin, Tmax (10^4K)
+1.0E+06 1.0E+18       !Log(Ne_min), Log(Ne_max)

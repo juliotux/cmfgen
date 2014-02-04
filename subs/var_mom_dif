@@ -1,0 +1,55 @@
+31c31
+< 	SUBROUTINE VAR_MOM_J_CMF_V7(ETA,CHI,ESEC,
+---
+> 	SUBROUTINE VAR_MOM_J_CMF_V8(ETA,CHI,ESEC,
+42a43,44
+> C Altered:   12-Mar-2003 : Changed to RH THOMAS algorithim so as to better
+> C                            handle small optical depths. changed to _V8.
+110c112
+< 	COMMON /SCRATCH/  PROGDESC,TA,TB,TC,DTAU,RSQ_DTAUONQ,
+---
+> 	COMMON /SCRATCH/  PROGDESC,TA,TB,TC,H,DTAU,RSQ_DTAUONQ,
+117c119
+< 	REAL*8 TA(NV),TB(NV),TC(NV),DTAU(NV),RSQ_DTAUONQ(NV)
+---
+> 	REAL*8 TA(NV),TB(NV),TC(NV),H(NV),DTAU(NV),RSQ_DTAUONQ(NV)
+153c155
+< 	I=(NV*28)-1
+---
+> 	I=(NV*29)-1
+269,270c271,272
+< 	  TB(I)=RSQ_DTAUONQ(I)*(1.0D0-THETA(I)) + PSI(I) +HU(I-1) +HL(I)
+< 	1             -EPS_B(I-1)+EPS_A(I)
+---
+> 	  H(I)=-RSQ_DTAUONQ(I)*(1.0D0-THETA(I)) - PSI(I) + (HU(I)-HL(I)) + (HL(I-1)-HU(I-1))
+> 	1               +2.0D0*(EPS(I-1)-EPS(I))
+279c281
+< 	TB(1)=R(1)*R(1)*( F(1)*Q(1)/DTAU(1) + HBC ) + PSI(1)
+---
+> 	H(1)=(R(2)*R(2)*F(2)*Q(2)-R(1)*R(1)*F(1)*Q(1))/DTAU(1) - R(1)*R(1)*HBC  - PSI(1)
+287c289
+< 	  TB(ND)=R(ND)*R(ND)*F(ND)/DTAU(ND-1)
+---
+> 	  H(ND)=(R(ND-1)*R(ND-1)*F(ND-1)*Q(ND-1)-R(ND)*R(ND)*F(ND))/DTAU(ND-1)
+290c292
+< 	  TB(ND)=R(ND)*R(ND)*F(ND)/DTAU(ND-1)+IN_HBC
+---
+> 	  H(ND)=(R(ND-1)*R(ND-1)*F(ND-1)*Q(ND-1)-R(ND)*R(ND)*F(ND))/DTAU(ND-1)-IN_HBC
+309c311
+< 	  XM(I)=XM(I) + VB(I)*RSQ_HNUM1(I-1) + VC(I)*RSQ_HNUM1(I)
+---
+> 	  XM(I)=XM(I) + (VB(I)*RSQ_HNUM1(I-1) + VC(I)*RSQ_HNUM1(I))
+318c320
+< 	CALL THOMAS(TA,TB,TC,XM,ND,1)
+---
+> 	CALL THOMAS_RH(TA,H,TC,XM,ND,1)
+354c356
+< 	CALL UP_TX_TVX(TX,TVX,KI,TA,TB,TC,PSIPREV_MOD,
+---
+> 	CALL UP_TX_TVX_V2(TX,TVX,KI,TA,H,TC,PSIPREV_MOD,
+390,391c392,393
+< 	  CALL SIMPTH(TA,TB,TC,TX_DIF_d_T,ND,1)
+< 	  CALL SIMPTH(TA,TB,TC,TX_DIF_d_dTdR,ND,1)
+---
+> 	  CALL SIMPTH_RH(TA,H,TC,TX_DIF_d_T,ND,1)
+> 	  CALL SIMPTH_RH(TA,H,TC,TX_DIF_d_dTdR,ND,1)

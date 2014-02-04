@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+#
+# changes all local files named *OUT to *_in.dat
+#
+@outlist = split(" ",`ls *OUT`);
+foreach $outfile (@outlist) {
+    $infile = $outfile;
+    $infile =~ s/($infile)/\L$1\E/;   #convert string to lowercase
+    $infile =~ s/out/_in\.dat/;      #change *out to *_in.dat
+    `mv $outfile $infile`;            #rename file on disk
+}

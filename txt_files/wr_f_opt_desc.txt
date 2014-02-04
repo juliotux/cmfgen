@@ -1,0 +1,144 @@
+22,16   		!Output formatting parameters.
+
+General listing of options in WR_F_TO_S. Options are ordered under subject.
+Associated with each option are requested inputs. Some inputs are not
+prompted for, and can only be changed from their default values by specifying
+them in the call. eg.
+
+		       RD_MOD(OVER=T)
+
+Such inputs are placed in [ ].
+
+SVE and BOX file
+	Default is to write file MAIN_OPT_STR.sve
+	Append sve=filename to write a new .sve file (no brackets)
+	Type box=filename to write a .box file containing several .sve files
+	Type .filename to read .sve file
+	Type #filename to read .box file
+
+Input:
+
+   RD_LNK
+        Reads in an old link file. Any existing link information is 
+           overwritten.
+
+   RD_SM_LNK
+        Reads in an old link file, but which has a smaller number of 
+           levels than the present atomic model. Any existing link 
+           information is overwritten. Generally used when moving from 
+           an atom with no split terms to one with split terms. Each 
+           level in a term is assigned to the same super level.
+
+   RD_DC
+        Reads in departure coefficients from a  model for the atom under
+           consideration. These data can be then used in assisting the
+           assignments of super levels.
+
+
+Output:
+
+   WR
+        Outputs revised links to file, in a format suitable for CMFGEN.
+      [WRITE_DC] : Outputs DC for each level if available
+      [HEAD]     : Outputs a default header. In general this will 
+                      need editing.
+
+   TY
+	Outputs revised links to the screen
+      [WRITE_DC] : Outputs DC for each level if available
+        
+   SL_WR
+      Output levels ordered according to their SUPER level. This allows
+          an easy check of your SL assignments.
+      [WRITE_DC] : Outputs DC for each level if available
+
+    WR_DC
+      The routine reads a file containing EXCTATION temperatures (created 
+      using DISPGEN) for the next lowest ionization stage. The excitation
+      temperature of the ground state is then used to comute the ION 
+      population, and the departure coefficients for all other levels. 
+      Routine is useful when including an additional ionization stage.  
+      Outouts departure coefficent file for the curent species.  Reads 
+      in the exciations temperature for the lower ionization stage.
+
+Link options:
+
+   CL
+       Renumbers links so that they are consecutively numbered.
+        This options assumes that all SUPER LEVEL ID's are positive,
+          and UNIQUE.
+
+       This option useful when you have changed existing super-level
+         assignments in the F_TO_S link specification FILE.
+       For example, to split an existing super-level in 2 super levels
+         edit the old F_TO_S file, giving these 2 new super levels
+         unique ID's. Then use RD option followed by CL.
+
+   LS
+       Links together levels that belong to the same term, independent
+         of their energy separation.
+
+   ELS
+       Link levels together that belong to the same multiplet. If a
+         Super-Levels last level is within DEL_E cm^-1 of the lowest
+         energy of a previous super-level, the two super levels are 
+         combined. The default is to combine only those super levels
+         having the same SPIN and PARITY.
+   E%LS
+       Link levels together that belong to the same multiplet, and 
+        to other levels if they are within a certain percentage of the
+        excitation energy of the state. iAutomatically  fives coarser
+        super-level assignments for levels close to the ionization limit.
+        The default is to combine only those super levels having the same
+        SPIN and PARITY.
+
+       DEL_E: Maximum energy separation (in cm^{-1]) of levels within a
+           super level.
+       [CHK_P]: If set to false, no check on PARITY is done when merging
+           super levels.
+       [CHK_S]: If set to false, no check on SPIN is done when merging
+           super levels.
+
+   SP      
+       Groups levels together that are within DEL_E cm^-1 of the energy
+         of the lowest level in the SUPER-LEVEL. The default is to
+         combine only those levels having the same SPIN and PARITY.
+
+       NB: Not all members of a multiplet will necessarily belong to
+         the same Super Level.
+
+       DEL_E= Maximum energy separation (in cm^{-1]) of levels within a
+           super level.
+       [CHK_P]: If set to false, no check on PARITY is done when merging
+           super levels.
+       [CHK_S]: If set to false, no check on SPIN is done when merging
+           super levels.
+ 
+   SPLIT
+         Allows a coarse SUPER level assignment to be refined according
+           to the energy separation of levels, and the difference in
+           departure levels (e.g., as computed using FULL LS coupling).
+
+       ACC= If the departure coefficients differ by more than ACC %, they 
+               will be gropoed into a new super level.
+       DEL_E= If the energy separation is > DEL_E (cm^-1), a new super
+               level is created.
+               
+   SEP
+         Ouputs the maximum energy separation between levels in EACH
+            super level.
+
+Miscellaneous:
+
+        LI
+	  Produces this output.
+          An e issued at the prompt stops the listing (return continues)
+
+	HE
+	  Brief option summary.
+
+	BOX
+	  Creates a box with a series of different options/
+        
+        EX
+	 Exit code.

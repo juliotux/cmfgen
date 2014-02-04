@@ -1,0 +1,446 @@
+                   RELEASE NOTES
+
+Please run a few test models and report any difficulties.
+
+Please report any compile difficulties. I cannot fix bugs/features
+if I don't know about them. The following summary of changes
+was hurriedly put together, and is thus incomplete. This list does not
+include trivial changes, and updates to DISPGEN/PLT_SPEC. Documentation
+has not yet been updated to reflect the changes, but is coming!
+
+****************************************************************************
+****************************************************************************
+
+                 01-Jul-2013
+
+This is a slightly extended release of the 25-Noc-2012 which never made it to
+my web site. Thus users should read the 25-Nov-2012 release notes. Most of the
+changes aere relatively minor -- new options, paraellization updates, and a
+few code changes to facillitate compilations.
+
+****************************************************************************
+****************************************************************************
+
+                 25-Nov-2012
+
+(1) LTE populations are now also installed in LOG format in CMFGEN and DISPGEN.
+       This is a MAJOR change and required a change in many routines. Since some
+       subroutines had different passed arguments, file version names were updated.
+       This was done to faciltate SN models with large changes in temperature that 
+       have high ionization in the inner region, but much lower temperature and 
+       ionization in the outer regions.
+
+(2) Atomic data files now contain links to the atomic data.
+     This can be obtained from the MODEL file by doing
+ 
+        grep "\[Reference\]" MODEL
+
+(3) Routines for non-thermal ionization in SN are now included in the distribution.
+
+(4) There were some issues with incorrect names in atomic data files. An error
+    is now output to OUTGEN when this ocurrs (the atomic data files have been fixed).
+    Unfortunately this error will also occur when using small atoms in which
+       the appropriate levels has not been included.
+
+(5) Penning ionization has been included. Only relevant to SN. Set [INC_PEN]=F in
+      VADAT file.
+
+(6) Some programs now write messages to the terminal in color.
+
+(7) More options included in MAINGEN. Mainly for SN work. Documentation not yet updated.
+       New options can be found by differencing $cmfdist/disp/maingen.f with older version.
+
+(8) MOD_PRRR was updated and is now more sophisticated. This allows a more compact form
+       of the PRRR files to be output, and plotting.
+
+(9) The noramlized check for the FLUX (output at the end of OBSFLUX) is now
+       obtained by integrating inwards (rather than outwards). Mainly
+       relevant to SN models.
+
+(10) More options added to VADAT file. These are read in by
+         $cmfdist/new_main/mod_subs/rd_control_variables.f
+     Most of these are related to non thermal ioizations.
+
+(11) A new key word ( [NEW_VST_METH] ) has been added to VADAT. At present
+       its defaults is TRUE. This potentially could slow the code, and
+       might cause convergence difficulties (its been tested but I can't
+       test all regimes). It helps the convergence of Ia models. The
+       current default is TRUE -- to get the current (i.e., old) behaviour,
+       set to FALSE.
+
+(12) Program no longer write NETRATE, TOTRATE, and LINEHEAT on last iteration. To
+       get these set [WRITE_RATES]=T in VADAT.
+
+(13) A bug related to CHG exchange retcions was fixed.
+       See $cmfdist/new_main/subs/chg/set_chg_lev_id_v4.f
+
+(14) A bug was fixed relating to ADJUST_LINE_FREQ ins CMF_FLUX calculations.
+
+(15) Modications to $cmfdist/plane/jgrey_hub_ddt_v3.f. Modified to converge
+       better and fixed bug (only important if did not converge).
+
+(16) Additional plotting options added to $cmfdist/spec_plt/plt_scr.f. This routine
+       allows, for example, variables to be plotted for different iteartions of a 
+       currently running model.
+
+ 
+****************************************************************************
+****************************************************************************
+
+                 7_Apr-2011
+
+Several important bug fixes, and  improvements.
+
+(1) A bug with RD_STORE_LOG was fixed. This could potentially read in a
+    bad data value depending on the structure of the VADAT file.
+    If [] were aligned, there was no problem.
+
+(2) A bug with the X_ray cross-sections was found. L shell cross-sections
+      were not being included for Si IV, PV and similar species (arose
+      because for these species only 1 electron is ejected from the inner shell.
+      Code was also updated to include M shell (p and s states) for Iron.
+      Limited tests did not find huge changes.
+
+      A new file xray_phot_fits.dat relaces an older version in the $atomic/misc
+      directory of the same name. It is the same data, but has an extra column.
+      To read this file, with an older version of the code, you will
+      need to change the length of STRING in $cmfdist/newsubs/xray_data_mod.f to 100
+      (or point to the older version of the file).
+
+(3) The HYDRO_DEFAULTS file now has another keyword indicating how many iterations
+      have been done -- change is transparent to user. An ERROR is ouput to OUTGEN
+      on the final iteration if the hydrostatic structure is poor -- check HYDRO
+      
+     In the HYDRO file make sure MAX_R is set. I also recommend that you use the OB_OPT to
+     ensure a fine grid at  the outer boudary. The crucial number is DTAU(2)/DTAU(1) --
+     the following sets the ratio to 25.
+
+          SPECIFY        [OB_OPT]
+          2              [NOB_PARS]
+          50.0D0         [OB_P1]
+          2.0D0          [OB_P2]
+          100            [MAX_R]
+
+(4) It is now possible to put a file ADJUST_CORRECTIONS in the model directory.
+    If you put
+           10:20 0.3
+            15   0.5
+    it will scale the corrections (full iterations only) at depths 10 through 20
+    by a factor of 0.3, and depth 15 by 0.5. This is -ve relaxation, and can facilitate
+    convergence when level pops are oscillating. Particularly useful for O stars with
+    low mass-loss rates. For O stars with low Mdots, and high Vinf, 80 or more depth points
+    are recommended.
+
+(4) In $atomic there are three new X-ray files: gal_xray_hr.dat, smc_xray_hr.dat,
+    lmc_xray_hr.dat. These were computed with the plasma emission code APEC for
+    solar, and scaled solar abundances bu Janos Zsargo. They should be use instead
+    of the old rs data.
+
+(5) CMFGEN and CMF_FLUX work successfully with PGF95 and OMP. Using 4 proceses 
+       does imprive computation time. Presently I am using /opt/pgi/osx86-64/10.8/bin/pgf95
+       on a MAC, and /usr/local/pgi105/linux86-64/10.5/bin/pgf95 on a LINUX system.
+
+(6) On a 32-bit lunux system I succussfully compiled CMFGEN using GFROTRAN44 -- version
+    41 had issues.I did not try parallel processing.
+
+(7) CMFGEN runs under INTEL but I have had issues (as yet unresolved) when OMP options were
+    switched on. There is also may be the usual character issue in one or two routines --
+    explictly specifying the string length solves these.
+
+(8) $cmfdist/newsubs/subs/non_therm contains dummy routines only. This routines are still 
+       under development.
+
+(9) When running ltebat.sh to compute the ROSSELAND mean opacity table, it
+      is no longer necessary to change MODEL_SPEC. In fact, ltebat.sh could
+      point to the files (MODEL_SPEC and VADAT) in the parent directory.
+
+(10) A file CORRECTION_LINK has been added which can be used with CORRECTION_SUM. The file
+      prints the largest corections at 5 to 10 depths, and indicates the levels associated
+      with these corrections.
+
+(11) Improvements have been made to the cpmod command.`
+
+(12) The INTEL compiler has an and off problem with some declarations. Seems to be version and operating
+         dependent. If the newly compiled crashes quickly do the following: 
+         Edit $cmfdist/newsubs/rdphot_gen_v2.f and replace 
+               CHARACTER*(*) OSCDATE  by  CHARACTER(LEN=*) OSCDATE
+         Edit $cmfdist/newsubs/genosc_v8.f and replace
+               CHARACTER*(*) FILNAME  by  CHARACTER(LEN=20) FILNAME(N)
+
+(13)  A big with photoionizaton type 30/31 was fixed, but these aren't currently used
+
+John
+
+****************************************************************************
+****************************************************************************
+
+                    17-June-2010
+
+
+There have been many changes, especially with improvements of SN models.
+The SN stuff is still very much under development. Some of the changes,
+especially the non trivial, are listed below.
+
+The frequency selection 
+has changed slightly -- thus old EDDFACTOR files will not work with the
+new version of CMFGEN (unless using FIXED_J=T in VADAT/CMF_FLUX_PARAMA_INIT).
+
+Additional OMP instructions have been added to many routines. Sometimes these
+cause problems related to compiler bugs (or features!).
+If issues, compile without OMP. CMFGEN will run a factor of 2 to 2.5 times
+faster (pgf95 compiler) using 4 cpus. Additional CPUS don't increase the speed
+dramatically (yet). A much better gain is obtained with cmf_flux.
+
+/unix/set_line_buffering.f added for use with PGF95 compiler.
+   The subroutine forces unbuffered output (useful for OUTGEN).
+   For intel compilers, you may need to create a dummy routine.
+
+com/cpmod has been updated to copy a SN model so the same model can be
+  rerun in a  new directory.
+
+Flourine, Scandium, Vanadium, and Barium have can now be treated
+  (atomic data files not yet updated on web).
+
+Addition options addedi to DISPGEN. See maingen.f -- Documentation still to be updated.
+
+Additional options added to misc/do_ng_v2.f
+
+LOWN option added to wr_f_to_s
+Format of RVTJ has change. Should be transparent to CMFGEN users.
+
+Significant changes to cmfgen_sub.f, mostly related to SN work.
+A large section of code was transferred to a subroutine
+(update_ba_for_line.f).
+
+Updates to new_main/mod_subs/comp_j_blank.f. Mainly related to new SN calls.
+
+Additional variables in new_main/mod_subs/rd_control_variables.f. Mainly related to
+SN studies.
+
+new_main/subs/do_cmf_hydro_v2.f
+  Updated: Now join velocity at 0.75 x (sound speed) - was 0.5
+           TAU_REF can be a parameter in the file HYDRO_DEFAULTS
+           (default is 2/3 - same as old version).
+
+new_main/subs/solveba_v9.f replaces version new_main/subs/solveba_v8.f.
+  Designed to better converge models in which a few levels at a few
+    depths are limiting convergence. Tends to help, but still under development.
+    A vector (10 values) showing increases and decreases is nouw output to CMFGEN.
+
+Additonal options added to cmf_flux (changes in rd_cmf_flux_controls.f)
+                    24-June-2009
+
+Minor bug fix in subs/det_main_cont_freq.f. Will cause slight (but insignificant)
+changes of models.
+
+
+****************************************************************************
+****************************************************************************
+
+This release fixes a couple of bugs to  the 26-May-2009 release.
+There have also been some additional changes. The most notable
+fixes to the 26-May-2009 versions were:
+        (1) Correction to lte_hydro/det_r_grid_v2.f which fixed a grid
+               issue that caused Tau(RMAX) to be less than requested value.
+        (2) Correction to misc/rewrite_scr.f which fixed an issue when NITSF
+               and IREC were unequal in POINT1 files.
+
+Additional notes:
+
+        (1) Be carefull that FG and FD in the cur_cmf/Makefile_definitions
+               are correctly defined. I also added F90nomp which solves a bug/feature with
+               the PGF95 compilero on a Mac Pro. It general, it can be defined the same as
+                F90.
+        (2) In the web directory there is a file called CMFGENGuide.txt which was written
+                in conjunction with Phil Massey and Kathryn Neugent. You might find this useful
+                with O star modeling.
+        (3) A collection of O star models has been placed on my WEB page. These are models of
+                intermediate complexity, and can be used as basis for new models. The models
+                are based on those of Fabrice Martins, although some parameters have been rounded,
+                and the atomic models and atoms updated.
+
+   Please check the web site in a few weeks in case others notice some additional updates.
+
+                    26-May-2009
+
+Note: Some transitions have inaccurate wavelengths. This can be
+      due to the adopted atomic models, or inaccurate data.
+      When computing observed spectra, you can place the
+      correct wavelengths in a file and soft-link it to
+      REVISED_LAMBDAS. An example file is in misc/REVISED_LAMBDAS_9apr08,
+      which show the correct format for the file. The case shown
+      is for Si IV, and arises because I have not split the 6z state into
+      6g and 6h. 
+
+(1) Significant changes and fixes to SN routines.
+
+(2) Modified computation of the Eddington factor, f, for
+      most routines. Mainly done to facilitate changes
+      to SN routines. Revised routines include MOM_JREL_V5 (instead of V3);
+      MOM_J_CMF_V8 (instead of V6),  FG_J_CMF_V11 (instead of v10)
+
+(3) Improvements to det_r_grid_v2.f used by DO_HYDRO option. Extra
+     grid points at outer boundary now inserted after new uniform grid
+     has been created. Should lead to better grid definition.
+
+(4) An alternative option has been installed to prevent SL's form
+      causing problem when solving for the temperature distribution.
+      Option is SCL_SL_OPAC in VADAT, and only one of SCL_SL_OPAC
+      and SCL_LN can be true. SCL_SL_OPAC scale emissivities/opacities
+      used in CMFGEN to yield consistency (rather than just the 
+      cooling rates). Now give consistency with RHS of zero-moment
+      transfer equation. Primarily installed for SN.
+
+(5) SL_OPTION, FL_OPTION, and IL_OPTION can be inserted into  MODEL_SPEC.
+      These options, if present, provide a method of splitting SL for
+      ALL species, with editing the batch.sh file. Primarily installed
+      for SN models.
+
+(6) A few routines have OMP instructions inserted. CMF_FLUX runs considerable
+    faster with multiple process -- e.g., over a factor of 3 gain for 4
+    processors. Only the observer's frame calculation is faster for SN model
+    that uses relativistic transfer.
+
+(7) DC_INTERP_METHOD can now be set to RTX. In this case interpolation
+      is done in Excitation Temperature space, rather than departure
+      coefficients.
+
+(8) All comments in VADAT must now start with a !. Banks lines
+      are still allowed. Strings with non-matching [ ] are
+      flagged.
+
+(9) Extrapolation of photoionization cross-sections to higher energy
+     improved. Only affected a single ionization stage where a resonance
+     occurred at the end of the tabulated cross-section.
+
+(10) Parameters for CMF_FLUX now placed in a module --- CMF_FLUX_CNTRL_VAR_MOD 
+      rather than in CMF_FLUX_SUB.
+
+(11) OBS_FRAME_SUB can now handle a hollow core. Done for late-time
+      SN models only when DIF (i.e., Diffusion approximation) is
+      set to zero.
+
+(12) As always there are minor bug fixes, changes, cleaning etc. None should
+     significantly affect modeling in most case. You can always use diff to 
+     find out what changes have been made to the code. If you execute 
+        com/full_diff.sh old_dist
+     in the current distribution, you will get a difference listing of
+     all Makefile, f files etc in Diff_sum
+
+**** Check consistency routines ****
+
+(1) A couple of routines have been inserted to check parameter
+     consistency. This is becoming useful as more options installed.
+
+(2) CMFGEN now outputs recommended value of T_MIN to OUTGEN. Setting
+     T_MIN prevents floating underflow/overflow when including very
+     ionization species such as CV.
+
+(3) CMFGEN now outputs to OUTGEN an indication of whether additional
+     ionization stages should be added (only for species included in
+     model)
+
+Additional routines:
+  These routines are included in the release. In some
+  cases they simply replace earlier versions. In other
+  cases they create new functions.
+
+disp: PAR_XOPAC.INC, set_dc_or_pop_or_tx.f, wr_crit.f
+
+misc: ave_dc.f, plt_alpha.f
+
+new_main/mod_subs: check_param_consistency.f, comp_grey_v3.f, sub_sob_line_v3.f
+                   check_ions_present.f, check_tmin.f, out_sn_pops_v3.f
+                   set_rv_hydro_model_v2.f
+
+obs:  check_cmf_flux_param_consis.f, cmf_flux_cntrl_var_mod.f
+      obs_frame_sub_v7.f, rd_cmf_flux_controls.f
+
+plane: characteristics_v2.f, cmf_formal_rel.f, cmf_formal_rel_v2.f
+       define_grid_v2.f, derivr.f, derivs.f, edd_jrel_var_v2.f
+       fg_j_cmf_v11.f, fine_chi_grid.f, fine_r_grid.f, get_moms_non_rel.f
+       get_moms_rel.f, h_weight.f, j_weight.f, jgrey_hub_ddt_v3.f
+       k_weight.f, mod_ray_mom_store.f, mod_space_grid_v2.f, mod_var_jrel_v2.f
+       mom_j_cmf_v8.f, mom_jrel_v5.f, n_weight.f, optdepth_v2.f
+       rel_variables.f, runge_kutta.f, solve_cmf_formal_v2.f, var_jrel_v2.f
+       var_mom_j_cmf_v9.f, var_mom_jext_cmf_v3.f, velocity_law.f
+
+spec_plt: plt_jh_cur.f
+
+subs: fdg_f_to_s_ns_v1.f, par_fun_v3.f, rd_f_to_s_ids_v2.f, regrid_t_ed_v2.f
+      regrid_tx_r.f, subs/write_vec.f
+
+******************************************************************************
+
+                30-Jun-2008
+
+(1) Bug fix to $cmfdist/new_main/subs/adjust_pops.f
+     (could cause a crash on some machines).
+
+(2) Fixed a stack of write statements
+    A simple X cause troubles on some compilers.
+    Also fixed a few other compiler sensitive statements.
+
+(3) Altered CMFGEN so that a new species can be added almost automatically.
+    Proceed as in documentation, but code will now automatically switch from
+    USE_FIXED_J=T to USE_FIXED_J=F. Before doing the switch, the code will 
+    NOW automatically do a gray temperature correction unless the hidden variable,
+    DO_GT_AUTO, is set to false in IN_ITS. Make sure GREY_SCL_FAC_IN is valid.
+
+(4) Some other cleaning. You can always use diff to find out what changes have 
+      been made to the code.
+
+(5) If you alter any module files, and have trouble running the code,
+      do a clean, and recompile the code. Its possible I may have missed
+      the dependencies of some routines on some modules.
+
+                    27-May-2008
+
+(1) As always there are minor bug fixes, changes etc. None should
+    significantly affect modeling.
+
+(2) Further improvements to Gauss-fitting option in PLT_SPEC. Designed to measure
+    EWs in normalized multiple model spectra in a semi-automatic and automatic fashion.
+
+(3) Options installed to allow hydrostatic structure to be updated automatically
+    in CMFGEN. Seems to work fine provided not to close to L(edd).
+ 
+(4) Users wishing to use the relativistic and time-dependent SN routines should
+    contact me and/or Luc Dessart. These are still under development and testing. 
+
+                     4-Feb-2008
+
+(1) As always there are minor bug fixes, changes etc. None should
+    significantly affect modeling.
+
+(2) Improvements to plane-parallel routines.
+
+(3) DO_AUTO_LAMBDA placed in IN_ITS. Does not have to be present --
+default is TRUE. Allows CMFGEN to automatically switch from LAMBDA
+iterations, FIXED_J_.TRUE. etc automatically after sufficient
+convergence has been obtained. Starting a model with DO_LAMBDA=T
+(and DO_AUTO_LAMBDA=T) is now a preferred option.
+
+(4) Improved convergence when there are extremely large corrections
+using LAMBDA iterations (e.g., when including X-rays).
+
+(5) Significant changes to allow SN models to be computed including
+      (a) Time variations of statistical equilibrium equations, 
+      (b) Inclusion of relativistic terms in transfer equation (moment
+             equations only)
+      (c) Time dependent radiative transfer.
+    These procedures are still under development and refinement, and
+    still need rigorous testing (especially the last 2).
+
+(6) Improvements to WIND_HYD to facilitate construction of RVSIG_COL
+files assuming a hydrostatic structure. Next version will have the
+hydrostructure option included in CMFGEN.
+
+(7) Improved Gauss-fitting option in PLT_SPEC. Designed to measure
+    EWs in normalized multiple model spectra in a semi-automatic
+    fashion.
+
+(8) Help files for DISPGEN, PLT_SPEC, WR_F_TO_S etc are now now
+    accessible by a web page in $cmfdist/web.
+
+Please report any problems or errors. 

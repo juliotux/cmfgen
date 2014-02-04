@@ -1,0 +1,5 @@
+WARNING
+     Three of the routines in this directory have the same name as those in
+        ../../new_main/subs/two. At present they are identical --- be careful if altering.
+        Check and later names before changing.
+     The  two_phot_mod.f routine is also now identical. 

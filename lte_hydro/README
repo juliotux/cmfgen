@@ -1,0 +1,91 @@
+Revised: 02-Jan-07
+
+Here are two codes that can be used to provide a hydrostatic 
+structure for CMFGEN. As still under testing/development, let
+me know of any problems. Eventually they will be implemented in CMFGEN.
+
+                    main_lte.exe
+Computes an LTE table of Rosseland opacities. Takes a little while 
+at present, as computes full table. Uses  GRID_PARAMS file (in 
+lte_test subdirectory) and several CMFGEN input files (MODEL_SPEC, 
+IN_ITS, VADAT). These are needed to specify the atomic models and other
+options. batch.sh is used to specify the atomic data files. For
+a sequence of models, with fixed abundances, the code only needs to
+be run once, and the CMFGEN files would be taken from the initial
+model. ND (& NP) in MODEL_SPEC needs to be changed (see below). 
+Also, if you are only changing abundances of impurity species 
+(e.g. Nickel) this code does not need to be rerun. Even if altering 
+abundances such as oxygen, the opacities will still be of use with the 
+hydrostatic calculation as the the code does some scaling if using
+an old model.
+
+Some of the Fortran files have been slightly modified from those 
+with CMFGEN to handle zero populations, hence their explicit 
+mention in the Makefile. Tried code on my alpha, and on a dual 
+core AMD system with a PGF95 compiler.
+
+Test case is in lte_test directory. Creates a lot of junk files (since 
+based on CMFGEN) but really only need table of Rosseland opacities.
+Don't run in same directory as CMFGEN model! To run the test calculation,
+simply copy the files in the lte_tst1 directory to your test directory.
+from the lte_tst1 directory into another directory
+
+In the MODEL_SPEC file, ND should be set to the total number of grid 
+values (i.e., the product of the # of T values and # of Ne values as 
+specified in GRID_PARAMS). Batch file is ltebat.sh --- batch.sh is needed 
+for the atomic data assignments. NB: If you inadvertently run batch.sh 
+you will get errors --- its ltebat.sh that needs to be run.
+
+                     (2) wind_hyd.exe
+Computes the hydrostatic structure.  Needs Rosseland table (called 
+ROSSELAND_LTE_TAB) and HYDRO_PARAMS. The later file specifies how the hydrostatic
+structure is to be computed. It can either be based on pure LTE, or a modified LTE 
+based on a complete RVTJ file (ROSSELAND_LTE_TAB is still used). The hydrostatic 
+structure is output to RVSIG_COL_NEW.  Several diagnostic output files are created 
+--- if you need these look at the code.  Code works well with high log g --- 
+difficulties might be encountered for models close to Eddington limit.
+
+Parameters:
+
+   LOG_G      : Log(g)  (g in cgs units) defined at tau=2/3 and REF_R.
+   MU_ATOM    : Mean atomic mass in amu.
+   TEFF       : Effective temperature defined at tau=2/3 and REF_R.
+   OLD_MOD    : Whether an old model (full RVTJ file) is available to improve estimates.
+   OLD_V      : Literally use OLD_V structure beyond connection point.
+   WIND_PRES  : Indicates if wind is present.
+   RSTAR      : Initial guess for core radius.
+   MAX_R      : Initial guess for RMAX/RCORE.
+   ATOM_DEN   : Atom density at out boundary (not required if wind present)
+   MDOT       : Required if not OLD_V.
+   VINF       : Terminal velocity in km/s.
+   BETA       : Normal CAK BETA.
+   CON_R      : Initial radius at which wind is connected. This may be changed as
+                   hydrostatic structure is iterate to match REF_R.
+   REF_R      : Radius at which Teff and Log g is defined (designed to be tau=2/3).
+   CON_V      : Connection velocity.
+
+MDOT is still needed even if wind not present. If wind not present, set to 1.0D-12
+(or a similarly low value). It is used in the output file so that RVSIG_COL can still
+be used to read in the density structure. The actual density structure is not effected
+by MDOT, although the grid may be (since the adaptive grid calculation is affected
+by the velocity spacing when V>0.1 km/s). When a wind is not present, MAX_R, VINF, BETA,
+CONV, and CONR are not needed. 
+
+An example model with wind is in
+                               hydro_tst1
+while an example model without wind is in
+                               hydro_tst2.
+
+  
+Code does not yet handle clumping. I suggest you use the clumped Mdot when defining the
+grid, and just make sure the grid is okay when clumping is included. OLD_V/clumping
+may not mix. I suggest skipping OLD_V option at present.
+
+If have a model close to hydrostatic solution, 1 iteration may suffice.
+If far, or LTE start, may need a couple. As this requires a new model, a little
+cumbersome at present. Will be inserted into CMFGEN after I get feedback.
+    
+
+Cheers
+
+John

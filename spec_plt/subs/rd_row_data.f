@@ -1,0 +1,67 @@
+!
+	SUBROUTINE RD_ROW_DATA(XVEC,YVEC,NX,XKEY,YKEY,FILNAME,LU,IOS)
+	USE NEW_GEN_IN_INTERFACE
+	IMPLICIT NONE
+!
+! Created: 12-June-2010
+!
+	INTEGER IOS
+	INTEGER NX
+	INTEGER LU
+	REAL*8 XVEC(NX)
+	REAL*8 YVEC(NX)
+	CHARACTER(LEN=*) FILNAME
+	CHARACTER(LEN=*) XKEY
+	CHARACTER(LEN=*) YKEY
+!
+	LOGICAL XDONE,YDONE
+	INTEGER, PARAMETER :: T_OUT=6
+	CHARACTER(LEN=200) STRING
+!
+! Procedure to read simple plots in column format from file.
+! Blank lines and comments (begin with a !) are ignored.
+!
+	OPEN(UNIT=LU,FILE=FILNAME,STATUS='OLD',ACTION='READ',IOSTAT=IOS)
+	IF(IOS .NE. 0)THEN
+	  WRITE(T_OUT,*)'Error opening file'
+	  RETURN
+	END IF
+!
+	IOS=0
+	XDONE=.FALSE.
+	YDONE=.FALSE.
+	DO WHILE(1 .EQ. 1)
+	  READ(LU,'(A)',IOSTAT=IOS)STRING
+	  WRITE(100,'(A)')TRIM(STRING)
+	  IF(INDEX(STRING,TRIM(XKEY)) .NE. 0)THEN
+	    READ(LU,*,IOSTAT=IOS)XVEC(1:NX)
+	    IF(IOS .EQ. 0)THEN
+	      WRITE(6,*)'Successfule read data associated with ',TRIM(XKEY)
+	    ELSE
+	      WRITE(6,*)'Error reading XVEC data'
+	    END IF
+	    XDONE=.TRUE.
+	 ELSE IF(INDEX(STRING,TRIM(YKEY)) .NE. 0)THEN
+	    READ(LU,*,IOSTAT=IOS)YVEC(1:NX)
+	    IF(IOS .EQ. 0)THEN
+	      WRITE(6,*)'Successfule read data associated with ',TRIM(YKEY)
+	    ELSE
+	      WRITE(6,*)'Error reading YVEC data'
+	    END IF
+	    YDONE=.TRUE.
+	 END IF
+	  IF(XDONE .AND. YDONE)EXIT
+	  IF(IOS .NE. 0)THEN
+	    WRITE(6,*)'Error reading data: IOS=',IOS
+	    WRITE(6,*)'XKEY=',TRIM(XKEY)
+	    WRITE(6,*)'YKEY=',TRIM(YKEY)
+	    CLOSE(UNIT=LU)
+	    RETURN
+	  END IF
+	END DO
+	CLOSE(UNIT=LU)
+!
+	WRITE(6,*)XVEC(1),XVEC(NX)
+	WRITE(6,*)YVEC(1),YVEC(NX)
+	RETURN
+	END

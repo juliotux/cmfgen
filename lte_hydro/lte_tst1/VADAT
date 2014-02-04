@@ -1,0 +1,669 @@
+54.288       [RSTAR]            !Rp 125
+50           [RMAX]             !Rmax/Rp
+7            [VEL_LAW]          !Velocity Law 
+RVSIG_COL    [VEL_OPT]          !Tell CMFGEN to read this file 
+0.121        [VCORE]            !Core
+1.0          [VPHOT]            !Photospheric velocity
+1183.4D0     [VINF]             !Terminal (km\s)
+0.02         [SCL_HT]           !Scale Height
+1.0          [BETA]             !Gamma (i.e. Beta=speed of velocity law)
+5.00E-8      [MDOT]             !Mass loss rate
+7.13D+04     [LSTAR]            !Luminosity (Lo)
+2.520D+01    [MASS]             !Stars Mass (Mo)
+
+T            [DO_CL]		!Allow for clumping in the model?
+EXPO         [CL_LAW]		!Law to evaluate clumping factors.
+2            [N_CL_PAR]		!Number of clumping parameters
+0.4          [CL_PAR_1]		!1st clumping  parameter (X at Vinf)
+50	     [CL_PAR_2]
+
+1.0          [HYD/X]            !H/X  abundance (Abundancs: GS1998, except CNO are 0.7*GS1998)
+0.1000       [HE/X]             !He/X abundance (by number)
+2.310E-04    [CARB/X]           !C/X  abundance (by number) = C_sol
+5.804E-05    [NIT/X]            !N/X  abundance (by number) = N_sol
+4.720E-04    [OXY/X]            !O/X  abundance (by number) = O_sol
+1.200E-04    [NEON/X]           !Ne/X abundance (by number) = Ne_sol
+-3.45D-05    [SOD/X]            !Na/X abundance (by mass: solar=3.45E-05)
+-6.47D-04    [MAG/X]            !Mg/X abundance (by mass: solar=6.47E-04)
+-5.58D-05    [ALUM/X]           !Al/X abundance (by mass: solar=5.58D-05)
+3.550E-05    [SIL/X]            !Sk/X abundance (by number) = Sk_sol
+2.820E-07    [PHOS/X]           !P/X abundance  (by number) = P_sol
+2.138E-05    [SUL/X]            !S/X abundance  (by number) = S_sol
+-7.87E-06    [CHL/X]            !Cl/X abundance (by mass: solar=7.87E-06)
+-7.05E-05    [ARG/X]            !Ar/X abundance (by mass: solar=1.04E-04)
+-3.61E-06    [POT/X]            !K/X abundance  (by mass: solar=3.61E-06)
+-6.44E-05    [CAL/X]            !Ca/X abundance (by mass: solar=6.15E-05)
+-1.70E-05    [CHRO/X]           !Cr/X abundance (by mass: solar=1.70E-05)
+-9.44E-06    [MAN/X]            !Mn/X abundance (by mass: solar=9.44E-06)
+3.160E-05    [IRON/X]           !Fe/X abundance (by number) = Fe_sol
+-7.29D-05    [NICK/X]           !Nk?X abunances (by mass: solar=7.65E-05)
+
+F            [RD_CF_FILE]       !Read in continuum frequencies from file
+3.49897D-3   [MIN_CF]           !Minimum continuum frequency if calculating NU
+1000.000D0   [MAX_CF]           !Maximum continuum frequency if calculating NU
+1.10D0       [FRAC_SP]          !Fractional spacing for small frequencies
+1.05D0       [AMP_FAC]          !Amplification factor for large frequency ranges
+0.10D0       [MAX_BF]           !Maximum frequency spacing close to bf edge
+
+T            [DO_DIS]		!Allow for level dissolution
+200.0D0      [dV_LEV]           !Spacing in km/s on low side of bf edge.
+1.4          [AMP_DIS]          !Amplification factor on low side of bf edge.
+0.1          [MIN_DIS]          !Minimum frequency for level disolution.
+
+F            [CROSS]
+750.0        [V_CROSS]
+3000.0       [SIG_GAU_KMS]      !Sigma of Gaussian used to smooth phot. cross-section.
+0.5          [EXT_LINE_VAR]     !Extent of variation region beyond resonance zone
+0.01         [ZNET_VAR_LIM]     !Iterate on net rates when ABS(ZNET-1) < ZNET_VAR_LIM.
+T            [WNET]             !Iterate on net rates for weak lines.
+0.10         [WK_LIM]           !Weak line opacity limit
+
+T            [DIF]              !Diffusion approx.
+T            [COH_ES]           !Assume coherent electorn scattering?
+F            [OLD_J]
+F            [MIX_COH]          !Mix coherencies in variation of J
+0.1          [ES_FAC]           !How close RJ and RJ_ES to use COH
+
+LOGMON       [METHOD]           !Use log interp to compute chi.LOGLOG
+N_ON_J       [N_TYPE]           !How to handle N in MOM_J_CMF
+20000.0D0    [VFRAC_FG]         !Maximum velocity spacing along ray in FG_J_CMF_V10+
+20000.0D0    [VFRAC_MOM]        !Maximum velocity spacing along ray in MOM_J_CMF_B6
+INT/INS      [FG_OPT]		!Solution options for FG
+T            [THK_CONT]         !Thick boundary condition for continuum ?
+T            [TRAP_J]           !Use trapazoidal wights to compute J ?
+
+2.0D0        [TDOP]             !Temperature for Doppler profile
+4.0D0        [AMASS_DOP]        !Atomic mass for Doppler profile
+10.0D0       [VTURB]            !Turbulent Velocity
+
+6.0          [MAX_DOP]          !Max. half-width of resonace zone
+1.0D0        [FRAC_DOP]         !Spacing in CMF resonace zone [in Doppler widths]
+200.0        [dV_CMF_PROF]      !Spacing (in km/s) across CMF profile.
+400.0        [dV_CMF_WING]      !Spacing in e.s. line wings of CMF profile.
+2500.0       [ES_WING_EXT]      !Ext. of non-coh e.s. wings beyond res. zone (in Vinf)
+3.0          [R_CMF_WING_EXT]   !Ext. of coh. e.s. wings beyond res. zone (in Vinf)
+
+1.1          [OBS_EXT_RAT]      !Half-Width of Observed profile in Vinf (>= 1.0)
+30.0         [dV_OBS_PROF]      !Spacing (in km/s) across observed profile (km/s).
+200.0        [dV_OBS_WING]      !Spacing in e.s. line wings (km/s).
+2000.0       [dV_OBS_BIG]       !Spacing between lines (km/s).
+
+F            [USE_FIXED_J]      !Use J previously computed
+F            [FLUX_CAL_ONLY]    !Do a flux calculation only?
+F            [EXT_FRM_SOL]	!Extend formal solutiona factor of 10 in R
+T            [INS_F_FRM_SOL]    !Insert extra frequencies in the formal sol?
+INT          [FRM_OPT]          !Method for formal solution
+F            [DO_SOB_LINES]     !Compute rates for SObolev transitions in flux mode?
+F            [SOB_FREQ_IN_OBS]  !
+
+BLANK        [GLOBAL_LINE]      !Global line switch (BLANK, SOB, CMF, NONE)
+F            [LAM_SET]          !Swith to SOB for long wavelengths?
+0.0E+03      [F_LAM_BEG]        !Lambda to begin flux calculation.
+7.0E+03      [F_LAM_END]        !Lambda to end flux calculation.
+3.0D-3       [GF_CUT]           !Omit lines with gf < GFCUT and lower level
+9            [GF_LEV_CUT]       !> GF_LEV_CUT
+10           [AT_CUT]           !Only cut if Atomic # >= AT_CUT
+10           [MIN_TRANS]	!Minimum # of trans from level before cut.
+
+T            [THK_LINE]         !Thk line boundary condition ?
+T            [CHK_L_POS]        !Check for negative line opacity?
+SRCE_CHK     [NEG_OPAC_OPT]     !New option for treating neg. opacities
+F            [He2_RES=0]        !Set rates in He2 resonance lines to zero?
+                
+F            [ALLOW_OL]         !Include line overlap?
+50.0         [OL_DIF]           !Max velocity dif for overlap (km/s)?
+
+F            [INC_CHG] 		!Include charge exchange reactions
+F            [INC_RAY]          !Include Rayleigh scattering
+T            [INC_TWO]  	!Include two photon transitions
+F            [INC_AD] 		!Include adiabatic cooling
+F            [INC_ADV]          !To be able to run on rosella
+T            [SCL_LN]           !Scale line cooling/heating rates
+0.5          [SCL_LN_FAC]       !Factor for determining when to scale H/C rates.
+
+T            [INC_XRAYS]
+F            [FF_XRAYS]
+T            [X_SM_WIND]
+1000         [VS_XRAYS]
+0.12         [FIL_FAC_1]
+300          [T_SHOCK_1]
+300          [V_SHOCK_1]
+0.03         [FIL_FAC_2]
+500.0D0      [T_SHOCK_2]
+500          [V_SHOCK_2]
+
+F            [XSLOW]
+1.5          [XFI1_BEG]
+3.3E-1       [XFI2_BEG]
+10.0         [XSCL_FAC]
+
+F            [RD_IN_R_GRID]     !Read in a predetermined R grid ?
+F            [LIN_INT]          !Regrid pops (set F if NEW model) (T=>no Temp iteration)
+T            [POP_SCALE]        !Scale pops to satisfy abundance Eq.
+T            [DC_SPH_TAU]       !interpolate on spherical optical depth scale.
+T            [IT_ON_T]          !Iterate on initial T distribution ?
+2.0          [T_INIT_TAU]       !For INIT_TEMP guess
+0.2          [GREY_TAU]         !Set T to TGREY for tau > ?
+
+CMF          [TRANS_HI]         !Method for treating Hydrogen lines ?
+CMF          [TRANS_HeI]        !Method for treating HeI lines ?
+CMF          [TRANS_He2]        !Method for treating He2 lines ?
+
+CMF          [TRANS_CI]         !Method for treating CI lines ?
+CMF          [TRANS_C2]         !Method for treating C2 lines ?
+CMF          [TRANS_CIII]       !Method for treating CIII lines ?
+CMF          [TRANS_CIV]        !Method for treating CIV lines ?
+CMF          [TRANS_CV]         !Method for treating CV lines ?
+CMF          [TRANS_CSIX]       !Method for treating CSIX lines ?
+
+CMF          [TRANS_NI]         !Method for treating NI lines ?
+CMF          [TRANS_N2]         !Method for treating N2 lines ?
+CMF          [TRANS_NIII]       !Method for treating NIII lines ?
+CMF          [TRANS_NIV]        !Method for treating NIV lines ?
+CMF          [TRANS_NV]         !Method for treating NV lines ?
+CMF          [TRANS_NSIX]       !Method for treating NSIX lines ?
+CMF          [TRANS_NSEV]       !Method for treating NSEV lines ?
+
+SOB          [TRANS_OI]         !Method for treating OIII lines ?
+SOB          [TRANS_O2]         !Method for treating OIII lines ?
+SOB          [TRANS_OIII]       !Method for treating OIII lines ?
+SOB          [TRANS_OIV]        !Method for treating OIV lines ?
+SOB          [TRANS_OV]         !Method for treating OV lines ?
+SOB          [TRANS_OSIX]       !Method for treating OSIX lines ?
+SOB          [TRANS_OSEV]        !Method for treating OSEV lines ?
+SOB          [TRANS_OVIII]       !Method for treating OVIII lines ?
+
+SOB          [TRANS_Ne2]         !Method for treating Ne2 lines ?
+SOB          [TRANS_NeIII]       !Method for treating NeIII lines ?
+SOB          [TRANS_NeIV]        !Method for treating NeIV lines ?
+SOB          [TRANS_NeV]         !Method for treating NeV lines ?
+SOB          [TRANS_NeSIX]       !Method for treating NeSIX lines ?
+SOB          [TRANS_NeSEV]       !Method for treating NeSEV lines ?
+SOB          [TRANS_NeVIII]      !Method for treating NeVIII lines ?
+
+SOB          [TRANS_NaI]         !Method for treating NaI lines ?
+SOB          [TRANS_Na2]         !Method for treating Na2 lines ?
+SOB          [TRANS_NaIII]       !Method for treating NaIII lines ?
+SOB          [TRANS_NaIV]        !Method for treating NaIV lines ?
+SOB          [TRANS_NaV]         !Method for treating NaV lines ?
+SOB          [TRANS_NaSIX]       !Method for treating NaSIX lines ?
+SOB          [TRANS_NaSEV]       !Method for treating NaSEV lines ?
+SOB          [TRANS_NaVIII]      !Method for treating NaVIII lines ?
+SOB          [TRANS_NaIX]        !Method for treating NaIX lines ?
+
+SOB          [TRANS_Mg2]         !Method for treating Mg2 lines ?
+SOB          [TRANS_MgIII]       !Method for treating MgIII lines ?
+SOB          [TRANS_MgIV]        !Method for treating MgIV lines ?
+SOB          [TRANS_MgV]         !Method for treating MgV lines ?
+SOB          [TRANS_MgSIX]       !Method for treating MgSIX lines ?
+SOB          [TRANS_MgSEV]       !Method for treating MgSEV lines ?
+SOB          [TRANS_MgVIII]      !Method for treating MgVIII lines ?
+SOB          [TRANS_MgIX]        !Method for treating MgIX lines ?
+SOB          [TRANS_MgX]         !Method for treating MgX lines ?
+
+SOB          [TRANS_Al2]         !Method for treating Al2 lines ?
+SOB          [TRANS_AlIII]       !Method for treating AlIII lines ?
+SOB          [TRANS_AlIV]        !Method for treating AlIV lines ?
+SOB          [TRANS_AlV]         !Method for treating AlV lines ?
+SOB          [TRANS_AlSIX]       !Method for treating AlSIX lines ?
+SOB          [TRANS_AlSEV]       !Method for treating AlSEV lines ?
+SOB          [TRANS_AlVIII]      !Method for treating AlVIII lines ?
+SOB          [TRANS_AlIX]        !Method for treating AlIX lines ?
+SOB          [TRANS_AlX]         !Method for treating AlX lines ?
+SOB          [TRANS_AlXI]        !Method for treating AlXI lines ?
+
+SOB          [TRANS_SkI]         !Method for treating SkIII lines ?
+SOB          [TRANS_Sk2]         !Method for treating SkIII lines ?
+SOB          [TRANS_SkIII]       !Method for treating SkIII lines ?
+SOB          [TRANS_SkIV]        !Method for treating SkIV lines ?
+SOB          [TRANS_SkV]         !Method for treating SkIV lines ?
+SOB          [TRANS_SkSIX]       !Method for treating SkIV lines ?
+
+SOB          [TRANS_P2]          !Method for treating P2 lines ?
+SOB          [TRANS_PIII]        !Method for treating PIII lines ?
+SOB          [TRANS_PIV]         !Method for treating PIV lines ?
+SOB          [TRANS_PV]          !Method for treating PV lines ?
+SOB          [TRANS_PSIX]        !Method for treating PSIX lines ?
+
+SOB          [TRANS_S2]          !Method for treating OIII lines ?
+SOB          [TRANS_SIII]        !Method for treating OIII lines ?
+SOB          [TRANS_SIV]         !Method for treating OIV lines ?
+SOB          [TRANS_SV]          !Method for treating OV lines ?
+SOB          [TRANS_SSIX]        !Method for treating OSIX lines ?
+
+SOB          [TRANS_Cl2]         !Method for treating Cl2 lines ?
+SOB          [TRANS_ClIII]       !Method for treating ClIII lines ?
+SOB          [TRANS_ClIV]        !Method for treating ClIV lines ?
+SOB          [TRANS_ClV]         !Method for treating ClV lines ?
+SOB          [TRANS_ClSIX]       !Method for treating ClSIX lines ?
+SOB          [TRANS_ClSEV]       !Method for treating ClSEV lines ?
+
+SOB          [TRANS_ArIII]       !Method for treating ArIII lines ?
+SOB          [TRANS_ArIV]        !Method for treating ArIV lines ?
+SOB          [TRANS_ArV]         !Method for treating ArV lines ?
+SOB          [TRANS_ArSIX]       !Method for treating ArSIX lines ?
+SOB          [TRANS_ArSEV]       !Method for treating ArSEV lines ?
+SOB          [TRANS_ArVIII]      !Method for treating ArVIII lines 
+
+SOB          [TRANS_Ca2]         !Method for treating Ca2 lines ?
+SOB          [TRANS_CaIII]       !Method for treating CaIII lines ?
+SOB          [TRANS_CaIV]        !Method for treating CaIV lines ?
+SOB          [TRANS_CaV]         !Method for treating CaV lines ?
+SOB          [TRANS_CaSIX]       !Method for treating CaSIX lines ?
+SOB          [TRANS_CaSEV]       !Method for treating CaSEV lines ?
+SOB          [TRANS_CaVIII]      !Method for treating CaVIII lines ?
+SOB          [TRANS_CaIX]        !Method for treating CaIX lines ?
+SOB          [TRANS_CaX]         !Method for treating CaIX lines ?
+
+SOB          [TRANS_Cr2]         !Method for treating Cr2 lines ?
+SOB          [TRANS_CrIII]       !Method for treating CrIII lines ?
+SOB          [TRANS_CrIV]        !Method for treating CrIV lines ?
+SOB          [TRANS_CrV]         !Method for treating CrV lines ?
+SOB          [TRANS_CrSIX]       !Method for treating CrSIX lines ?
+
+SOB          [TRANS_Mn2]         !Method for treating Mn2 lines ?
+SOB          [TRANS_MnIII]       !Method for treating MnIII lines ?
+SOB          [TRANS_MnIV]        !Method for treating MnIV lines ?
+SOB          [TRANS_MnV]         !Method for treating MnV lines ?
+SOB          [TRANS_MnSIX]       !Method for treating MnSIX lines ?
+SOB          [TRANS_MnSEV]       !Method for treating MnSEV lines ?
+
+SOB          [TRANS_Fe2]         !Method for treating Fe2 lines ?
+SOB          [TRANS_FeIII]       !Method for treating FeIII lines ?
+SOB          [TRANS_FeIV]        !Method for treating FeIV lines ?
+SOB          [TRANS_FeV]         !Method for treating FeV lines ?
+SOB          [TRANS_FeSIX]       !Method for treating FeSIX lines ?
+SOB          [TRANS_FeSEV]       !Method for treating FeSEV lines ?
+SOB          [TRANS_FeVIII]      !Method for treating FeVIII lines ?
+SOB          [TRANS_FeIX]        !Method for treating FeVIII lines ?
+SOB          [TRANS_FeX]         !Method for treating FeVIII lines ?
+
+SOB          [TRANS_Nk2]         !Method for treating Nk2 lines ?
+SOB          [TRANS_NkIII]       !Method for treating NkIII lines ?
+SOB          [TRANS_NkIV]        !Method for treating NkIV lines ?
+SOB          [TRANS_NkV]         !Method for treating NkV lines ?
+SOB          [TRANS_NkSIX]       !Method for treating NkSIX lines ?
+SOB          [TRANS_NkSEV]       !Method for treating NkSEV lines ?
+SOB          [TRANS_NkVIII]      !Method for treating NkVIII lines ?
+SOB          [TRANS_NkIX]        !Method for treating NkIX lines ?
+SOB          [TRANS_NkX]         !Method for treating NkX lines ?
+
+F            [DIE_AS_LINE]      !Treat dielectronic as non-overlapping lines
+1000.0D0     [VSM_DIE]          !Smoothing velocity (km/s)
+
+F,F          [DIE_HI]           !Include LTDR for HI (Use WI calcs?)
+F,F          [DIE_HeI]          !Include LTDR for HeI (Use WI calcs?)
+F,F          [DIE_He2]          !Include LTDR for He2 (Use WI calcs?)
+
+T,F          [DIE_CI]           !Include LTDR for CI (Use WI calcs?)
+F,F          [DIE_C2]           !Include LTDR for CIII (Use WI calcs?)
+F,T          [DIE_CIII]         !Include LTDR for CIII (Use WI calcs?)
+F,F          [DIE_CIV]          !Include LTDR for CIV (Use WI calcs?)
+F,F          [DIE_CV]           !Include LTDR for CV (Use WI calcs?)
+F,F          [DIE_CSIX]         !Include LTDR for CSIX (Use WI calcs?)
+
+F,F          [DIE_NI]           !Include LTDR for NI (Use WI calcs?)
+T,F          [DIE_N2]           !Include LTDR for N2 (Use WI calcs?)
+F,F          [DIE_NIII]         !Include LTDR for NIII (Use WI calcs?)
+T,T          [DIE_NIV]          !Include LTDR for NIV (Use WI calcs?)
+F,F          [DIE_NV]           !Include LTDR for NV (Use WI calcs?)
+F,F          [DIE_NSIX]         !Include LTDR for NSIX (Use WI calcs?)
+F,F          [DIE_NSEV]         !Include LTDR for NSEV (Use WI calcs?)
+
+T,F          [DIE_OI]         !Include LTDR for OI (Use WI calcs?)
+F,F          [DIE_O2]         !Include LTDR for O2 (Use WI calcs?)
+T,F          [DIE_OIII]         !Include LTDR for OIII (Use WI calcs?)
+T,F          [DIE_OIV]          !Include LTDR for OIV (Use WI calcs?)
+T,T          [DIE_OV]           !Include LTDR for OV (Use WI calcs?)
+F,F          [DIE_OSIX]         !Include LTDR for OSIX (Use WI calcs?)
+F,F          [DIE_OSEV]         !Include LTDR for OSEV (Use WI calcs?)
+F,F          [DIE_OVIII]        !Include LTDR for OVIII (Use WI calcs?)
+
+F,F          [DIE_Ne2]          !Include LTDR for Ne2 (Use WI calcs?)
+F,F          [DIE_NeIII]        !Include LTDR for NeIII (Use WI calcs?)
+F,F          [DIE_NeIV]         !Include LTDR for NeIV (Use WI calcs?)
+F,F          [DIE_NeV]          !Include LTDR for NeV (Use WI calcs?)
+F,F          [DIE_NeSIX]        !Include LTDR for NeSIX (Use WI calcs?)
+F,F          [DIE_NeSEV]        !Include LTDR for NeSEV (Use WI calcs?)
+F,F          [DIE_NeVIII]       !Include LTDR for NeVIII (Use WI calcs?)
+
+F,F          [DIE_NaI]          !Include LTDR for NaI (Use WI calcs?)
+F,F          [DIE_Na2]          !Include LTDR for Na2 (Use WI calcs?)
+F,F          [DIE_NaIII]        !Include LTDR for NaIII (Use WI calcs?)
+F,F          [DIE_NaIV]         !Include LTDR for NaIV (Use WI calcs?)
+F,F          [DIE_NaV]          !Include LTDR for NaV (Use WI calcs?)
+F,F          [DIE_NaSIX]        !Include LTDR for NaSIX (Use WI calcs?)
+F,F          [DIE_NaSEV]        !Include LTDR for NaSEV (Use WI calcs?)
+F,F          [DIE_NaVIII]       !Include LTDR for NaVIII (Use WI calcs?)
+F,F          [DIE_NaIX]         !Include LTDR for NaIX (Use WI calcs?)
+
+F,F          [DIE_Mg2]          !Include LTDR for Mg2 (Use WI calcs?)
+F,F          [DIE_MgIII]        !Include LTDR for MgIII (Use WI calcs?)
+F,F          [DIE_MgIV]         !Include LTDR for MgIV (Use WI calcs?)
+F,F          [DIE_MgV]          !Include LTDR for MgV (Use WI calcs?)
+F,F          [DIE_MgSIX]        !Include LTDR for MgSIX (Use WI calcs?)
+F,F          [DIE_MgSEV]        !Include LTDR for MgSEV (Use WI calcs?)
+F,F          [DIE_MgVIII]        !Include LTDR for MgVIII (Use WI calcs?)
+F,F          [DIE_MgIX]          !Include LTDR for MgIX (Use WI calcs?)
+F,F          [DIE_MgX]           !Include LTDR for MgX (Use WI calcs?)
+
+F,F          [DIE_Al2]          !Include LTDR for Al2 (Use WI calcs?)
+F,F          [DIE_AlIII]        !Include LTDR for AlIII (Use WI calcs?)
+F,F          [DIE_AlIV]          !Include LTDR for AlIV (Use WI calcs?)
+F,F          [DIE_AlV]           !Include LTDR for AlV (Use WI calcs?)
+F,F          [DIE_AlSIX]         !Include LTDR for AlSIX (Use WI calcs?)
+F,F          [DIE_AlSEV]         !Include LTDR for AlSEV (Use WI calcs?)
+F,F          [DIE_AlVIII]        !Include LTDR for AlVIII (Use WI calcs?)
+F,F          [DIE_AlIX]          !Include LTDR for AlIX (Use WI calcs?)
+F,F          [DIE_AlX]           !Include LTDR for AlX (Use WI calcs?)
+F,F          [DIE_AlXI]          !Include LTDR for AlXI (Use WI calcs?)
+
+F,F          [DIE_SkI]          !Include LTDR for SkI (Use WI calcs?)
+F,F          [DIE_Sk2]          !Include LTDR for Sk2 (Use WI calcs?)
+F,F          [DIE_SkIII]        !Include LTDR for SkIII (Use WI calcs?)
+F,F          [DIE_SkIV]         !Include LTDR for SkIV (Use WI calcs?)
+F,F          [DIE_SkV]          !Include LTDR for SkV (Use WI calcs?)
+F,F          [DIE_SkSIX]        !Include LTDR for SkSEV (Use WI calcs?)
+
+F,F          [DIE_S2]           !Include LTDR for S2 (Use WI calcs?)
+F,F          [DIE_SIII]         !Include LTDR for SIII (Use WI calcs?)
+F,F          [DIE_SIV]          !Include LTDR for SIV (Use WI calcs?)
+F,F          [DIE_SV]           !Include LTDR for SV (Use WI calcs?)
+F,F          [DIE_SSIX]         !Include LTDR for SSIX (Use WI calcs?)
+
+F,F          [DIE_P2]            !Include LTDR for P2 (Use WI calcs?)
+F,F          [DIE_PIII]          !Include LTDR for PIII (Use WI calcs?)
+F,F          [DIE_PIV]           !Include LTDR for PIV (Use WI calcs?)
+F,F          [DIE_PV]            !Include LTDR for PV (Use WI calcs?)
+F,F          [DIE_PSIX]          !Include LTDR for PSIX (Use WI calcs?)
+
+F,F          [DIE_Cl2]           !Include LTDR for Cl2 (Use WI calcs?)
+F,F          [DIE_ClIII]         !Include LTDR for ClIII (Use WI calcs?)
+F,F          [DIE_ClIV]          !Include LTDR for ClIV (Use WI calcs?)
+F,F          [DIE_ClV]           !Include LTDR for ClV (Use WI calcs?)
+F,F          [DIE_ClSIX]         !Include LTDR for ClSIX (Use WI calcs?)
+F,F          [DIE_ClSEV]         !Include LTDR for ClSEV (Use WI calcs?)
+
+F,F          [DIE_ArIII]         !Include LTDR for ArIII (Use WI calcs?)
+F,F          [DIE_ArIV]          !Include LTDR for ArIV  (Use WI calcs?)
+F,F          [DIE_ArV]           !Include LTDR for ArV   (Use WI calcs?)
+F,F          [DIE_ArSIX]         !Include LTDR for ArSIX (Use WI calcs?)
+F,F          [DIE_ArSEV]         !Include LTDR for ArSEV (Use WI calcs?)
+F,F          [DIE_ArVIII]        !Include LTDR for ArVIII (Use WI calcs?)
+
+F,F          [DIE_K2]            !Include LTDR for K2 (Use WI calcs?)
+F,F          [DIE_KIII]          !Include LTDR for KIII (Use WI calcs?)
+F,F          [DIE_KIV]           !Include LTDR for KIV (Use WI calcs?)
+F,F          [DIE_KV]            !Include LTDR for KV (Use WI calcs?)
+F,F          [DIE_KSIX]          !Include LTDR for KSIX (Use WI calcs?)
+F,F          [DIE_KSEV]          !Include LTDR for KSEV (Use WI calcs?)
+F,F          [DIE_KVIII]         !Include LTDR for KVIII (Use WI calcs?)
+
+F,F          [DIE_Ca2]           !Include LTDR for Ca2 (Use WI calcs?)
+F,F          [DIE_CaIII]         !Include LTDR for CaIII (Use WI calcs?)
+F,F          [DIE_CaIV]          !Include LTDR for CaIV (Use WI calcs?)
+F,F          [DIE_CaV]           !Include LTDR for CaV (Use WI calcs?)
+F,F          [DIE_CaSIX]         !Include LTDR for CaSIX (Use WI calcs?)
+F,F          [DIE_CaSEV]         !Include LTDR for CaSEV (Use WI calcs?)
+F,F          [DIE_CaVIII]        !Include LTDR for CaVIII (Use WI calcs?)
+F,F          [DIE_CaIX]          !Include LTDR for CaIX (Use WI calcs?)
+F,F          [DIE_CaX]           !Include LTDR for CaIX (Use WI calcs?)
+
+F,F          [DIE_Cr2]           !Include LTDR for Cr2 (Use WI calcs?)
+F,F          [DIE_CrIII]         !Include LTDR for CrIII (Use WI calcs?)
+F,F          [DIE_CrIV]          !Include LTDR for CrIV (Use WI calcs?)
+F,F          [DIE_CrV]           !Include LTDR for CrV (Use WI calcs?)
+F,F          [DIE_CrSIX]         !Include LTDR for CrSIX (Use WI calcs?)
+
+F,F          [DIE_Mn2]           !Include LTDR for Mn2 (Use WI calcs?)
+F,F          [DIE_MnIII]         !Include LTDR for MnIII (Use WI calcs?)
+F,F          [DIE_MnIV]          !Include LTDR for MnIV (Use WI calcs?)
+F,F          [DIE_MnV]           !Include LTDR for MnV (Use WI calcs?)
+F,F          [DIE_MnSIX]         !Include LTDR for MnSIX (Use WI calcs?)
+F,F          [DIE_MnSEV]         !Include LTDR for MnSEV (Use WI calcs?)
+
+F,F          [DIE_Fe2]           !Include LTDR  for Fe2 (Use WI calcs?)
+F,F          [DIE_FeIII]         !Include LTDR for FeIII (Use WI calcs?)
+F,F          [DIE_FeIV]          !Include LTDR for FeIV (Use WI calcs?)
+F,F          [DIE_FeV]           !Include LTDR for FeV (Use WI calcs?)
+F,F          [DIE_FeSIX]         !Include LTDR for FeSIX (Use WI calcs?)
+F,F          [DIE_FeSEV]         !Include LTDR for FeSEV (Use WI calcs?)
+F,F          [DIE_FeVIII]        !Include LTDR for FeVIII (Use WI calcs?)
+F,F          [DIE_FeIX]          !Include LTDR for FeIX (Use WI calcs?)
+F,F          [DIE_FeX]           !Include LTDR for FeX (Use WI calcs?)
+F,F          [DIE_FeXI]          !Include LTDR for FeXI (Use WI calcs?)
+F,F          [DIE_FeXII]         !Include LTDR for FeXII (Use WI calcs?)
+
+F,F          [DIE_Nk2]           !Include LTDR for Nk2 (Use WI calcs?)
+F,F          [DIE_NkIII]         !Include LTDR for NkIII (Use WI calcs?)
+F,F          [DIE_NkIV]          !Include LTDR for NkIV (Use WI calcs?)
+F,F          [DIE_NkV]           !Include LTDR for NkV (Use WI calcs?)
+F,F          [DIE_NkSIX]         !Include LTDR for NkSIX (Use WI calcs?)
+F,F          [DIE_NkSEV]         !Include LTDR for NkSEV (Use WI calcs?)
+F,F          [DIE_NkVIII]        !Include LTDR for NkVIII (Use WI calcs?)
+F,F          [DIE_NkIX]          !Include LTDR for NkIX (Use WI calcs?)
+F,F          [DIE_NkX]           !Include LTDR for NkX (Use WI calcs?)
+
+0            [FIX_HI]           !Fix ? levels for HI
+0            [FIX_HYD]          !Fix ? levels for HII
+0            [FIX_HeI]          !Fix ? levels for HeI
+0            [FIX_He2]          !Fix ? levels for He2
+0            [FIX_HE]           !Fix ? levels for HeIII
+
+0            [FIX_CI]           !Fix ? levels for CI
+0            [FIX_C2]           !Fix ? levels for CIII
+0            [FIX_CIII]         !Fix ? levels for CIII
+0            [FIX_CIV]          !Fix ? levels for CIV
+0            [FIX_CV]           !Fix ? levels for CV
+0            [FIX_CSIX]         !Fix ? levels for CSIX
+0            [FIX_CARB]         !Fix ? levels for CSEV
+
+0            [FIX_NI]           !Fix ? levels for NI
+0            [FIX_N2]           !Fix ? levels for N2
+0            [FIX_NIII]         !Fix ? levels for NIII
+0            [FIX_NIV]          !Fix ? levels for NIV
+0            [FIX_NV]           !Fix ? levels for NV
+0            [FIX_NSIX]         !Fix ? levels for NSIX
+0            [FIX_NSEV]         !Fix ? levels for NSEV
+0            [FIX_NIT]          !Fix ? levels for NVIII
+
+0            [FIX_OI]           !Fix ? levels for OI
+0            [FIX_O2]           !Fix ? levels for O2 
+0            [FIX_OIII]         !Fix ? levels for OIII
+0            [FIX_OIV]          !Fix ? levels for OIV
+0            [FIX_OV]           !Fix ? levels for OV
+0            [FIX_OSIX]         !Fix ? levels for OSIX
+0            [FIX_OSEV]         !Fix ? levels for OSEV
+0            [FIX_OVIII]        !Fix ? levels for OVIII
+0            [FIX_OXY]          !Fix ? levels for OIX
+
+0            [FIX_Ne2]          !Fix ? levels for NeIII
+0            [FIX_NeIII]        !Fix ? levels for NeIII
+0            [FIX_NeIV]         !Fix ? levels for NeIV
+0            [FIX_NeV]          !Fix ? levels for NeV
+0            [FIX_NeSIX]        !Fix ? levels for NeSIX
+0            [FIX_NeSEV]        !Fix ? levels for NeSEV
+0            [FIX_NeVIII]       !Fix ? levels for NeVIII
+0            [FIX_NEON]         !Fix ? levels for NeX
+
+0            [FIX_NaI]          !Fix ? levels for NaI
+0            [FIX_Na2]          !Fix ? levels for Na2
+0            [FIX_NaIII]        !Fix ? levels for NaIII
+0            [FIX_NaIV]         !Fix ? levels for NaIV
+0            [FIX_NaV]          !Fix ? levels for NaV
+0            [FIX_NaSIX]        !Fix ? levels for NaSIX
+0            [FIX_NaSEV]        !Fix ? levels for NaSEV
+0            [FIX_NaVIII]       !Fix ? levels for NaVIII
+0            [FIX_NaIX]         !Fix ? levels for NaIX
+0            [FIX_SOD]          !Fix ? levels for NaX
+
+0            [FIX_Mg2]          !Fix ? levels for Mg2
+0            [FIX_MgIII]        !Fix ? levels for MgIII
+0            [FIX_MgIV]         !Fix ? levels for MgIV
+0            [FIX_MgV]          !Fix ? levels for MgV
+0            [FIX_MgSIX]        !Fix ? levels for MgSIX
+0            [FIX_MgSEV]        !Fix ? levels for MgSEV
+0            [FIX_MgVIII]       !Fix ? levels for MgVIII
+0            [FIX_MgIX]         !Fix ? levels for MgIX
+0            [FIX_MgX]          !Fix ? levels for MgX
+0            [FIX_MAG]          !Fix ? levels for MgXI
+
+0            [FIX_Al2]          !Fix ? levels for Al2
+0            [FIX_AlIII]        !Fix ? levels for AlIII
+0            [FIX_AlIV]         !Fix ? levels for AlIV
+0            [FIX_AlV]          !Fix ? levels for AlV
+0            [FIX_AlSIX]        !Fix ? levels for AlSIX
+0            [FIX_AlSEV]        !Fix ? levels for AlSEV
+0            [FIX_AlVIII]       !Fix ? levels for AlVIII
+0            [FIX_AlIX]         !Fix ? levels for AlIX
+0            [FIX_AlX]          !Fix ? levels for AlX
+0            [FIX_AlXI]         !Fix ? levels for AlXI
+0            [FIX_ALUM]         !Fix ? levels for AlII
+
+0            [FIX_SkI]          !Fix ? levels for SkI
+0            [FIX_Sk2]          !Fix ? levels for Sk2
+0            [FIX_SkIII]        !Fix ? levels for SkIII
+0            [FIX_SkIV]         !Fix ? levels for SkIV
+0            [FIX_SkV]          !Fix ? levels for SkV
+0            [FIX_SkSIX]        !Fix ? levels for SkSIX
+0            [FIX_SIL]          !Fix ? levels for SkSEV
+
+0            [FIX_S2]           !Fix ? levels for S2
+0            [FIX_SIII]         !Fix ? levels for SIII
+0            [FIX_SIV]          !Fix ? levels for SIV
+0            [FIX_SV]           !Fix ? levels for SV
+0            [FIX_SSIX]         !Fix ? levels for SSIX
+0            [FIX_SUL]          !Fix ? levels for SUL
+
+0            [FIX_P2]           !Fix ? levels for P2
+0            [FIX_PIII]         !Fix ? levels for PIII
+0            [FIX_PIV]          !Fix ? levels for PIV
+0            [FIX_PV]           !Fix ? levels for PV
+0            [FIX_PSIX]         !Fix ? levels for PSIX
+0            [FIX_PHOS]         !Fix ? levels for PHOS
+
+0            [FIX_Cl2]          !Fix ? levels for Cl2
+0            [FIX_ClIII]        !Fix ? levels for ClIII
+0            [FIX_ClIV]         !Fix ? levels for ClIV
+0            [FIX_ClV]          !Fix ? levels for ClV
+0            [FIX_ClSIX]        !Fix ? levels for ClSIX
+0            [FIX_ClSEV]        !Fix ? levels for ClSEV
+0            [FIX_CHL]          !Fix ? levels for CLH
+
+0            [FIX_ArIII]        !Fix ? levels for ArIII
+0            [FIX_ArIV]         !Fix ? levels for ArIV
+0            [FIX_ArV]          !Fix ? levels for ArV
+0            [FIX_ArSIX]        !Fix ? levels for ArSIX
+0            [FIX_ArSEV]        !Fix ? levels for ArSEV
+0            [FIX_ArVIII]       !Fix ? levels for ArVIII
+0            [FIX_ARG]          !Fix ? levels for ArIX
+
+0            [FIX_K2]           !Fix ? levels for K2
+0            [FIX_KIII]         !Fix ? levels for KIII
+0            [FIX_KIV]          !Fix ? levels for KIV
+0            [FIX_KV]           !Fix ? levels for KV
+0            [FIX_KSIX]         !Fix ? levels for KSIX
+0            [FIX_KSEV]         !Fix ? levels for KSEV
+0            [FIX_KVIII]        !Fix ? levels for KVIII
+0            [FIX_POT]          !Fix ? levels for KIX
+
+0            [FIX_Ca2]          !Fix ? levels for Ca2
+0            [FIX_CaIII]        !Fix ? levels for CaIII
+0            [FIX_CaIV]         !Fix ? levels for CaIV
+0            [FIX_CaV]          !Fix ? levels for CaV
+0            [FIX_CaSIX]        !Fix ? levels for CaSIX
+0            [FIX_CaSEV]        !Fix ? levels for CaSEV
+0            [FIX_CaVIII]       !Fix ? levels for CaVIII
+0            [FIX_CaIX]         !Fix ? levels for CaIX
+0            [FIX_CaX]          !Fix ? levels for CaX
+0            [FIX_CAL]          !Fix ? levels for CaXI
+
+0            [FIX_Cr2]          !Fix ? levels for Cr2
+0            [FIX_CrIII]        !Fix ? levels for CrIII
+0            [FIX_CrIV]         !Fix ? levels for CrIV
+0            [FIX_CrV]          !Fix ? levels for CrV
+0            [FIX_CrSIX]        !Fix ? levels for CrSIX
+0            [FIX_CHRO]         !Fix ? levels for CaSEV
+
+0            [FIX_Mn2]          !Fix ? levels for Mn2
+0            [FIX_MnIII]        !Fix ? levels for MnIII
+0            [FIX_MnIV]         !Fix ? levels for MnIV
+0            [FIX_MnV]          !Fix ? levels for MnV
+0            [FIX_MnSIX]        !Fix ? levels for MnSIX
+0            [FIX_MnSEV]        !Fix ? levels for MnSEV
+0            [FIX_MAN]          !Fix ? levels for MnVIII
+
+0            [FIX_Fe2]           !Fix ? levels for Fe2
+0            [FIX_FeIII]         !Fix ? levels for FeIII
+0            [FIX_FeIV]          !Fix ? levels for FeIV
+0            [FIX_FeV]           !Fix ? levels for FeV
+0            [FIX_FeSIX]         !Fix ? levels for FeSIX
+0            [FIX_FeSEV]         !Fix ? levels for FeSEV
+0            [FIX_FeVIII]        !Fix ? levels for FeVIII
+0            [FIX_FeIX]          !Fix ? levels for FeIX
+0            [FIX_FeX]           !Fix ? levels for FeX
+0            [FIX_FeXI]          !Fix ? levels for FeXI
+0            [FIX_FeXII]         !Fix ? levels for FeXII
+0            [FIX_IRON]          !Fix ? levels for FeXIII
+
+0            [FIX_Nk2]           !Fix ? levels for Nk2
+0            [FIX_NkIII]         !Fix ? levels for NkIII
+0            [FIX_NkIV]          !Fix ? levels for NkIV
+0            [FIX_NkV]           !Fix ? levels for NkV
+0            [FIX_NkSIX]         !Fix ? levels for NkSIX
+0            [FIX_NkSEV]         !Fix ? levels for NkSEV
+0            [FIX_NkVIII]        !Fix ? levels for NkVIII
+0            [FIX_NkIX]          !Fix ? levels for NkIX
+0            [FIX_NkX]           !Fix ? levels for NkX
+0            [FIX_NICK]          !Fix ? levels for NkIX
+
+F            [FIX_NE]           !Fixed Electron density ?
+F            [FIX_IMP]          !Fix impurity species automatically ?
+F            [FIX_T]            !Fixed T ?
+T            [FIX_T_AUTO]       !Automatic variable T
+0.0          [TAU_SCL_T]        !Fix T for this optical depth. 1.0?
+1.4          [T_MIN]
+
+TRIDIAG      [SOL_METH]         !Msol (bmgsit)
+MAJOR        [SCALE_OPT]        !Scaling option (MAJOR, LOCAL, NONE, or GLOBAL)
+1.0D-01      [EPS_TERM]         !Terminate when %frac change smaller
+100.0D0      [MAX_LIN]		!Maximum fractional change allowed for linearization.
+1.0D+10      [MAX_LAM]		!Maximum fractional change allowed for LAMBDA iteration.
+1.0D+100     [MAX_CHNG]         !Terminate with error if %frac change > MAX_CHNG
+F            [COMP_BA]          !Compute BA matrix
+T            [STORE_BA_INV]     !Write BA matrix out
+T            [WR_PRT_INV]       !Write BA matrix out
+2            [N_FIX_BA]         !Number of iterations to hold BA fixed:
+T            [STORE_BA]         !Write BA matrix out
+1.0D-04      [BA_CHK_FAC]       !<< 1 (Values close to 1 reduce BA compuattion)
+5.0D-02        [FIX_BA]           !Fix BA if %change smaller
+
+400.0D0      [LAM_VAL]          !Do LAMBDA iterations if %change >.
+2            [NUM_LAM]          !Number of Lambda iteration per full linearization.
+
+F            [RD_SOL]           !Read in solution matrix
+T            [JC_W_EDD]         !Use Eddington factors to compute continuum J
+T            [JBAR_W_EDD]       !Use Eddington factors to compute JBAR for lines.
+F            [INC_GRID]         !Do an error calculation ?
+F            [ALL_FREQ]         !
+3.19         [ACC_END]          !
+2            [N_INS]            !NPINS
+1            [ST_INT]           !Interpolate from 1 to ?
+30           [END_INT]          !Interpolate from 1 to ?
+50           [ND_QUAD]          !Quadratic interpolation from 50 to ND
+LOG          [INTERP_TYPE]      !LOG or LIN plane
+
+4000         [N_PAR]            !Rate of BA incremantation by BA_PAR.
+
+F            [COMP_F]           !Compute new Continuum f values ?
+1.0D-04      [ACC_F]            !Convergence accuracy for F
+
+T            [DO_NG]            !Use NG acceleration
+5.0D0        [BEG_NG]           !Start  NG when percentage change <
+30           [IBEG_NG]
+10           [BW_NG]
+20           [ITS/NG]           !Number of iterations per NG aceleration
+
+
+Not handeled?
+SOB          [TRANS_GS_He2]       !Method for treating He2(g.s) lines ?

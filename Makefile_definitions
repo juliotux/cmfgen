@@ -1,0 +1,125 @@
+#
+# General Makefile defintions to allow CMFGEN etc to
+# be compiled and linked.
+#
+# NOTE WELL: 
+#      FG are options for f90 files in fixed format
+#      FFREE are options for f90 files in free format.
+#      FD are options for f90 files in fixed format with debug.
+#      FFREED are options for f90 files in free format with debug.
+#      The debug commands are generally not defined, and are not used
+#         unless you manually edit the Makefiles.
+#
+# Installation directory for CMFGEN
+# Site dependent.
+
+HOST :=$(shell hostname)
+
+ifeq ($(HOST),ibis.phyast.pitt.edu)
+INSTALL_DIR=/Users/jdh/cmf_releases/cur_cmf_16sep13/
+endif
+
+ifeq ($(HOST),lorikeet.phyast.pitt.edu)
+INSTALL_DIR=/export/home/jdh/cur_cmf/
+endif
+
+ifeq ($(HOST),gannet.phyast.pitt.edu)
+INSTALL_DIR=/export/home/jdh/cur_cmf/
+endif
+
+#
+# These statements should not be altered.
+#
+
+LIB_DIR=$(INSTALL_DIR)lib/
+MOD_DIR=$(INSTALL_DIR)mod/
+EXE_DIR=$(INSTALL_DIR)exe/
+  
+
+ifeq ($(HOST),ibis.phyast.pitt.edu)
+ F90 = pgf95 -mp -Mlarge_arrays -Ktrap=fp 
+ F90nomp = pgf95  -Mlarge_arrays -Ktrap=fp
+
+
+ FG  = -O2 -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
+ FH  = -O2 -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
+! FG  = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+! FH = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+ FD  = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+
+# FG  = -g  -Mbounds -Mchkstk -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+# FH  = -g  -Mbounds -Mchkstk -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+# FD  = -g  -Mbounds -Mchkstk -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+
+ FFREE  = -Mbackslash -Ktrap=fp -I$(MOD_DIR)
+ FFRED  = -Mbackslash -g -Ktrap=fp -I$(MOD_DIR)
+
+ BLAS=-lblas
+ LAPACK=-llapack
+# LOCLIB=-L/opt/pgi/osx86-64/12.9/lib
+ LOCLIB=-L/opt/pgi/osx86-64/11.8/lib
+ PGLIB= -pgf77libs -L/Users/jdh/pgplot/pgplot -lpgplot 
+ X11LIB=-L/usr/X11R6/lib -lX11
+
+endif
+
+#
+# Linking and compilig instructions for gfortran.
+#
+
+ifeq ($(HOST),gfortran.phyast.pitt.edu)
+ F90 = gfortran -fopenmp
+ F90nomp = gfortran
+ FG  =  -ffixed-line-length-0 -fno-backslash -fd-lines-as-comments -I$(MOD_DIR) -J$(MOD_DIR)
+ FH  =  -ffixed-line-length-0 -fno-backslash -fd-lines-as-comments -I$(MOD_DIR) -J$(MOD_DIR)
+ FD  = -g  -ffixed-line-length-0 -fno-backslash -fd-lines-as-comments -I$(MOD_DIR) -J$(MOD_DIR)
+ FFREE  = -fno-backslash -I$(MOD_DIR) -J$(MOD_DIR)
+ FFRED  = -fno-backslash -g -I$(MOD_DIR) -J$(MOD_DIR)
+
+ BLAS=-lblas
+ LAPACK=-llapack
+ LOCLIB=-L/usr/lib -L/opt/pgi/osx86-64/12.9/lib
+ X11LIB=-L/usr/X11R6/lib -lX11
+endif
+
+
+ifeq ($(HOST),lorikeet.phyast.pitt.edu)
+
+ F90 = pgf95 -mp -fPIC -Mlarge_arrays 
+ F90nomp = pgf95 -Mlarge_arrays 
+
+ FG  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FH  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FD  = -g  -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FFREE  = -Mbackslash  -I$(MOD_DIR)
+ FFRED  = -Mbackslash -g -Ktrap=fp -I$(MOD_DIR)
+
+ BLAS=
+ LAPACK=-lacml -lacml_mv
+ LOCLIB= 
+
+ PGLIB= -pgf77libs -L/usr/lib64 -lpgplot 
+ X11LIB=-L/usr/lib64/ghostscript/8.15 -lX11
+
+endif
+
+ifeq ($(HOST),gannet.phyast.pitt.edu)
+
+ F90 = pgf95 -mp -fPIC -Mlarge_arrays 
+ F90nomp = pgf95 -Mlarge_arrays 
+
+ FG  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FH  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FD  = -g  -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FFREE  = -Mbackslash  -I$(MOD_DIR)
+ FFRED  = -Mbackslash -g -Ktrap=fp -I$(MOD_DIR)
+
+ BLAS=
+ LAPACK=-lacml -lacml_mv
+ LOCLIB= 
+
+ PGLIB= -g77libs -L/usr/pgplot -lpgplot
+ X11LIB=-L/usr/lib64/lib -lX11
+
+endif
+

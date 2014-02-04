@@ -1,0 +1,112 @@
+!
+! Subroutine to increment the variation matrix due to terms which
+! depend directly on the intensity J. The Radiative equilibrium equation
+! is not altered.
+!
+! Routine also increments the ionization equilibrium equations.
+!
+	SUBROUTINE VSEBYJ_MULTI_V6(ID,WSE,dWSEdT,
+	1             HN,HNST,dlnHNST_dlnT,NLEV,
+	1             DI,DIST,dlnDIST_dlnT,N_DI,ION_LEV,
+	1             ED,T,JREC,dJRECdT,JPHOT,
+	1             NUM_BNDS,ND,DST,DEND)
+	USE STEQ_DATA_MOD
+	IMPLICIT NONE
+!
+! Altered : 01-Apr-2001 Changed to use STEQ_DATA_MOD
+!                       Extensive chnages in call (changed to V6).
+! Altered : 08-Jun-1995 EDGE frequency delted from call.
+!                       Change from _V1 to _V2 as call changed.
+! Created - May 1995 
+!
+	INTEGER*4 ID		!Number of ionization stage
+	INTEGER*4 NLEV		!Numer of levls in HN
+        INTEGER*4 N_DI		!Number of levels in target ion
+	INTEGER*4 ION_LEV	!Super level target in ION
+	INTEGER*4 ND		!Number of depth points
+        INTEGER*4 NION		!Numer of Eqns. in ionization matrix.
+!
+! NB --- NION is the total number of ionic species i.e. for
+! HI,HII,CI,CII,CIII,CIV,CV would have NION=5 (dont count HII and CV).
+!
+	INTEGER*4 NUM_BNDS,DST,DEND
+!
+	REAL*8 WSE(NLEV,ND),dWSEdT(NLEV,ND)
+!
+! Populations of species undergoing photoionization.
+!
+	REAL*8 HN(NLEV,ND),HNST(NLEV,ND),dlnHNST_dlnT(NLEV,ND)
+!
+! Ion populations.
+!
+	REAL*8 DI(N_DI,ND),DIST(N_DI,ND)
+	REAL*8 dlnDIST_dlnT(N_DI,ND)
+!
+	REAL*8 ED(ND),T(ND)
+	REAL*8 JREC(ND)
+	REAL*8 dJRECdT(ND)
+	REAL*8 JPHOT(ND)
+!
+! Constants for opacity etc.
+!
+	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
+	COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
+!
+! Local variables
+!
+	INTEGER*4 J,K,L
+	INTEGER*4 NT
+	INTEGER*4 ION_V
+	INTEGER*4 ION_EQ
+	REAL*8 T3
+	REAL*8 B_RAT
+!
+! REV_HNST referes to the LTE population  of the level defined with respect
+! to the actual destination (target) level.
+!
+	REAL*8 REV_HNST
+	REAL*8 WSE_BY_RJ,DI_FAC,ED_FAC,T_FAC
+!
+!
+!
+	IF(ION_LEV .EQ. 0)RETURN
+!
+	NT=SE(ID)%N_IV
+	ION_V=NLEV+ION_LEV
+        ION_EQ=SE(ID)%ION_LEV_TO_EQ_PNT(ION_LEV)
+!
+	DO K=DST,DEND			!Which depth point.
+	  L=(NUM_BNDS/2)+1
+	  B_RAT=(DI(ION_LEV,K)/DIST(ION_LEV,K))*(DIST(1,K)/DI(1,K))
+	  DO J=1,NLEV			!Which equation (for S.E. only)
+	    IF(WSE(J,K) .NE. 0)THEN
+	      WSE_BY_RJ=WSE(J,K)*JPHOT(K)
+	      SE(ID)%BA(J,J,L,K)=SE(ID)%BA(J,J,L,K)-WSE_BY_RJ
+!
+	      REV_HNST=HNST(J,K)*B_RAT
+	      T3=REV_HNST*WSE(J,K)*JREC(K)
+	      DI_FAC=T3/DI(ION_LEV,K)
+	      ED_FAC=T3/ED(K)
+	      T_FAC=T3*( dlnHNST_dlnT(J,K) +
+	1             (dlnDIST_dlnT(1,K)-dlnDIST_dlnt(ION_LEV,K)) )/T(K) +
+	1             dWSEdT(J,K)*(REV_HNST*JREC(K)-HN(J,K)*JPHOT(K)) + 
+	1             REV_HNST*WSE(J,K)*dJRECdT(K)
+!
+	      SE(ID)%BA(J,ION_V,L,K)=SE(ID)%BA(J,ION_V,L,K)  + DI_FAC
+	      SE(ID)%BA(J,NT-1,L,K) =SE(ID)%BA(J,NT-1,L,K)   + ED_FAC
+	      SE(ID)%BA(J,NT,L,K)   =SE(ID)%BA(J,NT,L,K)     + T_FAC
+!
+! Include ionizations/recombinations implicitly in the rate equation
+! of the target ion (eg He++(gs) for He+ ion/recoms ). 
+!
+	      SE(ID)%BA(ION_EQ,J,L,K)    =SE(ID)%BA(ION_EQ,J,L,K)     + WSE_BY_RJ
+	      SE(ID)%BA(ION_EQ,ION_V,L,K)=SE(ID)%BA(ION_EQ,ION_V,L,K) - DI_FAC
+	      SE(ID)%BA(ION_EQ,NT-1,L,K) =SE(ID)%BA(ION_EQ,NT-1,L,K)  - ED_FAC
+	      SE(ID)%BA(ION_EQ,NT,L,K)   =SE(ID)%BA(ION_EQ,NT,L,K)    - T_FAC 
+!
+	    END IF		!WSE(J,K) .NE. 0
+	  END DO
+	END DO
+!
+	RETURN
+	END

@@ -1,0 +1,20 @@
+	SUBROUTINE HIST_ADJ(X,Y,NX)
+	IMPLICIT NONE
+	INTEGER NX,I
+	REAL*4 X(NX),Y(NX)
+C
+	IF(Y(NX) .NE. 0)THEN
+	  WRITE(2,*)'Warning --- Y(NX) .NE. 0 in HIST_ADJ'
+	  WRITE(2,*)'HIST_ADJ assumes bin connects adjacent pixels'
+	END IF
+C
+C
+C
+	CALL PGMOVE(X(1),Y(1))
+	DO I=1,NX-1
+	  CALL PGDRAW(X(I+1),Y(I))
+	  CALL PGDRAW(X(I+1),Y(I+1))
+	END DO
+C
+	RETURN
+	END

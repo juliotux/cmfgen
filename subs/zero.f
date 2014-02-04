@@ -1,0 +1,12 @@
+	SUBROUTINE ZERO(Z,ND)
+	IMPLICIT NONE
+C
+	INTEGER ND
+	REAL*8 Z(ND)
+C
+C Altered 28-May-1996 : F90 updated, IMPLCIT NONE installed.
+C
+	Z(:)=0.0D0
+C
+	RETURN
+	END

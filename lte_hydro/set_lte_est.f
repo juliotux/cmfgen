@@ -1,0 +1,119 @@
+!
+! Subroutine to provide population, T, and ED estimates for a new model.
+! Routine replaces main IF(NEWMOD) ... END IF section in CMFGEN_SUB.
+! This routine will be easier to revise than CMFGEN.
+!
+
+	SUBROUTINE SET_LTE_EST(POPS,Z_POP,MEAN_ATOMIC_WEIGHT,ABUND_SUM,
+	1                            LUER,LUIN,ND,NT)
+	USE ANG_QW_MOD
+	USE MOD_CMFGEN
+	USE OPAC_MOD
+	USE CONTROL_VARIABLE_MOD
+	USE LINE_VEC_MOD
+	USE LINE_MOD
+	IMPLICIT NONE
+!
+! Created 
+!
+	INTEGER ND
+	INTEGER NT
+	INTEGER LUER				!Unit for error messages
+	INTEGER LUIN				!Unit for input
+!
+	REAL*8 POPS(NT,ND)
+	REAL*8 Z_POP(NT)			!Vector containing Z of atom/ion (not core)
+	REAL*8 MEAN_ATOMIC_WEIGHT
+	REAL*8 ABUND_SUM
+!
+	REAL*8 T1
+	REAL*8 DELTA_T
+	REAL*8 DELTA_ED
+	REAL*8 ATOM_MIN_VAL,ATOM_MAX_VAL
+	REAL*8 T_MIN_VAL,T_MAX_VAL
+	REAL*8 ATOMIC_MASS_UNIT
+	EXTERNAL ATOMIC_MASS_UNIT
+!
+	INTEGER N_ED
+	INTEGER N_T
+	INTEGER I,J,L
+	INTEGER ISPEC
+	INTEGER ID
+!
+	OPEN(UNIT=LUIN,STATUS='OLD',ACTION='READ',FILE='GRID_PARAMS')
+	  READ(LUIN,*)N_T,N_ED
+	  IF(N_ED*N_T .NE. ND)THEN
+	    WRITE(LUER,*)'Error --- invalid table size'
+	    WRITE(LUER,*)'Inconsistent with ND'
+	    STOP
+	  END IF
+	  READ(LUIN,*)T_MIN_VAL,T_MAX_VAL
+	  READ(LUIN,*)ATOM_MIN_VAL,ATOM_MAX_VAL
+	CLOSE(UNIT=LUIN)
+!
+	DELTA_T=0.0D0
+	DELTA_ED=0.0D0
+	IF(N_ED .NE. 1)DELTA_ED=LOG(ATOM_MAX_VAL/ATOM_MIN_VAL)/(N_ED-1)
+	IF(N_T .NE. 1)DELTA_T=LOG(T_MAX_VAL/T_MIN_VAL)/(N_T-1)
+	WRITE(6,*)'DELTA_ED=',DELTA_ED
+	WRITE(6,*)'DELTA_T=',DELTA_T
+!
+	L=0
+	DO J=1,N_ED
+	  DO I=1,N_T
+	    L=L+1
+	    POP_ATOM(L)=EXP(LOG(ATOM_MIN_VAL)+(J-1)*DELTA_ED)
+	    T(L)=EXP(LOG(T_MIN_VAL)+(I-1)*DELTA_T)
+	  END DO
+	END DO
+!
+	DO ISPEC=1,NUM_SPECIES
+	  DO L=1,ND
+	    POP_SPECIES(L,ISPEC)=AT_ABUND(ISPEC)*POP_ATOM(L)/ABUND_SUM
+	  END DO
+	END DO
+	T1=ATOMIC_MASS_UNIT()*MEAN_ATOMIC_WEIGHT
+!
+	T1=ATOMIC_MASS_UNIT()*MEAN_ATOMIC_WEIGHT
+	DO I=1,ND
+	  DENSITY(I)=POP_ATOM(I)*T1                     !gm/cm^3
+	END DO
+!	      
+	CALL DET_ED(ND,ABUND_SUM,DO_LEV_DISSOLUTION)
+!
+	DO ID=1,NUM_IONS-1
+	  IF(ATM(ID)%XzV_PRES)THEN
+	    ATM(ID)%XzV_F=ATM(ID)%XzVLTE_F
+	    ATM(ID)%XzV=ATM(ID)%XzVLTE
+	  END IF
+	END DO
+!
+! Store all quantities in POPS array. 
+!
+        DO ID=1,NUM_IONS-1
+            CALL IONTOPOP(POPS,  ATM(ID)%XzV, ATM(ID)%DXzV, ED,T,
+	1          ATM(ID)%EQXzV, ATM(ID)%NXzV, NT,ND, ATM(ID)%XzV_PRES)
+        END DO
+!
+!
+! Set the vector Z_POP to contain the ionic charge for each species.
+!
+	Z_POP(1:NT)=0.0D0
+	DO ID=1,NUM_IONS-1
+	  CALL SET_Z_POP(Z_POP, ATM(ID)%ZXzV, ATM(ID)%EQXzV,
+	1              ATM(ID)%NXzV, NT, ATM(ID)%XzV_PRES)
+	END DO
+!
+	DO J=1,ND
+	  POPION(J)=0.0D0
+	  DO I=1,NT
+	     IF(Z_POP(I) .GT. 0)POPION(J)=POPION(J)+POPS(I,J)
+	  END DO
+	END DO
+!
+! Evaluates LTE populations for both the FULL atom, and super levels.
+!
+	CALL EVAL_LTE_V5(DO_LEV_DISSOLUTION,ND)
+!
+	RETURN
+	END

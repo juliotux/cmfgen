@@ -1,4 +1,0 @@
-cmfgen
-======
-
-CMFGEN mirror code.

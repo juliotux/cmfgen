@@ -1,0 +1,340 @@
+	SUBROUTINE COMP_JBAR(ETA_CONT,CHI_CONT,ESEC,ETAL,CHIL,
+	1                T,V,SIGMA,R,P,AQW,HMIDQW,KQW,NMIDQW,
+	1                JBAR,DIF,DTDR,IC,THK_CONT,
+	1                VTURB,VDOP_FG_FRAC,VDOP_MOM_FRAC,
+	1                RED_EXT,AMASS,LINE_FREQ,
+	1                METHOD,FG_SOL_OPTIONS,N_TYPE,
+	1                LEV,NLEV,NLF,NC,NP,ND)
+!
+	IMPLICIT NONE
+!
+	INTEGER*4 ND
+	INTEGER*4 NC
+	INTEGER*4 NP
+	INTEGER*4 NLF
+	INTEGER*4 NLEV
+!	
+	REAL*8 ETA_CONT(ND)
+	REAL*8 CHI_CONT(ND)
+	REAL*8 ESEC(ND)
+	REAL*8 ETAL(ND)
+	REAL*8 CHIL(ND)
+	REAL*8 V(ND)
+	REAL*8 SIGMA(ND)
+	REAL*8 R(ND)
+	REAL*8 P(NP)
+	REAL*8 T(ND)
+	REAL*8 JBAR(ND)
+!
+	REAL*8 AQW(ND,NP)
+	REAL*8 HMIDQW(ND,NP)
+	REAL*8 KQW(ND,NP)
+	REAL*8 NMIDQW(ND,NP)
+!
+	REAL*8 DTDR
+	REAL*8 IC
+	REAL*8 RED_EXT
+	REAL*8 AMASS
+	REAL*8 VTURB
+	REAL*8 VDOP_FG_FRAC
+	REAL*8 VDOP_MOM_FRAC
+	REAL*8 LINE_FREQ
+!
+	LOGICAL DIF
+	LOGICAL THK_CONT
+!
+	CHARACTER*(*) METHOD
+	CHARACTER*(*) FG_SOL_OPTIONS
+	CHARACTER*(*) N_TYPE
+!
+	INTEGER*4 LEV(NLEV)
+!
+	COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
+	COMMON/LINE/ OPLIN,EMLIN
+	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ,OPLIN,EMLIN
+!
+	EXTERNAL SPEED_OF_LIGHT
+	REAL*8 SPEED_OF_LIGHT
+!
+! Local arrays and variables
+!
+	REAL*8 RJ(ND)
+	REAL*8 RJ_ES(ND)
+	REAL*8 RJ_STORE(ND,NLF)
+	REAL*8 RJ_ES_STORE(ND,NLF)
+!
+	REAL*8 LAM(NLF)
+	REAL*8 RSQH_STORE(NLF,ND)
+	REAL*8 RSQJ_STORE(NLF,ND)
+!
+	REAL*8 ETA(ND)
+	REAL*8 CHI(ND)
+	REAL*8 RH(ND)
+	REAL*8 RSQHNU(ND)
+	REAL*8 FEDD(ND)
+	REAL*8 GEDD(ND)
+	REAL*8 N_ON_J(ND)
+!
+	REAL*8 CHI_PREV(ND)
+	REAL*8 ETA_PREV(ND)
+	REAL*8 FEDD_PREV(ND)
+	REAL*8 GEDD_PREV(ND)
+	REAL*8 JNU_PREV(ND)
+	REAL*8 RSQHNU_PREV(ND)
+	REAL*8 N_ON_J_PREV(ND)
+!
+	REAL*8 TA(ND)
+	REAL*8 TB(ND)
+	REAL*8 TC(ND)
+	REAL*8 LINE_QW(ND)
+	REAL*8 NORM_CHK(ND)
+	REAL*8 FOLD(ND)
+	REAL*8 VDOP_VEC(ND)
+!
+	REAL*8 IPLUS(NP)
+!
+	REAL*8 HBC_CMF(3)
+	REAL*8 INBC(3)
+	REAL*8 NBC_CMF(3)
+!
+	REAL*8 HBC_PREV(3)
+	REAL*8 INBC_PREV(3)
+	REAL*8 NBC_PREV(3)
+!
+	REAL*8 FL
+	REAL*8 FL_OLD
+	REAL*8 VDOP
+	REAL*8 DOP_NU
+	REAL*8 DEL_NU
+	REAL*8 NU_ST
+	REAL*8 EMHNUKT
+	REAL*8 DBB 
+	REAL*8 dLOG_NU
+	REAL*8 T1
+	REAL*8 T2
+!
+	INTEGER*4 I
+	INTEGER*4 L
+	INTEGER*4 ML
+	INTEGER*4 FG_COUNT
+!
+	LOGICAL CONT_VEL
+	LOGICAL FIRST_FREQ
+	LOGICAL NEW_FREQ
+	LOGICAL INACCURATE
+	LOGICAL COHERENT_ES
+!
+	CHARACTER*10 TEMP_STR
+!
+	CONT_VEL=.TRUE.
+	COHERENT_ES=.TRUE.
+!
+	JBAR(:)=0.0D0
+	RJ_STORE(:,:)=0.0D0
+	RJ_ES_STORE(:,:)=0.0D0
+	FOLD(:)=0.0D0
+	NORM_CHK(:)=0.0D0
+!
+	T1=SUM(T)/ND
+	VDOP=12.85D0*SQRT( AMASS/T1 + (VTURB/12.85D0)**2 )
+	DOP_NU=LINE_FREQ*VDOP/2.998D+05
+	DEL_NU=(6.0D0+RED_EXT)*DOP_NU/(NLF-1)
+	FIRST_FREQ=.TRUE.
+	NU_ST=LINE_FREQ+6.0D0*DOP_NU
+	VDOP_VEC(:)=VDOP
+!
+	WRITE(6,*)'ND=',ND
+	WRITE(6,*)'NLF=',NLF
+	WRITE(6,*)'VTURB=',VTURB
+	WRITE(6,*)'AMASS=',AMASS
+	WRITE(6,*)'LINE_FREQ=',LINE_FREQ
+	WRITE(6,*)'MEANT=',T1
+	WRITE(6,*)'DOP_NU=',DOP_NU
+	WRITE(6,*)'DEL_NU=',DEL_NU
+	WRITE(6,*)'DEL_NU/DOP_NU=',DEL_NU/DOP_NU
+!
+	DO ML=1,NLF
+!
+	  FL= NU_ST-(ML-1)*DEL_NU
+!
+! Compute DBB for diffusion approximation. DBB=dB/dR
+! and DDBBDT= dB/dTR .
+!
+	  T1=HDKT*FL/T(ND)
+	  EMHNUKT=EXP(-T1)
+	  T2=1.0D0-EMHNUKT
+	  DBB=TWOHCSQ*( FL**3 )*T1*DTDR/T(ND)*EMHNUKT/(T2**2)
+!
+	  T1=1.0D-15/1.77245385095516D0/DOP_NU
+	  DO I=1,ND
+            T2=T1*EXP(- ((FL-LINE_FREQ)/DOP_NU)**2 )
+	    CHI(I)=CHI_CONT(I)+T2*CHIL(I)
+	    ETA(I)=ETA_CONT(I)+T2*ETAL(I)
+	    LINE_QW(I)=1.0D+15*DEL_NU*T2
+	    NORM_CHK(I)=NORM_CHK(I)+LINE_QW(I)
+	  END DO
+C
+C NB: CHI_PREV is used to refer to the continuum opacity at the previous
+C frequency. Is does not need to be multiplied by CLUMP_FAC, as it is compared
+C directly to CHI_CONT.
+C
+C For HBC and NBC only the first vector element is used.
+C
+	  NEW_FREQ=.TRUE.
+	  IF(FIRST_FREQ)THEN
+	    dLOG_NU=0.0D0
+	    DO I=1,ND
+	      RJ(I)=0.0D0
+	      CHI_PREV(I)=CHI(I)
+	      ETA_PREV(I)=ETA(I)
+	      FEDD_PREV(I)=0.0D0		!Not required.
+	      GEDD_PREV(I)=0.0D0
+	      JNU_PREV(I)=0.0D0
+	      N_ON_J_PREV(I)=0.0D0
+	      RSQHNU_PREV(I)=0.0D0
+	    END DO
+	    HBC_PREV(:)=0.0D0		!1:3
+	    NBC_PREV(:)=0.0D0		!1:3
+	    HBC_CMF(:)=0.0D0		!1:3
+	    NBC_CMF(:)=0.0D0		!1:3
+	    FG_COUNT=0
+	  ELSE
+	    dLOG_NU=dLOG(FL_OLD/FL)
+	    DO I=1,ND
+	      FEDD_PREV(I)=FEDD(I)
+	      GEDD_PREV(I)=GEDD(I)
+	      N_ON_J_PREV(I)=N_ON_J(I)
+	      JNU_PREV(I)=RJ(I)
+	      RSQHNU_PREV(I)=RSQHNU(I)
+	    END DO
+	    HBC_PREV(:)=HBC_CMF(:)
+	    NBC_PREV(:)=NBC_CMF(:)
+	  END IF
+!
+!	 RJ(:,ML)=RJ_STORE(:,ML)
+!	 IF(.NOT. COHERENT_ES)THEN
+!	    RJ_ES(:,ML)=RJ_ES_STORE(:,ML)
+!	 END IF
+C
+C We will do this twice, so that F is of higher accuracy.
+C
+	  INACCURATE=.TRUE.
+	  L=0
+	  DO WHILE(INACCURATE)
+C
+	     IF(COHERENT_ES)THEN
+	       TA(1:ND)=ETA(1:ND)+ESEC(1:ND)*RJ(1:ND)
+	     ELSE
+	       TA(1:ND)=ETA(1:ND)+ESEC(1:ND)*RJ_ES(1:ND)
+	     END IF
+C
+C NB Using TA for ETA, TC for JNU_VEC, and TB for HNU_VEC
+C
+	     IF(VDOP_FG_FRAC .NE. 0)THEN
+	       CALL FG_J_CMF_V10(TA,CHI,ESEC,V,SIGMA,R,P,
+	1                  TC,TB,FEDD,GEDD,N_ON_J,
+	1                  AQW,HMIDQW,KQW,NMIDQW,
+	1                  INBC,HBC_CMF,NBC_CMF,
+	1                  IPLUS,FL,dLOG_NU,DIF,DBB,IC,
+	1                  VDOP_VEC,VDOP_FG_FRAC,
+	1                  METHOD,FG_SOL_OPTIONS,THK_CONT,
+	1                  FIRST_FREQ,NEW_FREQ,N_TYPE,NC,NP,ND)
+	     ELSE
+	       CALL FG_J_CMF_V9(TA,CHI,ESEC,V,SIGMA,R,P,
+	1                  TC,TB,FEDD,GEDD,N_ON_J,
+	1                  AQW,HMIDQW,KQW,NMIDQW,
+	1                  INBC,HBC_CMF,NBC_CMF,
+	1                  IPLUS,FL,dLOG_NU,DIF,DBB,IC,
+	1                  METHOD,FG_SOL_OPTIONS,THK_CONT,
+	1                  FIRST_FREQ,NEW_FREQ,N_TYPE,NC,NP,ND)
+	     END IF
+	     FG_COUNT=FG_COUNT+1
+C
+	     IF(COHERENT_ES)THEN
+	       TA(1:ND)=ETA(1:ND)
+	     ELSE
+	       TA(1:ND)=ETA(1:ND)+ESEC(1:ND)*RJ_ES(1:ND)
+	     END IF
+	     IF(VDOP_MOM_FRAC .NE. 0)THEN
+	       CALL MOM_J_CMF_V6(TA,CHI,ESEC,V,SIGMA,R,
+	1                  FEDD,GEDD,N_ON_J,RJ,RSQHNU,
+	1                  VDOP_VEC,VDOP_MOM_FRAC,
+	1                  HBC_CMF,INBC,NBC_CMF,
+	1                  FL,dLOG_NU,DIF,DBB,IC,
+	1                  N_TYPE,METHOD,COHERENT_ES,
+	1                  FIRST_FREQ,NEW_FREQ,NC,NP,ND)
+	     ELSE
+	       CALL MOM_J_CMF_V5(TA,CHI,ESEC,V,SIGMA,R,
+	1     	           FEDD,GEDD,N_ON_J,
+	1                  FEDD_PREV,GEDD_PREV,N_ON_J_PREV,
+	1                  RJ,RSQHNU,JNU_PREV,RSQHNU_PREV,
+	1                  HBC_CMF,INBC,NBC_CMF,
+	1                  HBC_PREV,INBC_PREV,NBC_PREV,
+	1                  FL,dLOG_NU,DIF,DBB,IC,METHOD,COHERENT_ES,
+	1                  FIRST_FREQ,NEW_FREQ,NC,NP,ND)
+	     END IF
+	     WRITE(163,'(5ES14.6)')FL,TC(3),RJ(3),TB(3)*0.25*(R(3)+R(4))**2,RSQHNU(3)
+C
+C We set NEW_FREQ to false so that FG_J_CMF continues to use the same
+C AV_PREV and CV_PREV. NEW_FREQ must be set to true again outside the
+C F iteration loop.
+C
+	     NEW_FREQ=.FALSE.
+C
+C Update "inaccurate" iteration counter
+C
+	      L=L+1
+C
+C Check if F has converged.
+C
+	      INACCURATE=.FALSE.
+	      IF(L .LT. 20)THEN
+	        T1=0.0D0
+	        DO I=1,ND
+	          T1=MAX(ABS(FOLD(I)-FEDD(I)),T1)        
+	          FOLD(I)=FEDD(I)
+	        END DO
+	        IF(T1 .GT. 1.0D-07)INACCURATE=.TRUE.
+	      END IF
+C
+	      IF(L .GT. 10)THEN
+	         WRITE(6,*)'Possible error converging f - T1 is',T1
+	      	 INACCURATE=.FALSE.
+	      END IF
+	  END DO
+!
+	  LAM(ML)=1.0D-07*SPEED_OF_LIGHT()/FL
+	  RSQH_STORE(ML,1:ND)=RSQHNU(1:ND)
+	  RSQJ_STORE(ML,1:ND)=RJ(1:ND)*R(1:ND)*R(1:ND)
+!
+	  FIRST_FREQ=.FALSE.
+	  FL_OLD=FL
+	  JBAR(:)=JBAR(:)+LINE_QW(:)*RJ(:)
+	  TEMP_STR='RSQH'
+	  WRITE(TEMP_STR(5:7),'(I3.3)')ML
+	  CALL WRITV(RSQHNU,ND-1,TEMP_STR,27)
+	  TEMP_STR='RJ'
+	  WRITE(TEMP_STR(3:5),'(I3.3)')ML
+	  CALL WRITV(RJ,ND,TEMP_STR,28)
+	END DO
+	TEMP_STR='JBAR'
+	CALL WRITV(JBAR,ND,TEMP_STR,28)
+	TEMP_STR='NORM_CHK'
+	CALL WRITV(NORM_CHK,ND,TEMP_STR,28)
+!
+	I=1
+	DO WHILE(LEV(I) .GE. 1 .AND. LEV(I) .LE. ND)
+	  CALL DP_CURVE(NLF,LAM,RSQJ_STORE(:,LEV(I)))
+	  I=I+1
+	  IF(I .GT. NLEV)EXIT
+	END DO
+!
+	I=1
+	DO WHILE(LEV(I) .GE. 1 .AND. LEV(I) .LE. ND)
+	  CALL DP_CURVE(NLF,LAM,RSQH_STORE(:,LEV(I)))
+	  I=I+1
+	  IF(I .GT. NLEV)EXIT
+	END DO
+!
+	RETURN
+	END 

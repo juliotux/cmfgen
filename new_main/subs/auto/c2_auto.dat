@@ -1,0 +1,23 @@
+************************************************************************************************************************
+
+                 Autoionization probabilities for C2
+
+                    g       A*
+************************************************************************************************************************
+
+28-Aug-2001                                      !Format date
+28-Aug-2001                                      !Date
+10                                               !Number of energy levels
+1.0D+07                                          !Default autoionization rate
+3                                                !Entry number for autoionization rates
+
+2s_2p(3Po)3d_4Po    12     3.8D+07
+2s_2p(3Po)4s_4Po    12     4.2D+07
+2s_2p(3Po)4d_4Fo    28     4.3D+07
+2s_2p(3Po)4d_4Po    12     1.5D+08
+2s_2p(3Po)4d_4Do    20     3.3D+08
+2s_2p(3Po)4f_4Fe    28     1.1D+08
+2s_2p(3Po)4f_4De    20     2.0D+08
+2s_2p(3Po)4f_4Ge    36     1.6D+08
+2s_2p(3Po)5d_4Do    20     3.5D+08
+2s_2p(3Po)5f_4Ge    36     1.2D+08

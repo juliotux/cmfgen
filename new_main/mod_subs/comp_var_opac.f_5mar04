@@ -1,0 +1,201 @@
+!
+! Subroutine to compute how the continuum opacities and emissivities vary with
+! the populations.
+!
+	SUBROUTINE COMP_VAR_OPAC(POPS,RJ,FL,CONT_FREQ,FREQ_INDX,
+	1                SECTION,ND,NT,LST_DEPTH_ONLY)
+	USE MOD_CMFGEN
+	USE CONTROL_VARIABLE_MOD
+	USE OPAC_MOD
+	IMPLICIT NONE
+!
+! Created 26-Feb-2004 : Based on VAROPAC_V4
+!
+	INTEGER ND
+	INTEGER NT
+!
+	REAL*8 POPS(NT,ND)
+	REAL*8 RJ(ND)
+	REAL*8 FL
+	REAL*8 CONT_FREQ
+	INTEGER FREQ_INDX
+	CHARACTER*(*) SECTION
+	LOGICAL LST_DEPTH_ONLY
+!
+! Constants for opacity etc.
+!
+        COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
+        REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
+!
+! Local variables.
+!
+	REAL*8 T1,T2,T3,T4
+	INTEGER J
+	INTEGER K
+	INTEGER L
+	INTEGER ID
+	INTEGER PHOT_ID
+!
+C Compute the opacity AND emissivity variation as a function of the changes
+C in population levels. As the variation is linear, they can be added
+C independently. Note that the VCHI and VETA are not zeroed when the
+C variation routines are called.
+C
+	IF(COMPUTE_NEW_CROSS)THEN
+C
+C Zero VCHI and VETA, then allow for the variation of the electron
+C scattering opacity and emissivity with ED.
+C
+C TA is used as a work vector.
+C
+	  CALL DP_ZERO(VCHI,NT*ND)
+	  CALL DP_ZERO(VETA,NT*ND)
+	  CALL DP_ZERO(VCHI_ALL,NT*ND)
+	  CALL DP_ZERO(VETA_ALL,NT*ND)
+C
+C We use EMHNUKT_CONT since we are evaluating the variation in the opacities
+C and emissivities at CONT_FREQ, not FL
+C
+	  DO L=1,ND
+	    EMHNUKT_CONT(L)=EXP(-HDKT*CONT_FREQ/T(L))
+	  END DO
+C
+	  CALL TUNE(1,'VAR_OP_V8')
+	  DO ID=1,NUM_IONS
+	    IF(ATM(ID)%XzV_PRES)THEN
+	      DO J=1,ATM(ID)%N_XzV_PHOT
+	        PHOT_ID=J
+	        CALL VAR_OP_V8(VCHI,VETA,VCHI_ALL,VETA_ALL,
+	1         ATM(ID)%XzV, ATM(ID)%XzVLTE, ATM(ID)%dlnXzVLTE_dlnT, ATM(ID)%NXzV,
+	1         ATM(ID)%XzVLTE_F, ATM(ID)%EDGEXzV_F, ATM(ID)%NXzV_F, ATM(ID)%F_TO_S_XzV,
+	1         ATM(ID+1)%XzV,    ATM(ID+1)%XzVLTE,  ATM(ID+1)%dlnXzVLTE_dlnT,
+	1         ATM(ID+1)%NXzV,   PHOT_ID,           ATM(ID)%XzV_ION_LEV_ID(J),
+	1         ED,T,EMHNUKT_CONT,IMP_VAR,
+	1         CONT_FREQ,ATM(ID)%ZXzV,ID,L_TRUE,
+	1         ATM(ID)%EQXzV,ATM(ID+1)%EQXzV,NT,ND,LST_DEPTH_ONLY)
+	      END DO
+	    END IF
+	 END DO
+	 CALL TUNE(2,'VAR_OP_V8')
+C
+C 
+C
+C Add in 2-photon opacities and emissivities.
+C
+	  CALL TUNE(1,'TWO_P')
+	  CALL TWO_PHOT_VAR_OPAC(VETA,VCHI,POPS,T,CONT_FREQ,ND,NT)
+	  CALL TUNE(2,'TWO_P')
+!
+! Altered 04-Mar-2004: Call inserted directly into subroutine. No longer done
+!                        as include file.
+! Altered 21-Jun-2002: Changed to V4 and inserted LST_DEPTH_ONLY in call.
+!
+	  IF(XRAYS)THEN
+	    DO ID=1,NUM_IONS
+	      IF(ATM(ID)%XzV_PRES .AND. ATM(ID+1)%XzV_PRES)THEN
+	        CALL VAR_X_OPA_ETA_V4(VCHI,VETA,
+	1          ATM(ID)%XzV,ATM(ID)%XzVLTE,ATM(ID)%dlnXzVLTE_dlnT,
+	1          ATM(ID)%NXzV,
+	1          ATM(ID+1)%XzV, ATM(ID+1)%XzVLTE,
+	1          ATM(ID+1)%dlnXzVLTE_dlnT,
+	1          ATM(ID+1)%NXzV,ED, ATM(ID+1)%DXzV,
+	1          T,IMP_VAR,ATM(ID)%EQXzV, ATM(ID+2)%EQXzv,
+	1          AT_NO(SPECIES_LNK(ID)), ATM(ID)%ZXzV,
+	1          CONT_FREQ,EMHNUKT_CONT,NT,ND,LST_DEPTH_ONLY)
+	      END IF
+	    END DO
+	  END IF
+!
+! _ALL will contain the variation of ETA/CHI for ALL species.
+!
+	  CALL TUNE(1,'CHI_ADD')
+	  IF(LST_DEPTH_ONLY)THEN
+	    VCHI_ALL(:,ND)=VCHI_ALL(:,ND)+VCHI(:,ND)
+	    VETA_ALL(:,ND)=VETA_ALL(:,ND)+VETA(:,ND)
+	    VCHI_SAV(:,ND)=VCHI(:,ND)
+	    VETA_SAV(:,ND)=VETA(:,ND)
+	    VCHI_ALL_SAV(:,ND)=VCHI_ALL(:,ND)
+	    VETA_ALL_SAV(:,ND)=VETA_ALL(:,ND)
+	  ELSE
+	    VCHI_ALL=VCHI_ALL+VCHI
+	    VETA_ALL=VETA_ALL+VETA
+	    VCHI_SAV=VCHI
+	    VETA_SAV=VETA
+	    VCHI_ALL_SAV=VCHI_ALL
+	    VETA_ALL_SAV=VETA_ALL
+	  END IF
+	  CALL TUNE(2,'CHI_ADD')
+	ELSE IF(CONT_FREQ .EQ. FL)THEN
+	    VCHI=VCHI_SAV
+	    VETA=VETA_SAV
+	    VCHI_ALL=VCHI_ALL_SAV
+	    VETA_ALL=VETA_ALL_SAV
+	END IF
+C
+C 
+C
+C This section of code can be utilized by both the DTDR and CONTINUUM code
+C sections.
+C
+	CALL TUNE(1,'FL_NE')
+  	IF(CONT_FREQ .NE. FL)THEN
+C
+C Scale dCHI and dETA to allow for the slight variation in frequency.
+C Correction should generally be small.
+C
+! NB: Previously T4 was defined by T4= EMHNUKT(L)/EMHNUKT_CONT(L). In the
+! presence of X-rays, and with NU=1000 or larger, EMHNUKT_CONT could be
+! zero, thus causing a divide by zero.
+!
+	  T1=(FL/CONT_FREQ)**3
+	  T2=TWOHCSQ*(CONT_FREQ**3)
+	  T3=TWOHCSQ*(FL**3)
+	  J=1
+	  IF(LST_DEPTH_ONLY)J=ND
+!
+	  DO L=J,ND
+	    T4=T1*EXP(-HDKT*(FL-CONT_FREQ)/T(L))
+            DO K=1,NT
+              VETA(K,L)=VETA_SAV(K,L)*T4
+              VETA_ALL(K,L)=VETA_ALL_SAV(K,L)*T4
+            END DO
+C
+C Need to correct VETA for the variation in T in the factor T4.
+C Over correction at present because impurity species included.
+C
+	    VETA(NT,L)=VETA(NT,L) + 
+	1                ETA_C_EVAL(L)*T4*HDKT*(FL-CONT_FREQ)/T(L)/T(L)
+	    VETA_ALL(NT,L)=VETA_ALL(NT,L) + 
+	1                ETA_C_EVAL(L)*T4*HDKT*(FL-CONT_FREQ)/T(L)/T(L)
+C
+C Can now correct the opacity.
+C
+	   DO K=1,NT
+              VCHI(K,L)=VCHI_SAV(K,L)+(VETA_SAV(K,L)/T2-VETA(K,L)/T3)
+              VCHI_ALL(K,L)=VCHI_ALL_SAV(K,L)+(VETA_ALL_SAV(K,L)/T2-VETA_ALL(K,L)/T3)
+	   END DO
+	    
+          END DO
+C
+	END IF			!Correct cross-section?
+	CALL TUNE(2,'FL_NE')
+C
+C 
+C
+C
+C In the CONTINUUM code section (with blanketing) the variation of the opacity 
+C and emissivity due to the electron scattering term is handled separately.
+C It is required in the DTDR section, DIELECTRONIC and LINE sections.
+C In DTDR the cross-sections can also be held fixed. In order that our
+C correction process implemented above works, we must keep the electron
+C scattering cross-section separate (primarily in the emissivity).
+C
+	IF(SECTION .NE. 'CONTINUUM')THEN
+	  DO K=1,ND
+	    VCHI(NT-1,K)=VCHI(NT-1,K)+ESEC(K)/ED(K)
+	    VETA(NT-1,K)=VETA(NT-1,K)+ESEC(K)*RJ(K)/ED(K)
+	  END DO
+	END IF
+!
+	RETURN
+	END

@@ -1,0 +1,85 @@
+#Include file with system dependent definitions
+
+include ../Makefile_definitions
+
+#
+# These names are for the fortran linker
+#
+LN1=tools
+LN2=disp
+LN3=subs
+LN4=newsubs
+LN5=pgplt
+#
+# These names refer to the full file name
+#
+FN1=$(LIB_DIR)lib$(LN1).a
+FN2=$(LIB_DIR)lib$(LN2).a
+FN3=$(LIB_DIR)lib$(LN3).a
+FN4=$(LIB_DIR)lib$(LN4).a
+FN5=$(LIB_DIR)lib$(LN5).a
+#
+# We only make dispgen.exe if there has been a change to the main *.f files,
+# or if the libraries have changed since the last link.
+#
+ 
+OBJ1  =  par_opac.o par_opac_sub.o mod_par_opac.o\
+        rd_model_file.o  ins_line_v5.o \
+        mon_interp_fast.o ins_line_obs_v4.o
+ 
+ 
+all: $(EXE_DIR)par_opac.exe 
+
+#
+# Give the dependencies of dispgen.exe and how it is created.
+#
+
+$(EXE_DIR)par_opac.exe :  $(OBJ1) $(FN1) $(FN2) $(FN3) $(FN4) $(FN5)
+	$(F90) $(OBJ1) \
+              -L$(LIB_DIR) -l$(LN4) -l$(LN2) -l$(LN3) -l$(LN5) -l$(LN1) \
+               $(LOCLIB) \
+              -g -o $(EXE_DIR)par_opac.exe
+
+
+# General rule to compile a fortran ".f" file.
+
+%.o : %.f
+	$(F90) -c -g $(FG)  $<
+
+USR = ../lib/libtools.a(usr_option.o)
+GEN = ../lib/libsubs.a(mod_lev_dis_blk.o)
+
+par_opac.o     : par_opac.f      mod_par_opac.o   $(USR)
+par_opac_sub.o : par_opac_sub.f  mod_par_opac.o   $(GEN) \
+   COMP_JCONT_V4.INC  EVAL_LTE_INC_V4.INC\
+   OPACITIES_V4.INC   XOPAC_V4.INC
+
+$(GEN):
+	(cd ../subs; make )
+$(USR):
+	(cd ../tools; make )
+
+ 
+$(FN1) : lib1
+$(FN2) : lib2
+$(FN3) : lib3
+$(FN4) : lib4
+$(FN5) : lib5
+
+# We now MAKE the required libraries.
+
+lib1:
+	(cd ../tools; make)
+lib2:
+	(cd ../disp/subs; make)
+lib3:
+	(cd ../subs; make )
+	(cd ../unix; make )
+	(cd ../stark; make )
+lib4:
+	(cd ../newsubs; make)
+lib5:
+	(cd ../pgplt; make)
+
+clean :
+	rm -f *.o

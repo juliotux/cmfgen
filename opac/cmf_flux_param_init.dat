@@ -1,0 +1,242 @@
+3.49897D-3   [MIN_CF]           !Minimum continuum frequency if calculating NU
+50.000D0     [MAX_CF]           !Maximum continuum frequency if calculating NU
+1.10D0       [FRAC_SP]          !Fractional spacing for small frequencies
+1.05D0       [AMP_FAC]          !Amplification factor for large frequency ranges
+0.10D0       [MAX_BF]           !Maximum frequency spacing close to bf edge
+ 
+T            [DO_DIS]		!Allow for level dissolution
+200.0D0      [dV_LEV]           !Spacing in km/s on low side of bf edge.
+1.4          [AMP_DIS]          !Amplification factor on low side of bf edge.
+0.1          [MIN_DIS]          !Minimum frequency for level disolution.
+ 
+F            [CROSS]
+750.0        [V_CROSS]
+ 
+T            [DIF]              !Diffusion approx.
+2            [NUM_ES]		!Number of electron scattering iterations
+F            [COH_ES]           !Assume coherent electron scattering?
+F            [OLD_J]            !Read old J to provide estiamte of J_ES
+LOGMON       [METHOD]           !Use log interp to compute chi.LOGLOG
+N_ON_J       [N_TYPE]           !How to handle N in MOM_J_CMF
+INT/INS      [FG_OPT]
+T            [THK_CONT]         !Thick boundary condition for continuum ?
+T            [TRAP_J]           !Use trapazoidal wights to compute J ?
+ 
+50.0D0       [VTURB_FIX]        !Turbulent Velocity if GLOBAL_PROF=FOP_FIX
+50.0D0       [VTURB_MIN]        !Turbulent Velocity
+50.0D0       [VTURB_MAX]        !Turbulent Velocity
+ 
+6.0          [MAX_DOP]          !Max. half-width of resonace zone
+0.5D0        [FRAC_DOP]         !Spacing in CMF resonace zone [in Doppler widths]
+100.0         [dV_CMF_PROF]      !Spacing (in km/s) across CMF profile.
+200.0        [dV_CMF_WING]      !Spacing in e.s. line wings of CMF profile.
+2500.0       [ES_WING_EXT]      !Ext. of non-coh e.s. wings beyond res. zone (in Vinf)
+3.0          [R_CMF_WING_EXT]   !Ext. of coh. e.s. wings beyond res. zone (in Vinf)
+ 
+1.1          [OBS_EXT_RAT]      !Half-Width of Observed profile in Vinf (>= 1.0)
+30.0         [dV_OBS_PROF]      !Spacing (in km/s) across observed profile (km/s).
+200.0        [dV_OBS_WING]      !Spacing in e.s. line wings (km/s).
+2000.0       [dV_OBS_BIG]       !Spacing between lines (km/s).
+
+20.0D0       [TAU_MAX]          !
+0.1          [ES_DTAU]          !
+ETAZ         [INT_METH]         !
+  
+F            [FLUX_CAL_ONLY]    !Do a flux calculation only?
+F            [EXT_FRM_SOL]	!Extend formal solutiona factor of 10 in R
+T            [INS_F_FRM_SOL]    !Insert extra frequencies in the formal sol?
+F            [DO_SOB_LINES]     !Compute Sobolev EW's
+0.01         [EW_CUT]           !Only print if ABS(EW) > EW_CUT
+F            [SOB_FREQ_IN_OBS]  !
+F            [WR_ETA]
+F            [WR_FLUX]
+ 
+BLANK        [GLOBAL_LINE]      !Global line switch (BLANK, SOB, CMF, NONE)
+T            [LAM_SET]          !Swith to SOB for long wavelengths?
+9.00E+02     [F_LAM_BEG]        !Lambda to begin flux calculation.
+5.00E+04     [F_LAM_END]        !Lambda to end flux calculation.
+ 
+T            [THK_LINE]         !Thk line boundary condition ?
+T            [CHK_L_POS]        !Check for negative line opacity?
+ 
+T            [INC_TWO]  	!Include two photon transitions
+F            [INC_XRAYS]
+1.0E-08      [FIL_FAC]
+300          [T_SHOCK]
+400          [V_SHOCK]
+ 
+CMF          [TRANS_HI]         !Method for treating HI lines ?
+CMF          [TRANS_HeI]         !Method for treating HeI lines ?
+CMF          [TRANS_He2]         !Method for treating He2 lines ?
+
+CMF          [TRANS_CI]         !Method for treating CI lines ?
+CMF          [TRANS_C2]         !Method for treating C2 lines ?
+CMF          [TRANS_CIII]         !Method for treating CIII lines ?
+CMF          [TRANS_CIV]         !Method for treating CIV lines ?
+A
+
+CMF          [TRANS_NI]         !Method for treating NI lines ?
+CMF          [TRANS_N2]         !Method for treating N2 lines ?
+CMF          [TRANS_NIII]         !Method for treating NIII lines ?
+CMF          [TRANS_NIV]         !Method for treating NIV lines ?
+CMF          [TRANS_NV]         !Method for treating NV lines ?
+
+CMF          [TRANS_OI]         !Method for treating OI lines ?
+CMF          [TRANS_O2]         !Method for treating O2 lines ?
+CMF          [TRANS_OIII]         !Method for treating OIII lines ?
+CMF          [TRANS_OIV]         !Method for treating OIV lines ?
+CMF          [TRANS_OV]         !Method for treating OV lines ?
+CMF          [TRANS_OSIX]         !Method for treating OSIX lines ?
+
+CMF          [TRANS_NeI]          !Method for treating NeI lines ?
+CMF          [TRANS_Ne2]          !Method for treating Ne2 lines ?
+CMF          [TRANS_NeIII]        !Method for treating NeIII lines ?
+CMF          [TRANS_NeIV]         !Method for treating NeIV lines ?
+CMF          [TRANS_NeV]          !Method for treating  NeV lines ?
+CMF          [TRANS_NeSIX]        !Method for treating NeSIX lines ?
+CMF          [TRANS_NeSEV]        !Method for treating NeSEV lines ?
+
+CMF          [TRANS_SxI]         !Method for treating SxI lines ?
+CMF          [TRANS_Sx2]         !Method for treating Sx2 lines ?
+CMF          [TRANS_SxIII]         !Method for treating SxIII lines ?
+CMF          [TRANS_SxIV]         !Method for treating SxIV lines ?
+
+CMF          [TRANS_NaI]         !Method for treating NaI lines ?
+
+CMF          [TRANS_MgI]         !Method for treating MgI lines ?
+CMF          [TRANS_Mg2]         !Method for treating Mg2 lines ?
+
+CMF          [TRANS_AlI]         !Method for treating AlI lines ?
+CMF          [TRANS_Al2]         !Method for treating Al2 lines ?
+CMF          [TRANS_AlIII]         !Method for treating AlIII lines ?
+
+CMF          [TRANS_SI]        !Method for treating OIII lines ?
+CMF          [TRANS_S2]        !Method for treating OIII lines ?
+CMF          [TRANS_SIII]        !Method for treating OIII lines ?
+CMF          [TRANS_SIV]         !Method for treating OIV lines ?
+CMF          [TRANS_SV]          !Method for treating OV lines ?
+CMF          [TRANS_SSIX]        !Method for treating OSIX lines ?
+
+CMF          [TRANS_ArI]          !Method for treating ArI lines ?
+CMF          [TRANS_Ar2]          !Method for treating Ar2 lines ?
+CMF          [TRANS_ArIII]        !Method for treating ArIII lines ?
+CMF          [TRANS_ArIV]         !Method for treating ArIV lines ?
+CMF          [TRANS_ArV]          !Method for treating ArV lines ?
+CMF          [TRANS_ArSIX]        !Method for treating ArSIX lines ?
+CMF          [TRANS_ArSEV]        !Method for treating ArSEV lines ?
+
+CMF          [TRANS_CaI]         !Method for treating CaI lines ?
+CMF          [TRANS_Ca2]         !Method for treating Ca2 lines ?
+CMF          [TRANS_CaIII]        !Method for treating CaIII lines ?
+CMF          [TRANS_CaIV]         !Method for treating CaIV lines ?
+CMF          [TRANS_CaV]          !Method for treating CaV lines ?
+CMF          [TRANS_CaSIX]        !Method for treating CaSIX lines ?
+CMF          [TRANS_CaSEV]        !Method for treating CaSEV lines ?
+CMF          [TRANS_CaVIII]       !Method for treating CaVIII lines ?
+
+CMF          [TRANS_FeI]         !Method for treating FeI lines ?
+CMF          [TRANS_Fe2]         !Method for treating Fe2 lines ?
+CMF          [TRANS_FeIII]         !Method for treating FeIII lines ?
+CMF          [TRANS_FeIV]         !Method for treating FeIV lines ?
+CMF          [TRANS_FeV]         !Method for treating FeV lines ?
+CMF          [TRANS_FeSIX]         !Method for treating FeSIX lines ?
+CMF          [TRANS_FeSEV]         !Method for treating FeSEV lines ?
+CMF          [TRANS_FeVIII]         !Method for treating FeVIII lines ?
+CMF          [TRANS_FeIX]         !Method for treating FeIX lines ?
+CMF          [TRANS_FeX]         !Method for treating FeX lines ?
+
+NONE         [GLOBAL_PROF]
+T            [OPAC_LIMS]
+1.0E-04      [DOP_LIM]
+1.0E-04      [VOIGT_LIM]
+ 
+HZ_STARK     [PROF_HI]         !Method for treating HI lines ?
+DOPPLER      [PROF_HeI]        !Method for treating HeI lines ?
+HZ_STARK     [PROF_He2]        !Method for treating He2 lines ?
+
+DOPPLER      [PROF_CI]         !Method for treating CI lines ?
+DOPPLER      [PROF_C2]         !Method for treating C2 lines ?
+DOPPLER      [PROF_CIII]       !Method for treating CIII lines ?
+DOPPLER      [PROF_CIV]        !Method for treating CIV lines ?
+
+DOPPLER      [PROF_NI]         !Method for treating NI lines ?
+DOPPLER      [PROF_N2]         !Method for treating N2 lines ?
+DOPPLER      [PROF_NIII]       !Method for treating NIII lines ?
+DOPPLER      [PROF_NIV]        !Method for treating NIV lines ?
+DOPPLER      [PROF_NV]         !Method for treating NV lines ?
+
+DOPPLER      [PROF_OI]         !Method for treating OI lines ?
+DOPPLER      [PROF_O2]         !Method for treating O2 lines ?
+DOPPLER      [PROF_OIII]       !Method for treating OIII lines ?
+DOPPLER      [PROF_OIV]        !Method for treating OIV lines ?
+DOPPLER      [PROF_OV]         !Method for treating OV lines ?
+DOPPLER      [PROF_OSIX]       !Method for treating OSIX lines ?
+
+DOPPLER      [PROF_NeI]        !Method for treating NeI lines ?
+DOPPLER      [PROF_Ne2]        !Method for treating Ne2 lines ?
+DOPPLER      [PROF_NeIII]      !Method for treating NeIII lines ?
+DOPPLER      [PROF_NeIV]       !Method for treating NeIV lines ?
+DOPPLER      [PROF_NeV]        !Method for treating  NeV lines ?
+DOPPLER      [PROF_NeSIX]      !Method for treating NeSIX lines ?
+DOPPLER      [PROF_NeSEV]      !Method for treating NeSEV lines ?
+
+DOPPLER      [PROF_SxI]        !Method for treating SxI lines ?
+DOPPLER      [PROF_Sx2]        !Method for treating Sx2 lines ?
+DOPPLER      [PROF_SxIII]      !Method for treating SxIII lines ?
+DOPPLER      [PROF_SxIV]       !Method for treating SxIV lines ?
+
+DOPPLER      [PROF_NaI]        !Method for treating NaI lines ?
+
+DOPPLER      [PROF_MgI]        !Method for treating MgI lines ?
+DOPPLER      [PROF_Mg2]        !Method for treating Mg2 lines ?
+
+DOPPLER      [PROF_AlI]        !Method for treating AlI lines ?
+DOPPLER      [PROF_Al2]        !Method for treating Al2 lines ?
+DOPPLER      [PROF_AlIII]      !Method for treating AlIII lines ?
+
+DOPPLER      [PROF_SI]         !Method for treating OIII lines ?
+DOPPLER      [PROF_S2]         !Method for treating OIII lines ?
+DOPPLER      [PROF_SIII]       !Method for treating OIII lines ?
+DOPPLER      [PROF_SIV]        !Method for treating OIV lines ?
+DOPPLER      [PROF_SV]         !Method for treating OV lines ?
+DOPPLER      [PROF_SSIX]       !Method for treating OSIX lines ?
+
+DOPPLER      [PROF_ArI]        !Method for treating ArI lines ?
+DOPPLER      [PROF_Ar2]        !Method for treating Ar2 lines ?
+DOPPLER      [PROF_ArIII]      !Method for treating ArIII lines ?
+DOPPLER      [PROF_ArIV]       !Method for treating ArIV lines ?
+DOPPLER      [PROF_ArV]        !Method for treating ArV lines ?
+DOPPLER      [PROF_ArSIX]      !Method for treating ArSIX lines ?
+DOPPLER      [PROF_ArSEV]      !Method for treating ArSEV lines ?
+
+DOPPLER      [PROF_CaI]        !Method for treating CaI lines ?
+DOPPLER      [PROF_Ca2]        !Method for treating Ca2 lines ?
+DOPPLER      [PROF_CaIII]      !Method for treating CaIII lines ?
+DOPPLER      [PROF_CaIV]       !Method for treating CaIV lines ?
+DOPPLER      [PROF_CaV]        !Method for treating CaV lines ?
+DOPPLER      [PROF_CaSIX]      !Method for treating CaSIX lines ?
+DOPPLER      [PROF_CaSEV]      !Method for treating CaSEV lines ?
+DOPPLER      [PROF_CaVIII]     !Method for treating CaVIII lines ?
+
+DOPPLER      [PROF_FeI]        !Method for treating FeI lines ?
+DOPPLER      [PROF_Fe2]        !Method for treating Fe2 lines ?
+DOPPLER      [PROF_FeIII]      !Method for treating FeIII lines ?
+DOPPLER      [PROF_FeIV]       !Method for treating FeIV lines ?
+DOPPLER      [PROF_FeV]        !Method for treating FeV lines ?
+DOPPLER      [PROF_FeSIX]      !Method for treating FeSIX lines ?
+DOPPLER      [PROF_FeSEV]      !Method for treating FeSEV lines ?
+DOPPLER      [PROF_FeVIII]     !Method for treating FeVIII lines ?
+DOPPLER      [PROF_FeIX]       !Method for treating FeIX lines ?
+DOPPLER      [PROF_FeX]        !Method for treating FeX lines ?
+
+T            [JC_W_EDD]         !Use Eddington factors to compute continuum J
+T            [JBAR_W_EDD]       !Use Eddington factors to compute JBAR for lines.
+F            [INC_GRID]         !Do an error calculation ?
+1            [N_INS]            !NPINS
+1            [ST_INT]           !Interpolate from 1 to ?
+51           [END_INT]          !Interpolate from 1 to ?
+49           [ND_QUAD]          !Quadratic interpolation from 50 to ND
+LOG          [INTERP_TYPE]      !LOG or LIN plane
+ 
+F            [COMP_F]           !Compute new Continuum f values ?
+1.0D-04      [ACC_F]            !Convergence accuracy for F

@@ -1,0 +1,49 @@
+	PROGRAM TST_MON
+	IMPLICIT NONE
+!
+	INTEGER, PARAMETER :: ND=60
+	INTEGER, PARAMETER :: NQ=5*(ND-1)+1
+	INTEGER, PARAMETER :: LIN_END=1
+!
+	REAL*8 R(ND)
+	REAL*8 CHI(ND)
+!
+	REAL*8 QZR(NQ)
+	REAL*8 NEW_CHI(NQ)
+!
+	INTEGER I,J
+	REAL*8 DELR
+!	
+        DO I=1, ND ; CHI(I)= ( (I+1.0D0)**2 )/ND; END DO
+        DO I=1,ND
+          R(I)=1.0+0.1D0*(I**2)
+        END DO
+C
+	J=1
+        DO I=1,ND-1
+	  DELR=R(I+1)-R(I)
+          QZR(J)=R(I)
+          QZR(J+1)=R(I)+0.04*DELR
+          QZR(J+2)=R(I)+0.16*DELR
+          QZR(J+3)=R(I)+0.40*DELR
+          QZR(J+4)=R(I)+0.70*DELR
+	  J=J+5
+        END DO
+	QZR(NQ)=R(ND)
+!
+	DO I=1,ND
+	  WRITE(6,*)R(I),CHI(I)
+	END DO
+	DO I=1,NQ
+	  WRITE(6,*)QZR(I)
+	END DO
+!
+	CALL TUNE(1,'MON')
+	 DO J=1,10000
+	   CALL MON_INTERP_FAST(NEW_CHI,NQ,LIN_END,QZR,NQ,CHI,ND,R,ND)
+	 END DO
+	CALL TUNE(2,'MON')
+	CALL TUNE(3,' ')
+!
+	STOP
+	END	

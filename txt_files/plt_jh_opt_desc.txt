@@ -1,0 +1,89 @@
+22,16   		!Output formatting parameters.
+
+General listing of options in PLT_JH. Warning: Code originally developed
+to plot J but later extended to plot H, Eta, and Chi. Be carefull with
+labeling and units. Another possible trap is that EDDFACTOR is ouput
+on the FINE grid, where as H, Eta and Chi are ouput on the regular grid. 
+If comparing J, H etc, it may be better to us ethe EDDFACTOR file from the
+CMFGEN computation, or alternatively, do not add extra points in the CMF_FLUX
+computation.
+
+Options are ordered under subject. Associated with each option are requested 
+inputs. Some inputs are not prompted for, and can only be changed from their 
+default values by specifying them in the call. eg.
+
+		       RD_MOD(OVER=T)
+
+Such inputs are placed in [ ].
+
+SVE and BOX file:
+	Default is to write file MAIN_OPT_STR.sve
+	Append sve=filename to write a new .sve file (no brackets)
+	Type box=filename to write a .box file containing several .sve files
+	Type .filename to read .sve file
+	Type #filename to read .box file
+
+Input/output:
+
+    RD_MOD  	Read in new data into MODEL B. Any previous model B data is lost.
+                Data may be J, H, Eta, or CHI.
+
+    MOD_A	Switch to model A as the default. B data is not destroyed.
+
+    MOD_B	Switch to model B as the default. A data is not destroyed.
+                     
+X Axis Options
+    LX		Switch between logarithmic and linear X-AXIS
+    LOGX        (i.e. do opposite to current setting)
+    LINX
+
+    XU		Change units for X-axis. Options are:
+    XUNITS	   Hz
+		   um
+		   Ang
+		   keV
+	           eV
+		   km/s
+
+Y Axis Options
+    LY		Switch between logarithmic and linear Y-AXIS
+    LOGY        (i.e. do opposite to current setting)
+    LINY
+
+    YU		   Change Y plot parameter. Options are:
+    Y_UNITS 	      NAT     Default - avoids stuffing up ETA etc.
+	              Flam    ergs/cm^2/s/Ang)
+		      FNU     Jy
+		      NU_FNU  ergs/cm^2/s
+
+Main options.
+    JD		Plot variable at a given depth as a function of Lambda
+	          DEPTH   -- Depth index
+    RSQJD       Plots RSQJ as a function of Lambda.
+	          DEPTH   -- Depth index
+	          [SCALE] -- Scaling factor for plot.
+	          [ZEROV] -- Shifts plot to observers frame (velocity shift only)
+    R3J         Plots Int r^3.J dv as a function of depth.
+    JNU         Plots J at a given wavelength
+                  LAMBDA  -- Wavelength in Angstroms (-ve assumed to be Hz).
+	          [SCALE] -- Scaling factor for plot.
+	          [RSQJ]  -- Plot r^2.J?
+    SPHJ        Dirty option to modify J for sphericity effects.
+    ES          Convloves (J) with electron scattering redistribution function.
+    EJ          Plots energy density
+    BB          Plots blackbody spectrum at a given temperature.
+    CF		Plots the integrated flux (H) as a function of depth.
+    CFD		Plots the integrated flux (H) as a function of frequencey at a given depth.  
+    PHOT        Normalized plot showing source of ionizations for 1/v^3 cross-section,
+    dBdR        Compute 1/3 dB/dR for comparision with CHI x FLUX (check on diffusion approximation)
+    INT         Compute Int J dv & Int dJ/dlnv dv, and plot as a function of depth (diagnostic)
+    DNU.        Plots c.dNU/NU as a function on NU (diagnostic) 
+
+Output
+
+   EXTJ         Extends J (from A model) in R, creating a new data file J_DATA
+                and its corresponding file J_DATA_INFO. These can be used to
+                help facilitate convergence when extending model to much
+                larger radii.
+   WR_ID        Writes out file names of files read.
+

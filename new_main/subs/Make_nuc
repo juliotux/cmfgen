@@ -1,0 +1,50 @@
+# Include local system definitions
+
+include ../../Makefile_definitions
+
+# Library where object files will/are stored
+
+LIB=$(LIB_DIR)libdev.a
+LIB_MOD=$(LIB_DIR)libmod.a
+
+#
+# Entries for library
+#
+OBJ = $(LIB)(do_lev_pop_decays.o)\
+      $(LIB)(do_species_decays.o)\
+      $(LIB)(get_rad_decay_energy.o)\
+      $(LIB)(eval_rad_decay_v1.o)\
+      $(LIB)(out_sn_pops_v3.o)\
+      $(LIB)(rd_sn_data.o)\
+      $(LIB)(rd_nuc_decay_data.o)
+
+all : $(LIB) 
+	cp -f $(INSTALL_DIR)perm_mod_file jnk.mod
+	mv -f *.mod $(MOD_DIR)
+	rm -f *.o
+
+$(LIB) : $(OBJ) 
+
+STEQ=$(LIB_MOD)(steq_data_mod.o)
+MOD=$(LIB_MOD)(mod_cmfgen.o)
+NUC=$(LIB_MOD)(nuc_iso_mod.o)
+
+$(LIB)(%.o) : %.f $(STEQ) $(MOD) $(NUC)
+	$(F90) -c $(FG) $<
+	ar ruv $(LIB) $*.o
+
+$(STEQ):
+	(cd ../mod_subs ; make)
+
+$(MOD):
+	(cd ../mod_subs ; make)
+
+$(NUC):
+	(cd ../mod_subs ; make)
+
+
+clean :
+	rm -f *.o 
+
+clean_lib :
+	rm $(LIB)

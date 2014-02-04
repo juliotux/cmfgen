@@ -1,0 +1,53 @@
+22,16
+
+XLOGR    XLINR	   XAU      XRSUN    XARC
+XED	 XN	   XATOM    XVEL     XLOGV
+XTEMP    XCOLD     XTAUC    XROSS	
+
+GR       GRNL	   GRED	    TIT
+WRPLOT   RDPLOT
+WRPOP    WRDC      WRTX     WRL_*    WRC
+FIXT     FIXT2     TSTV     CHKV     SM_*
+NEWRG    SCL_#     MODSUM
+
+KEV_IN   HZ_IN	   ANG_IN   DIST     LTE
+XRAY     CLUMP     DIS      SET-ATM  SET-METH
+WRN      WRFREQ    WRID_*   WRTRANS  LNID
+
+ED       T         LOGT     TGREY    TRAT
+GREY     YROSS     VEL      LOGV     SIGMA    
+YION     YATOM     DTDP     YR       
+
+OP	 TAUC	   DTAUC    RTAU     TAUR
+RAY      RAYL      CJBB     JEXT     MEANOPAC  
+
+IF_#      QF_#
+
+NETR_*	 MOMR_*    SOBR_*    LAM_*
+SRCE_*   SRCEBB_*  SRCEJC_*
+TAUL_*   CHIL_*    EP_*      BETA_*     EW_*    EWEXT_*
+
+POP_*    DC_*      RAT_*     ION_*      RR_*
+DION_*   WLD_*     DIE_*
+COL_*    COLR_*    PHOT_*    PLTPHOT_*
+
+CAKT     TAUSOB    GF_*      DIST_*
+LTAU_*   NV_*
+DCHI     LCHI      MCHI
+
+INTERP   GNTFF     GNTBF	
+
+EX	EXIT
+
+********************************************************
+
+# Parameters
+HYD     CARB    OXY     NIT     SIL     IRON    etc
+
+* Parameters
+HI	HeI	He2
+CI	C2	CIII	CIV	CV
+NI	N2	NIII	NIV	NV	NSIX
+OI	O2	OIII	OIV	OV	OSIX	OSEV
+SkI	Sk2	SkIII	SkIV	SkV	SkSIX	SkSEV  (Silicon)
+FeI	Fe2	FeIII	FeIV	FeV	FeSIX	FeSEV  FeVIII  FeIX   FeX

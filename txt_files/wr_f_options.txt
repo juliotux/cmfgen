@@ -1,0 +1,14 @@
+
+22,16   		!Output formatting parameters.
+
+General listing of options in WR_F_TO_S. Use LI to get detailed
+ description of each option. Options are ordered under subject.
+
+Input:           RD_LNK    RD_SM_LNK	RD_DC
+
+Output:          WR        TY           SL_WR     WR_DC
+
+Link options:    CL        LS      	ELS       SPLIT
+                 SP        SEP          E%LS
+	  
+Miscellaneous:   LI        HE   	BOX       EX

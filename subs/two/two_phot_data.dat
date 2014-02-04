@@ -1,0 +1,33 @@
+*****************************************************************************
+*****************************************************************************
+
+  Atomic data for 2-photon transitions.
+
+  The HI and HE2 data is from Nussbaumer and Schmutz (Solar Phys, 29, 287).
+    Note that the 2-photon decay rate for hydrogenic ions scales a Z^6,
+
+  The HeI data is from Jacobs (1971, Phys. Rev. A, 4, 939) and Drake et al.
+    (Phys. Rev. 1969, 180, 25). The decay rate is correct. For simplicty we
+    have may the approximation that the distibution of photons in y
+    (== FREQ/MAX_FREQ) is identical to H. Only approximately correct but
+    shouldn't influence results very much.
+
+*****************************************************************************
+*****************************************************************************
+
+3                                       !Number of 2-photon transitions
+
+HI   1___  2___    1s2Se   2s2Se        !2-photon identification
+1					!Type of 2-photon transition
+1                                       !Number of coefficients
+8.225					!Decay rate (s^-1)
+
+HeI  1s1s1Se   1s2s1Se   	        !2-photon identification
+1					!Type of 2-photon transition
+1                                       !Number of coefficients
+51.9					!Decay rate (s^-1)
+
+He2   1___  2___    1s2Se   2s2Se       !2-photon identification
+1					!Type of 2-photon transition
+1                                       !Number of coefficients
+526.4					!Decay rate (s^-1)

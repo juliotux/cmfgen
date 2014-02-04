@@ -1,0 +1,214 @@
+!
+! Module containing basic data for:
+!                   (i) Each species
+!          	   (ii) Model atom data (populations etc)
+!		  (iii) Basic atmospheric structure.
+!
+	MODULE MOD_CMFGEN
+!
+! Altered 31-Jan2002 : FIXEDT etc inserted.
+!                            
+! Number of atomic species (e.g. H, C, N is 3 species).
+!
+	INTEGER, PARAMETER :: NUM_SPECIES=23
+!
+! Maximum number of ionization stages per species. For H, need at this number
+! has to be 2 or higher (as I and II). A setting of 10 implies that we can treat
+! full atoms for ION_IX.
+!
+	INTEGER, PARAMETER :: MAX_IONS_PER_SPECIES=15
+	INTEGER, PARAMETER :: MAX_NUM_IONS=NUM_SPECIES*MAX_IONS_PER_SPECIES
+!
+! Maximum number of photoionization routes for each species.
+!
+	INTEGER, PARAMETER :: NPHOT_MAX=4
+!
+! Actual number of ions in calculation. Stored sequentially.
+!
+	INTEGER NUM_IONS
+!
+	REAL*8 AT_MASS(NUM_SPECIES)		!Atomic mass in amu
+	REAL*8 AT_NO(NUM_SPECIES)		!Atomic number of species
+	REAL*8 AT_ABUND(NUM_SPECIES)		!Fractional species abundance
+	REAL*8 SOL_MASS_FRAC(NUM_SPECIES)	!Solar mass fraction
+	REAL*8 SOL_ABUND_HSCL(NUM_SPECIES)	!Solar abundance with H=12.0
+!
+! Total population density of each species (#/cm^3).
+!
+	REAL*8, ALLOCATABLE :: POP_SPECIES(:,:)
+!
+! Used to refer to the number of electrons/[species atom] coming from each 
+! species (also used a temporary store).
+!
+	REAL*8, ALLOCATABLE :: GAM_SPECIES(:,:)
+!
+! Conservation equation for each species.
+!
+	INTEGER EQBAL
+	INTEGER EQ_SPECIES(NUM_SPECIES)
+	INTEGER FIX_SPECIES(NUM_SPECIES)
+!
+! Indicate at what location in the ion arrays each species starts
+! an ends. This includes the highest ionization stage (e.g. H+).
+!
+	INTEGER SPECIES_BEG_ID(NUM_SPECIES)
+	INTEGER SPECIES_END_ID(NUM_SPECIES)
+!
+! Principal species abbreviation (e.g. CARB for carbon)
+!
+	CHARACTER*10 SPECIES(NUM_SPECIES)
+!
+! Abbreviation for species used to identify ions (e.g. Ca for calcium).
+!
+	CHARACTER*2  SPECIES_ABR(NUM_SPECIES)
+!
+	CHARACTER*5  GEN_ION_ID(MAX_IONS_PER_SPECIES)
+!
+! Link from ion identification to parent species.
+!
+	INTEGER SPECIES_LNK(MAX_NUM_IONS)
+!
+! Identification of ion.
+!
+	CHARACTER*12 ION_ID(MAX_NUM_IONS)
+!
+! Indicates whether a species (e.g. Carbon) is included.
+!
+	LOGICAL SPECIES_PRES(NUM_SPECIES)
+!
+! 
+! Data arrays for full atom. The names in this array should not be changed,
+! although new variables can be added.
+!
+	TYPE MODEL_ATOM_DATA
+!
+	  REAL*8, ALLOCATABLE :: XzV_F(:,:)		!Level populations in FULL atom
+	  REAL*8, ALLOCATABLE :: XzVLTE_F(:,:)	!LTE level populations in FULL atom
+	  REAL*8, ALLOCATABLE :: W_XzV_F(:,:)	!Level dissolution factors
+	  REAL*8, ALLOCATABLE :: DXzV_F(:)		!Ion population for full atom
+	  REAL*8, ALLOCATABLE :: AXzV_F(:,:)	!Oscillator strength (A(I,j), i<j)
+	  REAL*8, ALLOCATABLE :: EDGEXzV_F(:)	!Ionization energy to g.s. (10^15 Hz)
+	  REAL*8, ALLOCATABLE :: GXzV_F(:)		!Level statistical weights in full atom
+	  INTEGER, ALLOCATABLE :: F_TO_S_XzV(:)	!Link of full levels to super levels
+	  INTEGER, ALLOCATABLE :: INT_SEQ_XzV(:)
+	  CHARACTER*30, ALLOCATABLE :: XzVLEVNAME_F(:)	!Level name
+!
+	  REAL*8, ALLOCATABLE :: DXzV(:)		!Ion population for super level
+	  REAL*8, ALLOCATABLE :: XzV(:,:)		!Level population in SL atom
+	  REAL*8, ALLOCATABLE :: XzVLTE(:,:)	!LTE populations in SL atom
+	  REAL*8, ALLOCATABLE :: dlnXzVLTE_dlnT(:,:)
+!
+	  REAL*8, ALLOCATABLE :: WSXzV(:,:,:)		!Weights assoc. with s.e. eval.
+	  REAL*8, ALLOCATABLE :: WCRXzV(:,:,:)		!Weights assoc. with cooling.
+	  REAL*8, ALLOCATABLE :: dWSXzVdT(:,:,:)		!Weights assoc. with d(S.E. Eqn)/dT
+	  REAL*8, ALLOCATABLE :: WSE_X_XzV(:,:)		!X-ray photoionization weights.
+	  REAL*8, ALLOCATABLE :: WCR_X_XzV(:,:)		!
+!
+	  REAL*8, ALLOCATABLE :: APRXzV(:,:)		!Arrays for confirming the SE and RE
+	  REAL*8, ALLOCATABLE :: ARRXzV(:,:)		!equations are satisfied.
+	  REAL*8, ALLOCATABLE :: BFCRXzV(:,:)		
+!
+! Data vectors to check cooling rates.
+!
+	  REAL*8, ALLOCATABLE :: FFXzV(:)
+	  REAL*8, ALLOCATABLE :: CRRXzV(:)
+	  REAL*8, ALLOCATABLE :: CPRXzV(:)
+	  REAL*8, ALLOCATABLE :: COOLXzV(:)
+!
+! Data vectors to check charge recombination rates.
+!
+	  REAL*8, ALLOCATABLE :: CHG_RRXzV(:)
+	  REAL*8, ALLOCATABLE :: CHG_PRXzV(:)
+!
+	  REAL*8 ZXzV			!Charge on ion (=1 for HI)
+	  REAL*8 GIONXzV_F		!Statistical weight of ion
+!
+	  INTEGER NXzV_F		!Number of levels in full atom
+	  INTEGER NXzV			!Number of levels in SL atom
+	  INTEGER NXzV_IV		!Number of important levels in SL atom
+	  INTEGER EQXzV			!Equation in BA matrix for g.s. of atom
+	  INTEGER N_XzV_PHOT		!Number of states species can ionize to.
+!
+! Ionization balance equation for each ion. Used to access BAION matrix.
+!
+	  INTEGER EQXzVBAL
+!
+! Ion identification for DIELECTRONIC and X-rays. COuld use ID, but left
+! in for historical reasons.
+!
+	  INTEGER INDX_XzV
+!
+! Indicates whether to hold fixed the first N levels of an ion. If it is
+! greater than the number of levels in the super-atom, it is reduced to NS.
+!
+	  INTEGER FIX_NXzV
+!
+! Identifications corresponding to each photoionization route.
+!
+	  INTEGER XzV_ION_LEV_ID(NPHOT_MAX)
+!
+! Indicates whether a species is present. The final ionization state is regarded
+! as not present (e.g. HII_PRES is ALWAYS false, even though we treat H+ when
+! we treat HI).
+!
+	  LOGICAL XzV_PRES		!indicates 
+!
+! Dielectronic variables.
+!
+	  LOGICAL DIE_AUTO_XzV
+	  LOGICAL DIE_WI_XzV
+!  
+	  CHARACTER*6  XzV_TRANS_TYPE	!Transition type (e.g. Blank, Sobolev etc)
+	  CHARACTER*10 XzV_PROF_TYPE	!Type of profile (e.g. Doppler, Stark)
+	  CHARACTER*11 XzV_OSCDATE
+	  CHARACTER*11 NEW_XzV_OSCDATE
+!
+	END TYPE MODEL_ATOM_DATA
+!
+!
+	INTEGER EQNE		!Electron conservation equation
+!
+	REAL*8, ALLOCATABLE :: R(:)		!Radius in units of 10^10 cm
+	REAL*8, ALLOCATABLE :: V(:)		!V in units of km/s
+	REAL*8, ALLOCATABLE :: SIGMA(:)		!dlnV/dlnR-1
+	REAL*8, ALLOCATABLE :: T(:)		!Temperature in units of 10^4 K
+	REAL*8, ALLOCATABLE :: ED(:)		!Electron density (#/cm^3)
+!
+	REAL*8, ALLOCATABLE :: ROSS_MEAN(:)	!Rosseland mean opacity.
+	REAL*8, ALLOCATABLE :: FLUX_MEAN(:)	!Flux mean opacity
+	REAL*8, ALLOCATABLE :: POP_ATOM(:)	!Total atom density (#/cm^3)
+	REAL*8, ALLOCATABLE :: DENSITY(:)	!Mass density (gm/cm^3)
+	REAL*8, ALLOCATABLE :: CLUMP_FAC(:)	!Volume filling factor for clumps
+	REAL*8, ALLOCATABLE :: POPION(:)	!Ion density
+	REAL*8, ALLOCATABLE :: VOL_EXP_FAC(:)   !Volume expansion factor (for time dependent SN models)
+!
+	REAL*8 STARS_MASS			!In Msun
+!
+! Variables for determining whether some populations are held fixed
+! when the new populations are solved for.
+!
+	REAL*8 MOD_TAU_SCL_T
+	INTEGER MOD_FIX_T_D_ST
+	INTEGER MOD_FIX_T_D_END
+	LOGICAL MOD_FIXED_NE
+	LOGICAL MOD_FIXED_T
+	LOGICAL MOD_FIX_IMPURITY
+	LOGICAL FIX_IN_BOUND_T
+	INTEGER FIX_LST_X_DPTHS
+!
+	LOGICAL, ALLOCATABLE :: IMP_VAR(:)
+!
+	CHARACTER*7, PARAMETER :: NAME_CONVENTION='K_FOR_I'
+!
+! For unknown reasons, the DEC OSF alpha compiler requires this declaration
+! to be at the end of the data module in order not to get alignment problems.
+!
+	TYPE (MODEL_ATOM_DATA) ATM(NUM_SPECIES*MAX_IONS_PER_SPECIES)
+!
+! Indicates generic ionization names.
+!
+	DATA GEN_ION_ID /'I','2','III','IV','V',
+	1                'SIX','SEV','VIII','IX','X','XI','XII',
+	1                'XIII','XIV','XV'/
+!
+	END MODULE MOD_CMFGEN
