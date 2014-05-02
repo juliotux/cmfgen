@@ -14,6 +14,7 @@
 	USE VAR_RAD_MOD
         IMPLICIT NONE
 !
+! Incorporated: 02-Jan-2104: LINE_QW_SUM is now a 2D array.
 ! Altered 29-Oct-2012: Changed to V2 but call is the same.
 !                      Option to allow each line to have it own distinct stoagre location.
 !                      Old method (but reprogammed) can still be used.
@@ -51,7 +52,7 @@
 	      ZNET_SIM(I,SIM_INDX)=0.0D0
 	      JBAR_SIM(I,SIM_INDX)=0.0D0
 	    END DO
-	    LINE_QW_SUM(SIM_INDX)=0.0D0
+	    LINE_QW_SUM(1:ND,SIM_INDX)=0.0D0
 !
 ! Decide if line is weak, and hence whether we can iterate on the net rates
 ! rather than use a full linearization.

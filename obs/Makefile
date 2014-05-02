@@ -36,9 +36,9 @@ FN7=$(LIB_DIR)lib$(LN7).a
 OBJ1  =  cmf_flux_v5.o cmf_flux_sub_v5.o mod_cmf_obs.o mod_freq_obs.o \
         cmf_flux_cntrl_var_mod.o rd_cmf_flux_controls.o check_cmf_flux_param_consis.o \
         rd_model_file.o revise_obs_p.o  ins_line_v5.o obs_frame_sub_v9.o\
-        mon_interp_fast.o ins_line_obs_v4.o rd_cont_j_obs.o 
+        ins_line_obs_v4.o rd_cont_j_obs.o set_forbid_zero.o
  
-OBJ2  =  obs_frame.o obs_frame_sub_v2.o mon_interp_fast.o
+OBJ2  =  obs_frame.o obs_frame_sub_v2.o 
  
 all: $(EXE_DIR)cmf_flux.exe $(EXE_DIR)obs_frame.exe
 

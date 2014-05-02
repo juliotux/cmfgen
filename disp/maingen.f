@@ -382,9 +382,16 @@
 	  INNER_BND_METH='DIFFUSION'		!Default for normal stars
 	  DIF=.TRUE.
 	END IF
-	TYPE_ATM=' '			!i.e def is not 'EXP'
 	TRAPFORJ=.TRUE.
 	TSTAR=T(ND)
+!
+	TYPE_ATM='P'
+	T1=LOG(MASS_DENSITY(5)/MASS_DENSITY(1))/LOG(R(1)/R(5))
+	WRITE(TYPE_ATM(2:6),'(F5.2)')T1
+	WRITE(6,'(A)')RED_PEN
+	WRITE(6,'(A)')' For optical depth calculations we will assume a power density distribution'
+	WRITE(6,'(A,F5.2)')' at the outer boundary. Density exponent for atmosphere is ',T1
+	WRITE(6,'(A)')DEF_PEN
 !
 ! If the grey temperature is available in CMFGEN, we don't need to (although we can with the
 ! GREY option) compute it.
@@ -1252,7 +1259,7 @@
 	  DO I=1,ND
 	    XV(I)=DLOG10(TA(I))
 	  END DO
-	  XAXIS='m(gm cm\u-2\d)'
+	  XAXIS='Log m(gm cm\u-2\d)'
 	  XAXSAV=XAXIS
 !
 	ELSE IF(XOPT .EQ. 'XMASS')THEN
@@ -1261,11 +1268,12 @@
 	    ZETA(I)=4.0D0*PI*1.0D+30*MASS_DENSITY(I)*R(I)*R(I)*CLUMP_FAC(I)
 	  END DO
 	  CALL TORSCL(TA,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
+	  WRITE(6,*)'Mass in integrated from outer boudary.'
 	  WRITE(6,*)'Normalizing mass (in Msun) is',TA(ND)/1.989D+33
 	  DO I=1,ND
 	    XV(I)=DLOG10(TA(I)/TA(ND))
 	  END DO
-	  XAXIS='Mass Fraction'
+	  XAXIS='Log Mass Fraction'
 	  XAXSAV=XAXIS
 !
 	ELSE IF(XOPT .EQ. 'XFLUX')THEN
@@ -1395,6 +1403,16 @@
 	    END IF
 	  END DO
 	  CLOSE(LU_OUT)
+!
+	ELSE IF(XOPT .EQ. 'WRTAB')THEN
+	  OPEN(UNIT=10,FILE='NEW_TABLE',STATUS='UNKNOWN')
+	  DO I=1,ND
+	    TA(I)=CLUMP_FAC(I)*ROSS_MEAN(I)*(R(ND)/R(I))**2
+	  END DO
+	  CALL TORSCL(TAUROSS,TA,R,TB,TC,ND,METHOD,TYPE_ATM)
+	  DO I=1,ND
+	    WRITE(10,'(ES12.6,ES12.4,4X,F8.4,2X,ES12.4)')1.0E+10*R(I),POP_ATOM(I),T(I),TAUROSS(I)
+	  END DO
 !
 	ELSE IF(XOPT .EQ. 'CHKA')THEN
 !
@@ -2247,17 +2265,24 @@
 	  CALL DP_CURVE(ND,XV,TA)
 !
 	ELSE IF(XOPT .EQ. 'IMASS')THEN
+	  K=0
+	  WRITE(6,'(A)')' '
 	  DO ISPEC=1,NSPEC
-	    IF(XSPEC .EQ. SPECIES(ISPEC) .AND.  POPDUM(ND,ISPEC) .GT. 0.0D0)THEN
+	    IF( (XSPEC .EQ. SPECIES(ISPEC) .OR. XSPEC .EQ. 'ALL') .AND.  POPDUM(ND,ISPEC) .GT. 0.0D0)THEN
 	      T1=4.0D+30*PI*AT_MASS(ISPEC)*ATOMIC_MASS_UNIT()/MASS_SUN()
 	      DO I=1,ND
 	        ZETA(I)=T1*POPDUM(I,ISPEC)*CLUMP_FAC(I)*R(I)*R(I)
 	      END DO
 	      CALL TORSCL(TA,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
 	      CALL DP_CURVE(ND,XV,TA)
-	      WRITE(6,'(A,A,A,ES9.2,A)')'Mass of ',TRIM(SPECIES(ISPEC)),' is',TA(ND),' Msun'
+	      K=K+1
+	      WRITE(6,'( A,A4,A,ES9.2,A)',ADVANCE='NO')' Mass of ',TRIM(SPECIES(ISPEC)),' is',TA(ND),' Msun'
+	      IF(MOD(K,2) .NE. 0)WRITE(6,'(10X)',ADVANCE='NO')
+	      IF(MOD(K,2) .EQ. 0)WRITE(6,'(A)')' '
 	    END IF
+	    IF(MOD(K,2) .NE. 0. .AND. XSPEC .EQ. 'ALL')WRITE(6,'(A)')' '
 	  END DO
+	  YAXIS='Mass(M\d\(9)\u)'
 !
 	ELSE IF(XOPT .EQ. 'LOGT')THEN
 	  CALL DLOGVEC(T,YV,ND)
@@ -2625,7 +2650,7 @@
 	  ELEC=.FALSE.
 	  FLAG=.FALSE.
 !
-	  WRITE(6,*)'Option plots fractional abundance (N/Na), mass fraction, or species density.'
+	  WRITE(6,*)'Option plots fractional abundance (N/N[atom]), mass fraction, or species density.'
 !
 	  CALL USR_OPTION(ELEC,'FRAC','T','Fractional abundance')
 	  IF(.NOT. ELEC)CALL USR_OPTION(FLAG,'MF','T','Mass fraction')
@@ -2639,7 +2664,7 @@
 	        IF(XSPEC .NE. 'ALL')EXIT
 	      END IF
 	    END DO
-	    YAXIS='Fractional abundance (N\dX\u/N\dA\u)'
+	    YAXIS='Log Fractional abundance (N\dX\u/N\dA\u)'
 	  ELSE IF(FLAG)THEN
 	    DO ISPEC=1,NSPEC
 	      IF(XSPEC .EQ. SPECIES(ISPEC) .OR. (XSPEC .EQ. 'ALL' .AND.
@@ -2664,7 +2689,7 @@
 	        IF(XSPEC .NE. 'ALL')EXIT
 	      END IF
 	    END DO
-	    YAXIS='Species density (cm\u-3\d)'
+	    YAXIS='Log Species density (cm\u-3\d)'
 	  END IF
 !
 	  IF(XSPEC .EQ. 'ALL')THEN
@@ -5065,9 +5090,10 @@ c
 !
 ! To be read TAU_at_R and R_at_TAU respectively.
 !
-	ELSE IF(XOPT .EQ. 'RTAU' .OR. XOPT .EQ. 'VTAU' .OR. XOPT .EQ. 'TAUR' .OR. 
-	1       XOPT .EQ. 'KAPR' .OR. XOPT .EQ. 'CHIR' .OR. XOPT .EQ. 'ALBEDO' .OR.
-	1       XOPT .EQ. 'ETAR' .OR. XOPT .EQ. 'WROPAC')THEN
+	ELSE IF(XOPT .EQ. 'RTAU'  .OR. XOPT .EQ. 'VTAU' .OR. XOPT .EQ. 'TAUR' .OR. 
+	1       XOPT .EQ. 'EDTAU' .OR. 
+	1       XOPT .EQ. 'KAPR'  .OR. XOPT .EQ. 'CHIR' .OR. XOPT .EQ. 'ALBEDO' .OR.
+	1       XOPT .EQ. 'ETAR'  .OR. XOPT .EQ. 'WROPAC')THEN
 	  IF(XRAYS)WRITE(T_OUT,*)'Xray opacities (i.e. K shell) are included'
 	  IF(.NOT. XRAYS)WRITE(T_OUT,*)'Xray opacities (i.e. K shell) are NOT included'
 	  CALL USR_OPTION(LAM_ST,'LAMST',' ',FREQ_INPUT)
@@ -5170,7 +5196,9 @@ c
 	  ELSE IF(XOPT .EQ. 'VTAU')THEN
 	    CALL USR_OPTION(TAU_VAL,'TAU',' ','Tau value for which V is to be determined')
 	    YAXIS='V(km/s)'
-	    IF(LINY)YAXIS='R[\gt]/R\d*\u'
+	  ELSE IF(XOPT .EQ. 'EDTAU')THEN
+	    CALL USR_OPTION(TAU_VAL,'TAU',' ','Tau value for which Ne is to be determined')
+	    YAXIS='Ne(/cm\u3\d)'
 	  ELSE
 	    CALL USR_OPTION(TAU_VAL,'TAU',' ','Tau value for which R is to be determined')
 	    YAXIS='Log(R[\gt]/R\d*\u)'
@@ -5250,18 +5278,20 @@ c
 	          T2=(R(R_INDX)-RVAL)/(R(R_INDX)-R(R_INDX+1))
 	          YV(ML)=T2*TA(R_INDX+1) + (1.0-T2)*TA(R_INDX)
 	          IF(.NOT. LINY)YV(ML)=LOG10(YV(ML))
-	        ELSE IF(XOPT .EQ. 'VTAU')THEN
+	        ELSE IF(XOPT .EQ. 'VTAU' .OR. XOPT .EQ. 'EDTAU')THEN
+	          TB(1:ND)=V(1:ND)
+	          IF(XOPT .EQ. 'EDTAU')TB(1:ND)=ED(1:ND)
 	          I=1
 	          DO WHILE(TAU_VAL .GT. TA(I) .AND. I .LT. ND)
 	            I=I+1
 	          END DO
 	          IF(TAU_VAL .GT. TA(ND-1))THEN
-	            YV(ML)=V(ND)
+	            YV(ML)=TB(ND)
 	          ELSE IF(TAU_VAL .LE. TA(1))THEN
-	            YV(ML)=V(1)*TA(1)/TAU_VAL
+	            YV(ML)=TB(1)*TA(1)/TAU_VAL
 	          ELSE
 	            T2=(TA(I)-TAU_VAL)/(TA(I)-TA(I-1))
-                    YV(ML)=( (1.0-T2)*V(I)+T2*V(I-1) )
+                    YV(ML)=( (1.0-T2)*TB(I)+T2*TB(I-1) )
 	          END IF
 	        ELSE
 	          I=1

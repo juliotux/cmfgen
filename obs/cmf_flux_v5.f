@@ -64,7 +64,7 @@
 	INTEGER LUER
 	INTEGER ERROR_LU
 	EXTERNAL ERROR_LU
-	CHARACTER(LEN=12), PARAMETER :: PRODATE='22-Jan-2013' 
+	CHARACTER(LEN=12), PARAMETER :: PRODATE='27-Jan-2014' 
 !
 	DATA BLANK/' '/
 !
@@ -392,6 +392,10 @@
 	CALL RD_MODEL_LOG(DIE_AS_LINE,'DIE_AS_LINE')
 	CLOSE(LU)
 !
+! Read in other parameters from batch file. These must be in order.
+!
+	CALL RD_LOG(ONLY_OBS_LINES,'ONLY_OBS_LINES',T_IN,LUER,'Observed lines only?')
+!
 	FILENAME=TRIM(DIR_NAME)//'MODEL_SPEC'
 	CALL GEN_ASCI_OPEN(LUIN,FILENAME,'OLD',' ','READ',IZERO,IOS)
 	IF(IOS .NE. 0)THEN
@@ -406,9 +410,6 @@
 	WRITE(LUER,'(A)')' '
 	CALL CLEAN_RD_STORE()
 !
-! Read in other parameters from batch file. These must be in order.
-!
-	CALL RD_LOG(ONLY_OBS_LINES,'ONLY_OBS_LINES',T_IN,LUER,'Observed lines only?')
 ! 
 !
 !
@@ -608,6 +609,11 @@
 	    END IF
 	  END IF
 	END DO		!Over NUM_SPECIES
+!
+! This surbroutine allow forbidden lines to be omitted -- either for individual
+! ionization stages, or for all species.
+!
+        CALL SET_FORBID_ZERO(LUIN)
 !
 ! 
 ! Determine the total number of bound-bound transitions in the model.

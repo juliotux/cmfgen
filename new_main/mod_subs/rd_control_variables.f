@@ -118,10 +118,10 @@ C
 	    CALL RD_STORE_INT(N_OB_INS,'NBND_INS',L_FALSE,
 	1           'Number of additional points to insert in radius grid at boundary')
 	    CALL RD_STORE_DBLE(CONS_FOR_R_GRID,'C_R_GRID',L_FALSE,
-	1           'Constant to allow improved choice of R grid')
+	1           'Constant to allow improved shoice of R grid')
 	    IF(CONS_FOR_R_GRID .GT. 0)THEN
 	      CALL RD_STORE_DBLE(EXP_FOR_R_GRID,'E_R_GRID',L_TRUE,
-	1           'Constant to allow improved choice of R grid')
+	1           'Constant to allow improved shoice of R grid')
 	    ELSE
 	      CONS_FOR_R_GRID=1.0D0
 	      EXP_FOR_R_GRID=0.0D0
@@ -413,6 +413,9 @@ C
 	    CALL RD_STORE_CHAR(INNER_BND_METH,'IB_METH',L_TRUE,
 	1           'Inner boundary method (DIFUSION, HOLLOW, or ZERO_FLUX)')
 	  END IF
+	  IB_STAB_FACTOR=0.1D0
+	  IF(INNER_BND_METH .EQ. 'DIFFUSION')IB_STAB_FACTOR=0.0D0
+	  CALL RD_STORE_DBLE(IB_STAB_FACTOR,'IB_STAB',L_FALSE,'Inner boundary stabilization factor')
 	  OUTER_BND_METH='HONJ'
 	  CALL RD_STORE_CHAR(OUTER_BND_METH,'OB_METH',L_FALSE,'Outer boundary method (HONJ or HALF_MOM)')
 C
@@ -429,6 +432,10 @@ C
 C
 	  CALL RD_STORE_NCHAR(METHOD,'METHOD',ISIX,L_TRUE,
 	1         'Which method for continuum tau'//
+	1         ' loglog, loglin, linear or zero ?')
+	  LUM_FROM_ETA_METHOD='LINMON'
+	  CALL RD_STORE_NCHAR(LUM_FROM_ETA_METHOD,'LUM_METH',ISIX,L_FALSE,
+	1         'Which method for computing L from ETA '//
 	1         ' loglog, loglin, linear or zero ?')
 	  CALL RD_STORE_NCHAR(N_TYPE,'N_TYPE',ISIX,L_TRUE,
 	1         'Method for to handle N for MOM_J_CMF -- '//
@@ -454,15 +461,66 @@ C
 	1           'Include incident radiation for plane-parellel mod with V?')
 	  CALL RD_STORE_LOG(TRAPFORJ,'TRAP_J',L_TRUE,
 	1           'Use trapazoidal weights to compute J? ')
-C
+!
+! This section of the code should work with old VADAT  files when using a Doppler profile of
+! fixed width (the default).
+!
 	  WRITE(LUSCR,'()')
+	  FIX_DOP=.TRUE.
+	  AMASS_DOP=1.0D0
+	  CALL RD_STORE_LOG(FIX_DOP,'FIX_DOP',L_FALSE,
+	1      'Use the same turbulent velocity for all species?')
 	  CALL RD_STORE_DBLE(TDOP,'TDOP',L_TRUE,
 	1      'Temperature to be used in Doppler profile (10^4K)')
-	  CALL RD_STORE_DBLE(AMASS_DOP,'AMASS_DOP',L_TRUE,
+	  IF(FIX_DOP)THEN
+	    CALL RD_STORE_DBLE(AMASS_DOP,'AMASS_DOP',L_TRUE,
 	1      'Atomic mass to be used in Doppler profile (amu''s)')
-	  CALL RD_STORE_DBLE(VTURB,'VTURB',L_TRUE,
+	    CALL RD_STORE_DBLE(VTURB,'VTURB',L_TRUE,
 	1      'Turbulent velocity to be used in Doppler profile (km/s)')
-C
+	    VTURB_MIN=VTURB; VTURB_MAX=VTURB
+	    GLOBAL_LINE_PROF='DOP_FIX'
+	  ELSE
+	    CALL RD_STORE_DBLE(VTURB_MIN,'VTURB_MIN',L_TRUE,
+	1      'Minimum turbulent velocity for Doppler profile (km/s)')
+	    CALL RD_STORE_DBLE(VTURB_MAX,'VTURB_MAX',L_TRUE,
+	1      'Maximum turbulent velocity for Doppler profile (km/s)')
+	    VTURB=VTURB_MIN
+!
+	    WRITE(LUSCR,'()')
+	    CALL RD_STORE_NCHAR(GLOBAL_LINE_PROF,'GLOBAL_PROF',ITEN,L_TRUE,
+	1        'Global switch for intrinsic line absorption profile')
+	    CALL SET_CASE_UP(GLOBAL_LINE_PROF,IZERO,IZERO)
+	    IF( GLOBAL_LINE_PROF .NE. 'NONE' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'DOP_FIX' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'DOP_SPEC' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'DOPPLER' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'LIST' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'LIST_VGT' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'VOIGT' .AND.
+	1       GLOBAL_LINE_PROF .NE. 'HZ_STARK')THEN
+	      WRITE(LUER,*)'Invalid GLOBAL_LINE_PROF parameter'
+	      STOP
+	    END IF
+	    CALL RD_STORE_LOG(SET_PROF_LIMS_BY_OPACITY,'OPAC_LIMS',L_TRUE,
+	1           'Set prof limits by line to cont. ratio?')
+	    CALL RD_STORE_DBLE(DOP_PROF_LIMIT,'DOP_LIM',L_TRUE,
+	1           'Edge limits for Doppler line profile')
+	    CALL RD_STORE_DBLE(VOIGT_PROF_LIMIT,'VOIGT_LIM',L_TRUE,
+	1           'Edge limits for Voigt line profile')
+	  END IF
+!
+! The following options do not apply to a Doppler profile.
+!
+	  V_PROF_LIMIT=3000.0D0
+	  MAX_PROF_ED=1.0D+16
+	  NORM_PROFILE=.TRUE.
+	  CALL RD_STORE_DBLE(MAX_PROF_ED,'MAX_PROF_ED',L_FALSE,
+	1           'Maximum electron density for Stark profile computation')
+	  CALL RD_STORE_DBLE(V_PROF_LIMIT,'V_PROF_LIM',L_FALSE,
+	1           'One-sided profile limit for Stark profiles (km/s)')
+	  CALL RD_STORE_LOG(NORM_PROFILE,'NORM_PROF',L_FALSE,
+	1           'When true, profiles are normalized to have unit area.')
+!
 	  WRITE(LUSCR,'()')
 	  CALL RD_STORE_DBLE(MAX_DOP,'MAX_DOP',L_TRUE,
 	1      'Maximum half-width of resonance zone (in Doppler widths)')
@@ -802,6 +860,7 @@ C
 	    WRITE(LUER,*)'******WARNING in CMFGEN*****************'
 	    WRITE(LUER,*)'Solution method inconsistent with NUM_BNDS'
 	    WRITE(LUER,*)'METH_SOL=',METH_SOL,'NUM_BNDS=',NUM_BNDS
+	    WRITE(LUER,'(X,A,/)')'Using diagnoal solution'
 	    METH_SOL='DIAG'
 	  END IF
 	  CALL RD_STORE_NCHAR(SCALE_OPT,'SCALE_OPT',ISIX,L_TRUE,
@@ -815,6 +874,14 @@ C
 	1      'Maximum fractional change for linearization ')
 	  CALL RD_STORE_DBLE(MAX_LAM_COR,'MAX_LAM',L_TRUE,
 	1      'Maximum fractional change for lambda iteration ')
+	  MAX_dT_COR=0.2D0
+	  CALL RD_STORE_DBLE(MAX_dT_COR,'MAX_dT',L_FALSE,
+	1      'Maximum fractional change in the temperature')
+	  IF(MAX_dT_COR .LE. 0.0D0 .OR. MAX_dT_COR .GT. 0.201D0)THEN
+	    WRITE(LUER,*)' Error: MAX_dT in VADAT has an invalid value of',MAX_dT_COR
+	    WRITE(LUER,*)' Require 0 < MAX_dT_COR < 0.2'
+	    STOP
+	  END IF
 	  CALL RD_STORE_DBLE(MAX_CHNG_LIM,'MAX_CHNG',L_TRUE,
 	1      'If maximum % fractional change > MAX_CHNG terminate model ')
 !
@@ -873,10 +940,12 @@ C
 	  CALL RD_STORE_DBLE(DJDT_RELAX_PARAM,'DJDT_RELAX',L_FALSE,
 	1          'Factor to scale DJDT terms to assist initial convergence')
 !
+	  USE_LAM_ES=.FALSE.
 	  USE_J_REL=.FALSE.
 	  INCL_REL_TERMS=.FALSE.
 	  INCL_ADVEC_TERMS_IN_TRANS_EQ=.FALSE.
 	  USE_FORMAL_REL=.FALSE.
+	  CALL RD_STORE_LOG(USE_LAM_ES,'USE_LAM_ES',L_FALSE,'Use lambda iteration with ray solutions?')
 	  CALL RD_STORE_LOG(USE_J_REL,'USE_J_REL',L_FALSE,'Use MOM_J_REL_VN to solve the moment equations?')
 	  IF(USE_DJDT_RTE .OR. USE_J_REL)USE_FORMAL_REL=.TRUE.
 	  CALL RD_STORE_LOG(USE_FORMAL_REL,'USE_FRM_REL',L_FALSE,'Use CMF_FORMAL_REL to compute F etc?')

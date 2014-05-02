@@ -180,8 +180,8 @@
  	  WRITE(LUER,9000)IINC,ABS(INCREASE),'  (BA not computed)'
 	  WRITE(LUER,9200)IDEC,DECREASE,'  (BA not computed)'
 	END IF
-9000	FORMAT(' Maximum % increase at depth ',I3,' is',1PE10.2: A)
-9200	FORMAT(' Maximum % decrease at depth ',I3,' is',1PE10.2: A)
+9000	FORMAT(' Maximum % increase at depth ',I4,' is',1PE10.2: A)
+9200	FORMAT(' Maximum % decrease at depth ',I4,' is',1PE10.2: A)
 !
 ! Convert decrease into more useful form. If DECREASE=100, the
 ! new population value is zero and change is infinite. i.e we

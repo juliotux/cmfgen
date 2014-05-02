@@ -7,6 +7,7 @@
 !
 	PROGRAM PLT_JH
 !
+! Altered 02-Nov-2013 :  Modified EXTJ J option -- now uses MON_INTERP.
 ! Altered 09-Jan-2009 :  No longer require RVTJ file.
 ! Altered 23-Nov-2007 :  New option inserted to allow J (in EDDFACTOR File) to be extended to
 !                           larger radii assuming simple dilution. (alteration done 14-Nov-2007).
@@ -316,6 +317,12 @@
 	END IF
 	CLOSE(LU_IN)
 !
+	 IF(ND_ATM .NE. ZM(1)%ND)THEN
+	   WRITE(6,*)' ' 
+	   WRITE(6,*)' WARNING -- ND in RVTJ differs from that assoicated with main input file ' 
+	   WRITE(6,*)' ' 
+	 END IF
+!
 ! Now compute the important optical depth scales.
 !
 	 ALLOCATE (TA(ND_ATM))
@@ -566,24 +573,11 @@
 !
 ! Set up the extension & interpolation vectors.
 !
+	  K=0
 	  DO I=1,NEW_ND
 	    IF(NEW_R(I) .GT. R(1))THEN
 	      TA(I)=(R(1)/NEW_R(I))**2
 	      K=I
-	    ELSE
-	      DO L=2,ZM(1)%ND
-	        IF(NEW_R(I) .GE. R(L))THEN
-	          TC(I)=L-1
-	          IF( ABS(NEW_R(I)/R(L-1)-1.0D0) .LT. 1.0D-06)THEN
-	            TA(I)=1.0D0     
-	          ELSE IF( ABS(NEW_R(I)/R(L)-1.0D0) .LT. 1.0D-06)THEN
-	            TA(I)=0.0D0
-	          ELSE
-	            TA(I)=(NEW_R(I)-R(L))/(R(L-1)-R(L))
-	          END IF
-	          EXIT
-	        END IF
-	      END DO
 	    END IF
 	  END DO
 !
@@ -602,16 +596,16 @@
 	1       ACCESS='DIRECT',STATUS='NEW',RECL=I,IOSTAT=IOS)
 	  END IF
 	  WRITE(83,REC=EDD_CONT_REC)ACCESS_F,NCF,NEW_ND
-	    DO ML=1,ZM(1)%NCF
-	      DO I=1,K
-	        TB(I)=TA(I)*ZM(1)%RJ(1,ML)
-	      END DO
-	      DO I=K+1,NEW_ND
-	        J=NINT(TC(I))
-	        TB(I)=TA(I)*ZM(1)%RJ(J,ML)+(1.0D0-TA(I))*ZM(1)%RJ(J+1,ML)
-	      END DO
-	      WRITE(83,REC=ACCESS_F-1+ML)(TB(I),I=1,NEW_ND),ZM(ID)%NU(ML)
+	  WRITE(6,*)NEW_R(K+1),NEW_R(NEW_ND)
+	  WRITE(6,*)R(1),R(ZM(1)%ND)
+	  DO ML=1,ZM(1)%NCF
+	    DO I=1,K
+	      TB(I)=TA(I)*ZM(1)%RJ(1,ML)
 	    END DO
+	    I=NEW_ND-K
+            CALL MON_INTERP(TB(K+1),I,IONE,NEW_R(K+1),I,ZM(1)%RJ(1,ML),ZM(1)%ND,R,ZM(1)%ND)
+            WRITE(83,REC=ACCESS_F-1+ML)(TB(I),I=1,NEW_ND),ZM(ID)%NU(ML)
+	  END DO
 	  CLOSE(UNIT=83)
 	  IF(FILE_PRES)THEN
 	    WRITE(6,*)'New J data written to J_DATA and J_DATA_INFO'
@@ -1181,36 +1175,7 @@
 	ELSE IF(X(1:2) .EQ. 'LI' .OR. X(1:4) .EQ. 'LIST' .OR. 
 	1                             X(1:2) .EQ. 'HE' 
 	1          .OR. X(1:4) .EQ. 'HELP')THEN
-	  CALL GET_ENVIRONMENT_VARIABLE(NAME="CMFDIST",VALUE=HELP_FILE,STATUS=IOS)
-	  IF(X(1:2) .EQ. 'LI')THEN
-	    HELP_FILE=TRIM(HELP_FILE)//'/txt_files/plt_jh_opt_desc.txt'
-	    CALL GEN_ASCI_OPEN(LU_IN,HELP_FILE,'OLD',' ','READ',IZERO,IOS)
-	  ELSE 
-	    HELP_FILE=TRIM(HELP_FILE)//'/txt_files/plt_jh_options.txt'
-	    CALL GEN_ASCI_OPEN(LU_IN,HELP_FILE,'OLD',' ','READ',IZERO,IOS)
-	  END IF
-	  IF(IOS .NE. 0)THEN
-	    WRITE(T_OUT,*)'Error opening HELP or DESCRIPTOR file for PLT_JH'
-	    GOTO 1
-	  END IF
-	  READ(LU_IN,*)I,K			!For page formating (I=22,K=12)
-	  DO WHILE(1.EQ. 1)
-	    DO J=1,I
-	      READ(LU_IN,'(A)',END=700)STRING
-	      L=LEN(TRIM(STRING))
-	      IF(L .EQ. 0)THEN
-	        WRITE(T_OUT,'(X)')
-	      ELSE
-	        WRITE(T_OUT,'(X,A)')STRING(1:L)
-	      END IF
-	    END DO
-	    READ(T_IN,'(A)')STRING
-	    IF(STRING(1:1) .EQ. 'E' .OR.
-	1       STRING(1:1) .EQ. 'e')GOTO 700		!Exit from listing.
-	    I=K
-	  END DO
-700	  CONTINUE
-	  CLOSE(UNIT=LU_IN)
+	  CALL PLT_JH_OPT_DESC
 !
 	ELSE IF(X(1:2) .EQ. 'EX') THEN
 	  CALL DP_CURVE(0,XV,YV)

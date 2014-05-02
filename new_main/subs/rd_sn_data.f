@@ -61,7 +61,7 @@
 	LOGICAL DONE
 !
 	LUER=ERROR_LU()
-	WRITE(LUER,*)'Entering RD_SN_DATA'
+	WRITE(LUER,'(/,A)')' Entering RD_SN_DATA'
 	OPEN(UNIT=LU,FILE='SN_HYDRO_DATA',STATUS='OLD')
 !
 ! Get the number of data points in the HYDRO model, and the number 
@@ -145,7 +145,7 @@
 	   END IF
 	   STRING=' '
 	 END DO
-	 WRITE(LUER,*)'Obtained non-POP vectors in RD_SN_DATA'
+	 WRITE(LUER,*)'   Obtained non-POP vectors in RD_SN_DATA'
 !
 ! We can now read in the mass-fractions.
 !
@@ -218,7 +218,7 @@
 	  ELEC_DEN_HYDRO=LOG(ELEC_DEN_HYDRO) 
 	  CALL MON_INTERP(ED,ND,IONE,LOG_R,ND,ELEC_DEN_HYDRO,NX,LOG_R_HYDRO,NX)
 	  ED=EXP(ED)
-	  WRITE(LUER,*)'RD_SN_DATA has read ED and T'
+	  WRITE(LUER,*)'   RD_SN_DATA has read ED and T'
 	END IF
 !
 	WRK_HYDRO=LOG(DENSITY_HYDRO) 
@@ -237,7 +237,7 @@
 	   END IF
 	  END DO
 	END DO
-	WRITE(LUER,*)'Read SN populations in RD_SN_DATA'
+	WRITE(LUER,*)'   Read SN populations in RD_SN_DATA'
 !
 	DO IS=1,NUM_ISOTOPES
 	  ISO(IS)%OLD_POP_DECAY=ISO(IS)%OLD_POP
@@ -259,7 +259,7 @@
 	    STOP
 	  END IF
 	END DO
-	WRITE(LUER,*)'Read SN isotope populations in RD_SN_DATA'
+	WRITE(LUER,*)'   Read SN isotope populations in RD_SN_DATA'
 !
 ! Ensure mass-fractions sum to unity. Two options: scale either
 ! the mass-fractions or the density. Here we scale the mass-fractions.
@@ -277,9 +277,9 @@
 	DO L=1,NUM_SPECIES
 	  POP_SPECIES(:,L)=POP_SPECIES(:,L)/WRK(:)
 	END DO
-	WRITE(6,*)'Normalized mass fractions in RD_SN_DATA'
-	WRITE(6,*)'Maximum normalization factor was',MAXVAL(WRK)
-	WRITE(6,*)'Minimum normalization factor was',MINVAL(WRK)
+	WRITE(6,*)'   Normalized mass fractions in RD_SN_DATA'
+	WRITE(6,*)'   Maximum normalization factor was',MAXVAL(WRK)
+	WRITE(6,*)'   Minimum normalization factor was',MINVAL(WRK)
 !
 ! Now compute the atomic population of each species.
 !
@@ -317,7 +317,7 @@
 	      END IF
 	    END DO
 	  END DO
-	  WRITE(LUER,*)'Normalized isotope populations in RD_SN_DATA'
+	  WRITE(LUER,*)'   Normalized isotope populations in RD_SN_DATA'
 	ELSE
 	  DO IP=1,NUM_PARENTS
 	    WRK(1:ND)=0.0D0
@@ -392,7 +392,7 @@
 !
 	DEALLOCATE (R_HYDRO, LOG_R_HYDRO, V_HYDRO, SIGMA_HYDRO, T_HYDRO, DENSITY_HYDRO )
 	DEALLOCATE (WRK_HYDRO, SPEC_HYDRO, POP_HYDRO, ATOM_DEN_HYDRO, ELEC_DEN_HYDRO)
-	WRITE(LUER,*)'Exiting RD_SN_DATA'
+	WRITE(LUER,'(A,/)')' Exiting RD_SN_DATA'
 !
 	RETURN
 	END

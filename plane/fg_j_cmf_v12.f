@@ -208,6 +208,7 @@
 	USE MOD_RAY_MOM_STORE
 	IMPLICIT NONE
 !
+! Altered 30-Dec-2013: Fixed expressions for HPLUS_OB and HPLUS_IB: Change OMP schedule to dynamic.
 ! Altered 08-Jan-2012: Changed to V12. Added REXT_FAC to call.
 ! Altered 07-Jul-2011: Changed extrapolation region I to max-value of 10 (rathee than ND/6).
 !                         This was done for shell model. Mayu need further changes.
@@ -315,6 +316,7 @@
 	INTEGER NI_SMALL
 	INTEGER I,J,K,LS
 	INTEGER NI
+	INTEGER NP_TMP
 !
 	REAL*8 DBC
 	REAL*8 I_CORE
@@ -686,7 +688,10 @@
 	    STOP	
           END IF
 !
-	  DO LS=1,NP
+! LS=NP with only 1 depth point must be treated separately.
+!
+	  NP_TMP=NP; IF(NI_RAY(NP) .EQ. 1)NP_TMP=NP-1
+	  DO LS=1,NP_TMP
 	    NI_SMALL=ND-(LS-NC-1);   IF(LS .LE. NC+1)NI_SMALL=ND
 	    K=1
 	    DO I=1,NI_SMALL
@@ -703,6 +708,7 @@
 	      END DO
 	    END DO
 	  END DO
+	  IF(NI_RAY(NP) .EQ. 1)J_PNT(1,NP)=1
 !
 	  DO I=1,ND
 	    DO LS=1,NP-I+1
@@ -710,6 +716,8 @@
 	      IF(J_PNT(I,LS) .LT. 1 .OR. J_PNT(I,LS) .GT. NI_RAY(LS))THEN
 	        WRITE(LUER,*)'Error setting J_PNT in FG_J_CMF_V12 -- invalid values'
 	        WRITE(LUER,*)'Depth=',I,'Ray=',LS,'J_PNT value=',J_PNT(I,LS)
+	        WRITE(LUER,*)'NP=',NP,'R(1)=',R(1),'R_RAY(1,LS)=',R_RAY(1,LS)
+	        WRITE(LUER,*)'NI_SMALL=',NI_SMALL
 	        STOP
 	      ELSE IF( ABS(R_RAY(K,LS)-R(I))/R(I) .GT. 1.0D-12)THEN
 	        WRITE(LUER,*)'Error setting J_PNT in FG_JCMF_V12 -- invalid values'
@@ -1310,7 +1318,8 @@ C
 !
 ! Enter loop to perform integration along each ray.
 !
-!$OMP PARALLEL DO PRIVATE(SOURCE_PRIME,SOURCE_RAY,CHI_RAY,ETA_RAY,dCHIdR_RAY,Q,EE,E0,E1,E2,E3,S,dS,T1,T2,I_CORE,dZ,NI,I,K)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) 
+!$OMP1 PRIVATE(SOURCE_PRIME,SOURCE_RAY,CHI_RAY,ETA_RAY,dCHIdR_RAY,Q,EE,E0,E1,E2,E3,S,dS,T1,T2,I_CORE,dZ,NI,I,K)
 !
 	  DO LS=1,NP
 !
@@ -1609,7 +1618,7 @@ C
 	  T1=AV(K,LS)+CV_BOUND(LS)
 	  T2=0.0D0; T2=MAX(T2,AV(K,LS)-CV_BOUND(LS))
 	  JPLUS_OB=JPLUS_OB+JQW(1,LS)*T1
-	  HPLUS_OB=HPLUS_OB+HQW(1,LS)*T2
+	  HPLUS_OB=HPLUS_OB+HQW(1,LS)*T1
 	  KPLUS_OB=KPLUS_OB+KQW(1,LS)*T1
 	  NPLUS_OB=NPLUS_OB+NQW(1,LS)*T1
 	  JMIN_OB=JMIN_OB+JQW(1,LS)*T2
@@ -1622,7 +1631,7 @@ C
 	  T1=AV(K,LS)-0.5D0*I_M_IN_BND(LS)
 	  T2=I_M_IN_BND(LS)
 	  JPLUS_IB = JPLUS_IB+JQW(ND,LS)*T1
-	  HPLUS_IB = HPLUS_IB+HQW(ND,LS)*T2
+	  HPLUS_IB = HPLUS_IB+HQW(ND,LS)*T1
 	  KPLUS_IB = KPLUS_IB+KQW(ND,LS)*T1
 	  NPLUS_IB = NPLUS_IB+NQW(ND,LS)*T1
 	   JMIN_IB = JMIN_IB +JQW(ND,LS)*T2

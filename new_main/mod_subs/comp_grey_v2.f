@@ -15,6 +15,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered 28-Jan-2014 : Now call TORSCL_V3
 ! Altered 20-Jan-2008 : POPS & NT inserted into call. Changed to V2.
 !                       Now call JGREY_HUB_DDT_V2
 ! 
@@ -75,15 +76,21 @@
 	COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
 	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
 !
-	WRITE(6,*)'BEGIN COMP_GREY_V2',ND,NC,NP
 	PI=4.0D0*ATAN(1.0D0)
 	CHI(1:ND)=ROSSMEAN(1:ND)
 !
-! Compute the Rosseland optical depth scale. The ' ' in TORSCL indicates TYPE of atmosphere,
-! and here is set to ' ' so that TORSCL assumes a power law dependence. If CHI(3) .LT. CHI(1),
-! an 1/r^2 density dependence at the outer boundary is assumed.
+! Compute the Rosseland optical depth scale. 
 !
-        CALL TORSCL(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,' ')
+	J=5
+	DO K=J+1,10
+	  IF(CHI(J)/CHI(1) .GT. 5.0D0)EXIT
+	  J=J+1
+	END DO
+	IF(PLANE_PARALLEL_NO_V)THEN
+          CALL TORSCL_V3(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,'EXP',J,L_FALSE)
+	ELSE
+          CALL TORSCL_V3(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,'PCOMP',J,L_FALSE)
+	END IF
 !
 	IF(PLANE_PARALLEL_NO_V)THEN
            FEDD=0.3333D0

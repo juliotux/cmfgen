@@ -3,6 +3,7 @@ C Auixlary routine to evauate, and write out, the mean ionic charge
 C
 	SUBROUTINE RITE_GAM_HEAD(R,ED,T,ND,LU,FILNAME)
 C
+C Altered 31-Dec-2013 : ND now output as I4 rather than I3
 C Created 11-Jun-1996 : based on RITE_GAM. This routine rites out
 C header info and population independent vectors (i.e. R,T and ED).
 C
@@ -30,7 +31,7 @@ C
 	  END IF
 
 	  WRITE(LU,'(A)')
-	  WRITE(LU,'(1X,I3,20X,''!Number of depth points'')')ND
+	  WRITE(LU,'(1X,I4,20X,''!Number of depth points'')')ND
 C
 	  WRITE(LU,'(A)')' '
 	  WRITE(LU,'(A)')' !Electron density'

@@ -274,6 +274,18 @@
 	    END IF
           END DO
 !
+! Check R-grid is monotonic.
+!
+	 DO I=1,ND-1
+	   IF(R(I) .LE. R(I+1))THEN
+	     LUER=ERROR_LU()
+	     WRITE(LUER,*)'Error in SET_RV_HYDRO_MODEL_V3 --- R-grid is not monotonic'
+	     WRITE(LUER,*)'I,R(I),R(I+1)'
+	     WRITE(LUER,*)I,R(I),R(I+1)
+	     STOP
+	   END IF
+	 END DO
+!
 ! Make sure the R grid that is read in is compatible with the R grid found in SN_HYDRO_DATA.
 ! If R at the inner boundary differs signifcantly (currently 1 part in 10^6) from that in the
 ! SN_HYDRO_DATA file, we assume that the supplied R grid was for the previous time step.

@@ -39,6 +39,7 @@
 	USE STEQ_DATA_MOD 
 	IMPLICIT NONE
 !
+! Incorporated 02-Jun-2013 : Changed to allow depth dependent profiles (from cur_cmf_25jun13).
 ! Altered 19-Feb-2013 :: Added TUNE statement so that BA_UP section is always enclosed.
 ! Altered 11-Feb-2005 :: Rewrite setion in BA_FF.
 !                        Done to try an improve memory access when using very
@@ -210,26 +211,35 @@ CC!$OMP END PARALLEL
 	ELSE
 	  CALL TUNE(IONE,'BA_UP_VJ')
 	  T2=FQW/NU
-!$OMP PARALLEL PRIVATE(L,I,K,T1)
-!$OMP DO
+!
+!$OMP PARALLEL DO PRIVATE(L,I,K,T1)
 	  DO L=DST,DEND
 	    T1=T2*EXP(-HDKT*NU/T(L))
 	    DO K=1,NUM_BNDS
 	      DO I=1,NT
-	          VJ_R(I,K,L)=VJ_R(I,K,L)+T1*VJ(I,K,L)
-	          VJ_P(I,K,L)=VJ_P(I,K,L)+T2*VJ(I,K,L)
+	        VJ_R(I,K,L)=VJ_R(I,K,L)+T1*VJ(I,K,L)
 	      END DO
 	    END DO
 	    RJ_SUM(L)=RJ_SUM(L)+T2*RJ(L)
 	  END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!$OMP END PARALLEL DO
+!
+!$OMP PARALLEL DO PRIVATE(L,I,K,T1)
+	  DO L=DST,DEND
+	    DO K=1,NUM_BNDS
+	      DO I=1,NT
+	        VJ_P(I,K,L)=VJ_P(I,K,L)+T2*VJ(I,K,L)
+	      END DO
+	    END DO
+	    RJ_SUM(L)=RJ_SUM(L)+T2*RJ(L)
+	  END DO
+!$OMP END PARALLEL DO
 	  CALL TUNE(ITWO,'BA_UP_VJ')
 !
 	  CALL TUNE(IONE,'BA_UP_VT')
 !$OMP PARALLEL PRIVATE(L,I,K,T1,T2)
 !$OMP DO
-	  DO L=DST,DEND
+	  DO L=1,ND                        !DST,DEND
 	    T1=CHI_CONT(L)-ESEC(L)
 	    T2=FQW*T1
 	    DO K=1,NUM_BNDS
@@ -257,25 +267,35 @@ CC!$OMP END PARALLEL
 ! we loop over all L. This minimizes paging.
 !
 	  CALL TUNE(IONE,'BA_UP_BANF')
-!$OMP PARALLEL PRIVATE(L,J,K,QFV_T)
-!$OMP DO
-	  DO L=DST,DEND					!S.E. equation depth
-	    QFV_T=FQW*(CHI_CONT(L)-ESEC(L))
-	    DO K=1,NUM_BNDS
-	      IF(K .EQ. DIAG_INDX)THEN
-   	        DO  J=1,NT	  	  	  	!Variable
-	          BA_T_PAR(J,L)=BA_T_PAR(J,L) + (
-	1            FQW*(RJ_RAD(L)*VCHI(J,L)-VETA(J,L)) + QFV_T*VJ(J,K,L) )
-	        END DO
-	      ELSE
-   	        DO  J=1,NT	  	  	  !Variable
-	          BA_T(J,K,L)=BA_T(J,K,L)+QFV_T*VJ(J,K,L)
-	        END DO
-	      END IF
- 	    END DO
-	  END DO
-!$OMP END DO
-!$OMP END PARALLEL
+	  IF(NUM_BNDS .EQ. 1)THEN
+!$OMP PARALLEL DO PRIVATE(L,J,QFV_T)
+	    DO L=1,ND
+	      QFV_T=FQW*(CHI_CONT(L)-ESEC(L))
+   	      DO  J=1,NT	  	  	  	!Variable
+	        BA_T_PAR(J,L)=BA_T_PAR(J,L) + (
+	1             FQW*(RJ_RAD(L)*VCHI(J,L)-VETA(J,L)) + QFV_T*VJ(J,1,L) )
+	      END DO
+	    END DO
+!$OMP END PARALLEL DO
+	  ELSE
+!$OMP PARALLEL DO PRIVATE(L,J,K,QFV_T)
+	    DO L=DST,DEND					!S.E. equation depth
+	      QFV_T=FQW*(CHI_CONT(L)-ESEC(L))
+	      DO K=1,NUM_BNDS
+	        IF(K .EQ. DIAG_INDX)THEN
+   	          DO  J=1,NT	  	  	  	!Variable
+	            BA_T_PAR(J,L)=BA_T_PAR(J,L) + (
+	1              FQW*(RJ_RAD(L)*VCHI(J,L)-VETA(J,L)) + QFV_T*VJ(J,K,L) )
+	          END DO
+	        ELSE
+   	          DO  J=1,NT	  	  	  !Variable
+	            BA_T(J,K,L)=BA_T(J,K,L)+QFV_T*VJ(J,K,L)
+	          END DO
+	        END IF
+ 	      END DO
+	    END DO
+!$OMP END PARALLEL DO
+	  END IF
 !
 !$OMP PARALLEL PRIVATE(L,J,K,LS,BNDST,BNDEND)
 !$OMP DO

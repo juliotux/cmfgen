@@ -63,6 +63,7 @@
 	REAL*8, ALLOCATABLE :: DLAM_INT(:)
 	REAL*8, ALLOCATABLE :: STARK_INT(:)
 	SAVE DLAM_INT,STARK_INT
+	REAL*8, SAVE :: WAVE_SAVE=0.0D0
 !
 	INTEGER NI,NG
 	INTEGER I,J,K,L,IOS
@@ -70,6 +71,7 @@
 	INTEGER ERROR_LU,LUER
 	EXTERNAL ERROR_LU
 !
+	CHARACTER(LEN=80) STRING
 	LOGICAL SIMP_QUAD
 !
 	IF(DWS(NWS) .LT. DWS(1))THEN
@@ -230,15 +232,27 @@
 	  PRO(1:NF)=PRO(1:NF)/T1
 	  IF(ABS(T1-1.0D0) .GT. 0.3)THEN
             LUER=ERROR_LU()
-	    WRITE(LUER,*)' '
-	    WRITE(LUER,*)'Possible error in CONV_STRK_V2'
-	    WRITE(LUER,*)'Profile normalization constant differs from 1 by more than 30%'
-	    WRITE(LUER,*)'Normalization constant = ',T1
-	    WRITE(LUER,'(3(A,ES16.8))')' Wave=',WAVE,' dlam_therm=',DLAM_THERM,
-	1                            '  dlam_turb=',DLAM_TURB
-	    WRITE(LUER,'(A,ES12.4,A,ES12.4)')' Log(Ne)=',ELOG,'   Log(T)=',TLOG
-	    WRITE(LUER,'(2(A,ES16.8,A))')' Lam_ST(1)=',PROF_LAM(1),'A',
-	1                      '  Lam_END(NF)=',PROF_LAM(NF),'A'
+	    IF(WAVE .NE. WAVE_SAVE)THEN
+	      BACKSPACE(LUER,IOSTAT=IOS)
+	      IF(IOS .EQ. 0)THEN
+	        READ(LUER,'(A)')STRING
+	        BACKSPACE(LUER)
+	        WRITE(LUER,'(/,A)')TRIM(STRING)
+	      END IF
+	      WRITE(LUER,*)'Possible error in CONV_STRK_V2'
+	      WRITE(LUER,*)'Profile normalization constant differs from 1 by more than 30%'
+	      IF(WAVE .GT. 100.0D0 .AND. WAVE .LT. 1.0D+05)THEN
+	        WRITE(LUER,'(3(A,F15.8,A,3X))')' Wave=',WAVE,'A','Lam_ST(1)=',PROF_LAM(1),'A',
+	1                      'Lam_END(NF)=',PROF_LAM(NF),'A'
+	      ELSE
+	        WRITE(LUER,'(3(A,ES16.8,A,3X))')' Wave=',WAVE,'A','Lam_ST(1)=',PROF_LAM(1),'A',
+	1                      'Lam_END(NF)=',PROF_LAM(NF),'A'
+	      END IF
+	      WAVE_SAVE=WAVE
+	      WRITE(LUER,'(5A14)')'Norm Const.','    Log(Ne)',
+	1                      '     Log(T)',' dLAM_THERM',' dLAM_TURB'
+	    END IF
+	    WRITE(LUER,'(5ES14.4)')T1,ELOG,TLOG,DLAM_THERM,DLAM_TURB
 	  END IF
 	END IF
 !

@@ -37,6 +37,7 @@
 	USE VAR_RAD_MOD
 	IMPLICIT NONE
 !
+! Incorporated 02-Jan-2013: Chagend to allow depth dependent line profiles.
 ! Altered 20-Oct-2010 : Commented out statements accessing DIFFW.
 !                         No longer call CALL SET_VAR_RAD_MOD_V2
 !                         This reduces memory requirements by not declaring 
@@ -580,10 +581,11 @@
 	        T2=GF_CUT
 	      END IF
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_OSCDAT'
-	      CALL GENOSC_V6( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,
-	1                 ATM(ID)%XzVLEVNAME_F, T1, ATM(ID)%ZXzV,
+	      CALL GENOSC_V8( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F,
+	1                 ATM(ID)%ARAD,ATM(ID)%GAM2,ATM(ID)%GAM4,ATM(ID)%OBSERVED_LEVEL,
+	1                 T1, ATM(ID)%ZXzV,
 	1                 ATM(ID)%XzV_OSCDATE, ATM(ID)%NXzV_F,I,
-	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,
+	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,
 	1                 LUIN,LUSCR,TMP_STRING)
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_TO_S'
 	      CALL RD_F_TO_S_IDS( ATM(ID)%F_TO_S_XzV, ATM(ID)%INT_SEQ_XzV,
@@ -732,13 +734,18 @@
 	  PF(I)=PF(I)*T1
 	END DO
         VDOP_VEC(1:ND)=12.85D0*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
+        VTURB_VEC(1:ND)=VTURB_MIN+(VTURB_MAX-VTURB_MIN)*V(1:ND)/V(1)
+!
+        IF(GLOBAL_LINE_PROF(1:4) .EQ. 'LIST')THEN
+          CALL RD_STRK_LIST(LUIN)
+        END IF
 !
 ! Compute the frequency grid for CMFGEN. Routine also allocates the vectors 
 ! needed for the line data, sets the line data, and puts the line data into 
 ! numerical order.
 !
-	CALL SET_FREQUENCY_GRID(NU,FQW,LINES_THIS_FREQ,NU_EVAL_CONT,
-	1               NCF,NCF_MAX,N_LINE_FREQ,
+	CALL SET_FREQUENCY_GRID_V2(NU,FQW,LINES_THIS_FREQ,NU_EVAL_CONT,
+	1               NCF,NCF_MAX,N_LINE_FREQ,ND,
 	1               OBS_FREQ,OBS,N_OBS,LUIN,IMPURITY_CODE)
 !
 ! Define the average energy of each super level. At present this is
@@ -1003,7 +1010,7 @@
 	  DO SIM_INDX=1,MAX_SIM
 	    IF(RESONANCE_ZONE(SIM_INDX))THEN
 	      DO L=1,ND
-	         CHI(L)=CHI(L)+CHIL_MAT(L,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
+	         CHI(L)=CHI(L)+CHIL_MAT(L,SIM_INDX)*LINE_PROF_SIM(L,SIM_INDX)
 	      END DO
 	    END IF
 	  END DO

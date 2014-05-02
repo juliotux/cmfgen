@@ -210,7 +210,7 @@
 	END DO
 	CLOSE(LU)
 	NUM_DECAY_PATHS=IN
-	WRITE(6,*)'Successfully read in NUCLEAR data'
+	WRITE(6,'(A,/)')' Successfully read in NUCLEAR data'
 !
 	IF(VERBOSE)THEN
 	  DO IN=1,NUM_DECAY_PATHS

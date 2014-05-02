@@ -17,6 +17,10 @@
 	1                      MAX_TRANS,MAX_TVALS,MAX_TAB_SIZE)
 	IMPLICIT NONE
 !
+! Altered 25-Jan-2015 : Minor bug fix - could print out a wrong matching name.
+! Altered 20-Dec-2014 : Code checks if non-matching level corresponds to a higher level not 
+!                          included in the model atom (call CHL_COL_NAME).
+! Altered 15-Dec-2013 : Code now only outputs error message on first call for each species.
 ! Altered 02-Sep-2012 : Outputs error messgae when matching transition not found.
 !                         Checks ordering of levels (necessary for overlapping LS states).
 !                         Fixed bug when data levels split, and program levels unsplit.
@@ -93,6 +97,15 @@
 	CHARACTER*500 STRING
 	CHARACTER*60 LOCNAME(NLEV)
 !
+	LOGICAL, SAVE :: DO_WARNING_OUTPUT
+	CHARACTER(LEN=80), SAVE :: FIRST_FILE=' '
+!
+	IF(FIRST_FILE .EQ. ' ')THEN
+	  FIRST_FILE=FILE_NAME
+	  DO_WARNING_OUTPUT=.TRUE.
+	ELSE IF(FIRST_FILE .EQ. FILE_NAME)THEN
+	  DO_WARNING_OUTPUT=.FALSE.
+	END IF
 	LUER=ERROR_LU()
 	NUM_NO_MATCH=0
 	NO_MATCH_NAME=' '
@@ -452,7 +465,10 @@
 	      NO_MATCH_NAME(K)=TRIM(LOW_LEV)
 	    END IF
 	  END IF
-	  IF(NUP_CNT .EQ. 0 .AND. TRIM(UP_LEV) .NE. 'I')THEN
+!
+! We only bother with the upper level if we successfully found a match for the lower level.
+!
+	  IF(NL_CNT .NE. 0 .AND. NUP_CNT .EQ. 0 .AND. TRIM(UP_LEV) .NE. 'I')THEN
 	    K=0
 	    DO I=1,NUM_NO_MATCH
 	      IF(TRIM(UP_LEV) .EQ. TRIM(NO_MATCH_NAME(I)))K=I
@@ -475,16 +491,18 @@
 !
 	END DO
 !
-	DO I=1,NUM_NO_MATCH
-	  WRITE(LUER,'(A,A,A,A)')' Warning(',TRIM(FILE_NAME),
-	1                   '): No match found for level ',TRIM(NO_MATCH_NAME(I))
-	END DO
+! We now check whether the level names without match correspond to levels not
+! included in the model calculations.
+!
+	CLOSE(LUIN)
+	IF(DO_WARNING_OUTPUT)THEN
+	  CALL CHK_COL_NAME(NO_MATCH_NAME,NUM_NO_MATCH,NLEV,LUIN,LUER,FILE_NAME)
+	END IF
 !
 ! NUM_TRANS is now set equal to the actual number of transitions read.
 !
 	NUM_TRANS=TRANS_INDX
 !
-	CLOSE(LUIN)
 	RETURN
 	END
 

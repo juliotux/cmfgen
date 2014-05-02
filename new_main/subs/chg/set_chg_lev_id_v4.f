@@ -169,8 +169,8 @@
 	  END IF
 	END DO
 	WRITE(LUER,*)'Number of charge transitions read in is',N_CHG_RD
-	WRITE(LUER,*)'Number of charge transitions omitted is ',N_CHG_OMITTED
-	WRITE(LUER,*)'Number of revixsed charge transitions, including split state, is',N_CHG
+	WRITE(LUER,*)'Number of charge transitions omitted is',N_CHG_OMITTED
+	WRITE(LUER,*)'Number of revised charge transitions, including split state, is',N_CHG
 !
 	ALLOCATE (TYPE_CHG(N_CHG),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (TLO_CHG(N_CHG),STAT=IOS)
@@ -343,7 +343,7 @@
 	  END DO
 	  J=CHG_ID(K,1)
 	  T1=T1/COEF_CHG_RD(J,1)/G_SUM(J,1)/G_SUM(J,2)
-	  IF( ABS(T1-1.0D0) .GT. 1.0E-05)THEN
+	  IF( ABS(T1-1.0D0) .GT. 1.0D-05)THEN
 	    WRITE(6,*)'Error in SETLEV_ID_V4 --- reaction rates do not agree'
 	    WRITE(6,'(A,I3)')'  Reaction is:',K
 	    WRITE(6,'(A,4A8)')'  Reactants are:',SPEC_ID_CHG(K,1:4)

@@ -4,6 +4,8 @@
 	1             NT,ND,LU,NEWMOD)
 	IMPLICIT NONE
 !
+! Altered 04-Nov-2013 : Bug fix -- incorrect read when R, V and SIGMA written, and not
+!                          reading the last record.
 ! Altered 28-Sep-2009 : Changed to allow an increase in the number of depth points.
 !                          Previously the R,V, & SIGMA record was limiting ND.
 ! Altered 02-May-2004 : Changed to V2.
@@ -146,6 +148,7 @@
 	  END IF
 !
 ! Note that NITSF= # of successful iterations so far.
+! Note: R,V and SIGMA will be updated if they are output for every iteration.
 !
 	  NUM_RV_RECS=INT( (3*ND-1)/N_PER_REC ) + 1
 	  IF(NUM_RV_RECS .EQ. 1)THEN
@@ -156,7 +159,7 @@
 	    DO L=1,NUM_RV_RECS
 	      IST=(L-1)*N_PER_REC+1
 	      IEND=MIN(IST+N_PER_REC-1,3*ND)
-	      READ(LU,REC=ST_REC_M1+L,IOSTAT=IOS)(RVSIG_VEC(I),I=IST,IEND)
+	      READ(LU,REC=L,IOSTAT=IOS)(RVSIG_VEC(I),I=IST,IEND)
 	    END DO
 	    R(1:ND)=RVSIG_VEC(1:ND)
 	    V(1:ND)=RVSIG_VEC(ND+1:2*ND)
@@ -172,19 +175,19 @@
 	    RETURN
 	  END IF
 !
-! Read in the population data.
-!
-500	CONTINUE		!Try to read an earlier record.
-!
 ! IREC ignores the number of records that it takes to write each time.
 ! Hence in POINT it will correspond to the iteration number.
 ! ST_REC_M1 + 1 is the first output record.
 !
-	IF(IREC_RD .NE. 0)THEN
-	  IREC=IREC_RD
-	ELSE
-	  IREC_RD=IREC
-	END IF
+	  IF(IREC_RD .NE. 0)THEN
+	    IREC=IREC_RD
+	  ELSE
+	    IREC_RD=IREC
+	  END IF
+!
+! Read in the population data.
+!
+500	CONTINUE		!Try to read an earlier record.
 	IF(RVSIG_WRITTEN)THEN
 	  IF(NUM_RV_RECS .EQ. 1)THEN
 	    ST_REC_M1=(IREC-1)*(NUMRECS+1)+RECS_FOR_RV

@@ -1,5 +1,5 @@
 !
-! Subroutine designed to facilitae (or check for inconsistencies) in
+! Subroutine designed to facilitate (or check for inconsistencies) in
 ! the use of CMFGEN.
 !
 ! Routine indicataes to the user whether ions can be deleted from the

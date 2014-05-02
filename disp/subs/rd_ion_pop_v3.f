@@ -53,7 +53,7 @@ C
 C
 	IF(SCRAT)
 	1   CALL WRITSCRAT(CIII,DCIII,NCIII,ND,SCRATREC,LUSCRAT,DESC)
-	WRITE(LUER,'(A,T30,I4)')'  Number of '//DESC//' levels is',NCIII
+	WRITE(LUER,'(5X,A,T30,I4)')'Number of '//DESC//' levels is',NCIII
 C
 	RETURN
 	END

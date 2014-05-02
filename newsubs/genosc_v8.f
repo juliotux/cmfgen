@@ -73,9 +73,9 @@
 !
 ! External functions.
 !
-	EXTERNAL SPEED_OF_LIGHT,ICHRLEN,RD_FREE_VAL,ERROR_LU
+	EXTERNAL SPEED_OF_LIGHT,ICHRLEN,RD_FREE_VAL,ERROR_LU,WARNING_LU
 	REAL*8 SPEED_OF_LIGHT,RD_FREE_VAL
-	INTEGER ICHRLEN,ERROR_LU
+	INTEGER ICHRLEN,ERROR_LU,WARNING_LU
 !
 ! Local variables
 !
@@ -84,7 +84,8 @@
 	CHARACTER*11 FORMAT_DATE
 	REAL*8 T1,T2,T3,SPEED_LIGHT
 	INTEGER I,J,K,NW,L1,L2,IOS,LEV_ID
-	INTEGER MAXLEN,LUER,CUT_CNT
+	INTEGER MAXLEN,CUT_CNT
+	INTEGER LUER,LUWARN
 	CHARACTER(LEN=200) STRING
 	INTEGER, PARAMETER :: IZERO=0
 	INTEGER, PARAMETER :: IONE=1
@@ -110,6 +111,7 @@
 !
 	SPEED_LIGHT=SPEED_OF_LIGHT()			!cm/s^-1
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU()
 !
 ! Initialize arrays.
 !
@@ -171,7 +173,7 @@
 	  STRING=ADJUSTL(STRING)
 	  OSCDATE(1:11)=STRING(1:11)
 	  IF(TRIM(FORMAT_DATE) .EQ. 'OLD')THEN
-	    WRITE(LUER,*)'Possible error -- FORMAT Date not found in oscilator file'
+	    WRITE(LUWARN,*)'Possible error -- FORMAT Date not found in oscilator file'
 	  END IF
 !
 	  READ(LUIN,'(A)')STRING
@@ -304,7 +306,7 @@
 	  DO I=2,N
 	   IF(FEDGE(I) .GT. FEDGE(I-1))THEN
 	      WRITE(LUER,*)' '
-	      WRITE(LUER,*)'Warning/error reading in Level Names from '//FILNAME
+	      WRITE(LUER,*)'Warning/error reading in Level Names from '//TRIM(FILNAME)
 	      WRITE(LUER,*)'Energy levels are out of order: levels are:',I-1,I
 	    END IF
 	  END DO
@@ -436,7 +438,7 @@
 	  END DO
 !
 	  IF(CUT_CNT .NE. 0)THEN
-	    WRITE(LUER,'(1X,A,I5,A,A)')'***Warning**** --- ',CUT_CNT,
+	    WRITE(LUWARN,'(1X,A,I5,A,A)')'***Warning**** --- ',CUT_CNT,
 	1     ' weak transitions cut in GENOSC_V8 --- ',TRIM(FILNAME)
  	  END IF
 	END IF
@@ -456,7 +458,7 @@
 	  END DO
 	END IF
 	IF(CUT_CNT .NE. 0)THEN
-	    WRITE(LUER,'(1X,A,I5,A,A)')'***Warning**** --- ',CUT_CNT,
+	    WRITE(LUWARN,'(1X,A,I5,A,A)')'***Warning**** --- ',CUT_CNT,
 	1     ' unobserved transitions cut in GENOSC_V8 --- ',TRIM(FILNAME)
  	END IF
 !

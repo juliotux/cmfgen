@@ -267,10 +267,9 @@
 	      SIGMA_EXT(I)=BETA/(R_EXT(I)/R_EXT(ND_EXT)-1.0D0)-1.0D0
 	    END DO
 	    VDOP_VEC_EXT(1:ND_ADD)=VDOP_VEC(1)
-	    WRITE(LUER,'(A)')' '
-	    WRITE(LUER,*)'Using thick boundary condition in CMF_FORM_REL'
-	    WRITE(LUER,'(2(A,ES16.8,3X))')' R(1)=',R(1),'RMAX=',RMAX
-	    WRITE(LUER,'(2(A,ES16.8,3X))')' V(1)=',V(1),'VMAX=',V_EXT(1)
+	    WRITE(LUER,*)'   Using thick boundary condition in CMF_FORM_REL'
+	    WRITE(LUER,'(7X,2(A,ES16.8,3X))')' R(1)=',R(1),'RMAX=',RMAX
+	    WRITE(LUER,'(7X,2(A,ES16.8,3X))')' V(1)=',V(1),'VMAX=',V_EXT(1)
 	  END IF
 	  LOG_R_EXT(1:ND_EXT)=LOG(R_EXT(1:ND_EXT))
 !
@@ -291,7 +290,7 @@
 	    ELSE
 	      IDMAX=ND/6
 	    END IF
-	    WRITE(6,'(A,I4,A)')' Using depth 1 and',IDMAX,' to extrapolate opacities'
+	    WRITE(6,'(4X,A,I4,A)')'Using depth 1 and',IDMAX,' to extrapolate opacities'
 	  END IF
 !
 	END IF

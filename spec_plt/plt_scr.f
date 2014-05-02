@@ -4,10 +4,16 @@
 !   Convergence as a function of depth etc.
 !
 	PROGRAM PLT_SCR
+	USE MOD_COLOR_PEN_DEF
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 	INTEGER ND,NT,NIT
-C
+!
+! Altered 11-Mar-2014: Installed INT option.
+! Altered 25-Feb-2014: Modified WRST option.
+! Altered 12-Dec-2013: Installed LY option so that we can plot very small populations on
+!                        a logarithmic scale.
+!
 	REAL*8, ALLOCATABLE :: POPS(:,:,:)		!NT,ND,NIT
 	REAL*8, ALLOCATABLE :: R_MAT(:,:)		!ND,NIT
 	REAL*8, ALLOCATABLE :: V_MAT(:,:)		!ND,NIT
@@ -43,10 +49,12 @@ C
 	INTEGER K
 	INTEGER IOS
 C
+	LOGICAL LOG_Y_AXIS
 	LOGICAL NEWMOD
 	LOGICAL WRITE_RVSIG
 	LOGICAL DO_ABS
 	LOGICAL, PARAMETER :: L_TRUE=.TRUE.
+	CHARACTER*10 TMP_STR
 	CHARACTER*10 PLT_OPT
 	CHARACTER*80 YLABEL
 	CHARACTER*132 STRING
@@ -153,6 +161,9 @@ C
 	WRITE(T_OUT,*)' '
 	WRITE(T_OUT,*)'FDG    :: Fudge individual values at a single depth and output to SCRTEMP'
 	WRITE(T_OUT,*)'FDGV   :: Fudge values over a ranges of depths (% change) and output to SCRTEMP'
+	WRITE(T_OUT,*)'INT    :: Interpolate values whose corrections are above a certain % limit'
+	WRITE(T_OUT,*)' '
+	WRITE(T_OUT,*)'LY  :: Switch to/from Log(Y) for options where appropriate (not full implemented)'
 	WRITE(T_OUT,*)' '
 	WRITE(T_OUT,*)'E   :: EXIT'
 	WRITE(T_OUT,*)' '
@@ -161,16 +172,35 @@ C
 	CALL SET_CASE_UP(PLT_OPT,0,0)
 !
 	IF(PLT_OPT(1:2) .EQ. 'E ' .OR. PLT_OPT(1:2) .EQ. 'EX')STOP
-	IF(PLT_OPT(1:5) .EQ. 'CHK_R')THEN
+	IF(PLT_OPT(1:2) .EQ. 'LY')THEN
+	   WRITE(6,*)RED_PEN
+	  IF(LOG_Y_AXIS)WRITE(6,*)'Switching to linear Y axis'
+	  IF(.NOT. LOG_Y_AXIS)WRITE(6,*)'Switching to logarithmic Y axis'
+	  WRITE(6,'(A)')DEF_PEN
+	  TMP_STR=' '; CALL GEN_IN(TMP_STR,'Hit any character to continue')
+	  LOG_Y_AXIS=.NOT. LOG_Y_AXIS
+	  GOTO 200
+!
+	ELSE IF(PLT_OPT(1:5) .EQ. 'CHK_R')THEN
 	  DO IT=1,NIT
 	    WRITE(6,'(2ES16.6)')R_MAT(1,IT),R_MAT(ND,IT)
 	  END DO
+	  GOTO 200
+!
 	ELSE IF(PLT_OPT(1:4) .EQ. 'WRST')THEN
-	  RAT(:,:)=(POPS(:,:,1)-POPS(:,:,NIT))/POPS(:,:,1)
+	  I=1; K=NIT
+	  CALL GEN_IN(K,'Iteration to check')
+	  CALL GEN_IN(I,'Comparison iteration')
+	  RAT(:,:)=(POPS(:,:,I)-POPS(:,:,K))/POPS(:,:,I)
 	  OPEN(UNIT=11,FILE='POP_RATIOS',STATUS='UNKNOWN')
-          CALL WR2D_V2(RAT,NT,ND,'Fractional changes from starting solution','#',L_TRUE,11)
+	    WRITE(TMP_STR,'(I4)')K; TMP_STR=ADJUSTL(TMP_STR)
+	    STRING='Fractional changes: 1- POP(IT='//TRIM(TMP_STR)
+	    WRITE(TMP_STR,'(I4)')I; TMP_STR=ADJUSTL(TMP_STR)
+	    STRING=TRIM(STRING)//')/POP(IT='//TRIM(TMP_STR)//')'
+	    CALL WR2D_V2(RAT,NT,ND,STRING,'#',L_TRUE,11)
 	  CLOSE(UNIT=11)
 	  GOTO 200
+!
 	ELSE IF(PLT_OPT(1:4) .EQ. 'CHNG')THEN
 	  IT=0
 	  DO WHILE(IT .LT. 1 .OR. IT .GT. NIT)
@@ -363,11 +393,17 @@ C
 	    IF(IVAR .EQ. 0)EXIT
 	    DO ID=1,ND
 	      Y(ID)=POPS(IVAR,ID,IT)
+	      Z(ID)=LOG10(POPS(IVAR,ID,IT))
 	      X(ID)=ID
 	    END DO
-	    CALL DP_CURVE(ND,X,Y)
+	    IF(LOG_Y_AXIS)THEN
+	      CALL DP_CURVE(ND,X,Z)
+	      Ylabel='Log'
+	    ELSE
+	      CALL DP_CURVE(ND,X,Y)
+	      Ylabel=''
+	    END IF
 	  END DO
-	  Ylabel=''
 	  CALL GRAMON_PGPLOT('Depth',Ylabel,' ',' ')
 	  GOTO 200
 	ELSE IF(PLT_OPT(1:2) .EQ. 'PV')THEN
@@ -382,11 +418,17 @@ C
 	    IF(V(1) .GT. 10000.0D0)T1=1.0D-03
 	    DO ID=1,ND
 	      Y(ID)=POPS(IVAR,ID,IT)
+	      Z(ID)=LOG10(POPS(IVAR,ID,IT))
 	      X(ID)=T1*V_MAT(ID,IT)
 	    END DO
-	    CALL DP_CURVE(ND,X,Y)
+	    IF(LOG_Y_AXIS)THEN
+	      CALL DP_CURVE(ND,X,Z)
+	      Ylabel='Log'
+	    ELSE
+	      CALL DP_CURVE(ND,X,Y)
+	      Ylabel=''
+	    END IF
 	  END DO
-	  Ylabel=''
 	  IF(V(1) .GT. 10000.0D0)THEN
 	    CALL GRAMON_PGPLOT('V(Mm/s)',Ylabel,' ',' ')
 	  ELSE
@@ -405,16 +447,22 @@ C
 	    IF(R(1) .GT. 1.0D+04)T1=1.0D-04
 	    DO ID=1,ND
 	      Y(ID)=POPS(IVAR,ID,IT)
+	      Z(ID)=LOG10(POPS(IVAR,ID,IT))
 	      X(ID)=1.0D-04*R_MAT(ID,IT)
 	    END DO
-	    CALL DP_CURVE(ND,X,Y)
+	    IF(LOG_Y_AXIS)THEN
+	      CALL DP_CURVE(ND,X,Z)
+	      Ylabel='Log'
+	    ELSE
+	      CALL DP_CURVE(ND,X,Y)
+	      Ylabel=''
+	    END IF
 	  END DO
 	  IF(R(1) .GT. 1.0D+04)THEN
 	    CALL GRAMON_PGPLOT('R(10\u14 \dcm)',Ylabel,' ',' ')
 	  ELSE
 	    CALL GRAMON_PGPLOT('R(10\u10 \dcm)',Ylabel,' ',' ')
 	  END IF
-	  Ylabel=''
 	  GOTO 200
 !
 	ELSE IF(PLT_OPT(1:2) .EQ. 'VR')THEN
@@ -466,6 +514,11 @@ C
 	  CALL SCR_RITE_V2(R,V,SIGMA,POPS(1,1,IREC),IREC,NITSF,
 	1              RITE_N_TIMES,LST_NG,WRITE_RVSIG,
 	1              NT,ND,LUSCR,NEWMOD)
+	  WRITE(6,*)'Corrections written to SCRTEMP as new iteration.'
+	  WRITE(6,*)'Restart program if you wish to compare to with pops from last iteration.'
+	  WRITE(6,*)'Populations can be compared with older iterations.'
+	  GOTO 200
+!
 	ELSE IF(PLT_OPT(1:3) .EQ. 'FDG')THEN
 	  IT=NIT; ID=ND; IVAR=NT
 	  CALL GEN_IN(IT,'Iteration # (zero to exit)')
@@ -482,92 +535,133 @@ C
 	  CALL SCR_RITE_V2(R,V,SIGMA,POPS(1,1,IREC),IREC,NITSF,
 	1              RITE_N_TIMES,LST_NG,WRITE_RVSIG,
 	1              NT,ND,LUSCR,NEWMOD)
-	END IF
-C
-	ID=ND
-	DO WHILE(0 .EQ. 0)	
-	  NPLTS=0
-	  IVAR=1
-	  DO WHILE(IVAR .NE. 0)
-500	    IVAR=0
-	    WRITE(STRING,'(I5,A)')NT,'](0 to plot)'
-	    DO WHILE(STRING(1:1) .EQ. ' ') ; STRING(1:)=STRING(2:) ; END DO
-	    STRING='Variable to be plotted ['//STRING
-	    CALL GEN_IN(IVAR,STRING)
-	    IF(IVAR .LT. 0 .OR. IVAR .GT. NT)GO TO 500
-	    IF(IVAR .EQ. 0)GOTO 1000
-C
-600	    CONTINUE
-	    WRITE(STRING,'(I5,A)')ND,'](0 to plot)'
-	    DO WHILE(STRING(1:1) .EQ. ' ') ; STRING(1:)=STRING(2:); END DO
-	    STRING='Depth of variable to be plotted ['//STRING
-	    CALL GEN_IN(ID,STRING)
-	    IF(ID .LE. 0 .OR. ID .GT. ND)GO TO 600
-C
-	    Y(1:NIT)=POPS(IVAR,ID,1:NIT)
-C
-	    IF(PLT_OPT(1:1) .EQ. 'F')THEN
-	      DO K=1,NIT-1
-	        Z(K)=100.0D0*(Y(K+1)-Y(K))/Y(K+1)
-	        X(K)=FLOAT(K)
-	      END DO
-	      NY=NIT-1
-	      T1=MAXVAL(ABS(Z(1:NY)))
-	      IF(T1 .LT. 1.0D-02)THEN
-	        Z(1:NY)=Z(1:NY)*1.0D+03
-	        YLABEL='\gDY/Y(%)\d \ux10\u3\d'
-	        WRITE(T_OUT,*)'Correction scaled by factor of 10^3'
+	  WRITE(6,*)'Corrections written to SCRTEMP as new iteration.'
+	  WRITE(6,*)'Restart program if you wish to compare to with pops from last iteration.'
+	  WRITE(6,*)'Populations can be compared with older iterations.'
+	  GOTO 200
+!
+	ELSE IF(PLT_OPT(1:3) .EQ. 'INT')THEN
+	  IT=NIT; ID=ND; T2=100.0D0
+	  CALL GEN_IN(IT,'Iteration # (zero to exit)')
+	  CALL GEN_IN(ID,'Depth of variable')
+	  CALL GEN_IN(T2,'Interpolate values with correction > >%')
+	  DO IVAR=1,NT-1
+	    T1=100.0D0*ABS(POPS(IVAR,ID,IT)-POPS(IVAR,ID,IT-1))/POPS(IVAR,ID,IT)
+	    IF(T1 .GT. T2)THEN
+	      WRITE(6,*)'Replacing population for variable',IVAR
+	      IF(ID .EQ. 2 .OR. ID .EQ. ND)THEN
+	        POPS(IVAR,ID,IT)=POPS(IVAR,ID-1,IT)
+	      ELSE IF(ID .EQ. 1)THEN
+	        POPS(IVAR,ID,IT)=POPS(IVAR,ID+1,IT)
 	      ELSE
-	        YLABEL='\gDY/Y(%)'
+	        T1=LOG(R(ID)/R(ID-1))/LOG(R(ID+1)/R(ID-1))
+	        POPS(IVAR,ID,IT)=EXP( T1*LOG(POPS(IVAR,ID+1,IT)) +
+	1                     (1.0D0-T1)*LOG(POPS(IVAR,ID-1,1)) )
 	      END IF
-!	      
-	    ELSE IF(PLT_OPT(1:1) .EQ. 'R')THEN
-	      DO K=1,NIT-2
-	        T1=Y(K+2)-Y(K+1)
-	        T2=Y(K+1)-Y(K)
-	        IF(T2 .NE. 0)THEN
-	           Z(K)=T1/T2
-	        ELSE
-	           Z(K)=10.0
-	        END IF
-	        X(K)=FLOAT(K)+2
-	      END DO
-	      NY=NIT-2
-	      YLABEL='\gDY(K+1)/\gDY(K)'
-	    ELSE IF(PLT_OPT(1:1) .EQ. 'D')THEN
-	      DO K=1,NIT
-	        Z(K)=100.0D0*(Y(K)-Y(NIT))/Y(NIT)
-	        X(K)=FLOAT(K)
-	      END DO
-	      NY=NIT-1
-	      T1=MAXVAL(ABS(Z(1:NY)))
-	      IF(T1 .LT. 1.0D-02)THEN
-	        Z(1:NY)=Z(1:NY)*1.0D+03
-	        YLABEL='[Y(K)-Y(NIT)]/Y(NIT) [%]\d \ux10\u3\d'
-	        WRITE(T_OUT,*)'Correction scaled by factor of 10^3'
-	      ELSE
-	        YLABEL='[Y(K)-Y(NIT)]/Y(NIT) [%]'
-	      END IF
-	    ELSE IF(PLT_OPT(1:1) .EQ. 'Y')THEN
-	      DO K=1,NIT
-	        Z(K)=Y(K)
-	        X(K)=FLOAT(K)
-	      END DO
-	      NY=NIT
-	      YLABEL='Y(K)'
-	    ELSE
-	      WRITE(T_OUT,*)' Option not recognized: try again'
-	      GOTO 1000
 	    END IF
-	    CALL DP_CURVE(NY,X,Z)
-	    NPLTS=NPLTS+1
 	  END DO
-1000	  CONTINUE
-	  IF(NPLTS .NE. 0)THEN
-	    CALL GRAMON_PGPLOT('Iteration number K',Ylabel,' ',' ')
-	  ELSE
-	    GOTO 200
-	  END IF
-	END DO
+          NITSF=NITSF+1; IREC=IT
+	  CALL SCR_RITE_V2(R,V,SIGMA,POPS(1,1,IREC),IREC,NITSF,
+	1              RITE_N_TIMES,LST_NG,WRITE_RVSIG,
+	1              NT,ND,LUSCR,NEWMOD)
+	  WRITE(6,*)'Corrections written to SCRTEMP as new iteration.'
+	  WRITE(6,*)'Restart program if you wish to compare to with pops from last iteration.'
+	  WRITE(6,*)'Populations can be compared with older iterations.'
+	  GOTO 200
+!
+	ELSE IF(PLT_OPT .EQ. 'R' .OR.
+	1       PLT_OPT .EQ. 'F' .OR.
+	1       PLT_OPT .EQ. 'D' .OR.
+	1       PLT_OPT .EQ. 'Y')THEN
+	  ID=ND
+	  DO WHILE(0 .EQ. 0)	
+	    NPLTS=0
+	    IVAR=1
+	    DO WHILE(IVAR .NE. 0)
+500	      IVAR=0
+	      WRITE(STRING,'(I5,A)')NT,'](0 to plot)'
+	      DO WHILE(STRING(1:1) .EQ. ' ') ; STRING(1:)=STRING(2:) ; END DO
+	      STRING='Variable to be plotted ['//STRING
+	      CALL GEN_IN(IVAR,STRING)
+	      IF(IVAR .LT. 0 .OR. IVAR .GT. NT)GO TO 500
+	      IF(IVAR .EQ. 0)GOTO 1000
 C
+600	      CONTINUE
+	      WRITE(STRING,'(I5,A)')ND,'](0 to plot)'
+	      DO WHILE(STRING .EQ. ' ') ; STRING(1:)=STRING(2:); END DO
+	      STRING='Depth of variable to be plotted ['//STRING
+	      CALL GEN_IN(ID,STRING)
+	      IF(ID .LE. 0 .OR. ID .GT. ND)GO TO 600
+C
+	      Y(1:NIT)=POPS(IVAR,ID,1:NIT)
+C
+  	      IF(PLT_OPT .EQ. 'F')THEN
+  	        DO K=1,NIT-1
+  	          Z(K)=100.0D0*(Y(K+1)-Y(K))/Y(K+1)
+  	          X(K)=FLOAT(K)
+  	        END DO
+  	        NY=NIT-1
+  	        T1=MAXVAL(ABS(Z(1:NY)))
+  	        IF(T1 .LT. 1.0D-02)THEN
+  	          Z(1:NY)=Z(1:NY)*1.0D+03
+  	          YLABEL='\gDY/Y(%)\d \ux10\u3\d'
+  	          WRITE(T_OUT,*)'Correction scaled by factor of 10^3'
+  	        ELSE
+	          YLABEL='\gDY/Y(%)'
+	        END IF
+!	      
+	      ELSE IF(PLT_OPT .EQ. 'R')THEN
+	        DO K=1,NIT-2
+	          T1=Y(K+2)-Y(K+1)
+	          T2=Y(K+1)-Y(K)
+	          IF(T2 .NE. 0)THEN
+	             Z(K)=T1/T2
+	          ELSE
+	             Z(K)=10.0
+	          END IF
+	          X(K)=FLOAT(K)+2
+	        END DO
+	        NY=NIT-2
+	        YLABEL='\gDY(K+1)/\gDY(K)'
+	      ELSE IF(PLT_OPT .EQ. 'D')THEN
+	        DO K=1,NIT
+	          Z(K)=100.0D0*(Y(K)-Y(NIT))/Y(NIT)
+	          X(K)=FLOAT(K)
+	        END DO
+	        NY=NIT-1
+	        T1=MAXVAL(ABS(Z(1:NY)))
+	        IF(T1 .LT. 1.0D-02)THEN
+	          Z(1:NY)=Z(1:NY)*1.0D+03
+	          YLABEL='[Y(K)-Y(NIT)]/Y(NIT) [%]\d \ux10\u3\d'
+	          WRITE(T_OUT,*)'Correction scaled by factor of 10^3'
+	        ELSE
+	        YLABEL='[Y(K)-Y(NIT)]/Y(NIT) [%]'
+	        END IF
+	      ELSE IF(PLT_OPT .EQ. 'Y')THEN
+	        DO K=1,NIT
+	          Z(K)=Y(K)
+	          IF(LOG_Y_AXIS)Z(K)=LOG10(Z(K))
+	          X(K)=FLOAT(K)
+	        END DO
+	        NY=NIT
+	        YLABEL='Y(K)'
+	        IF(LOG_Y_AXIS)YLABEL='Log Y(K)'
+	      END IF
+	      CALL DP_CURVE(NY,X,Z)
+	      NPLTS=NPLTS+1
+	    END DO
+1000	    CONTINUE
+	    IF(NPLTS .NE. 0)THEN
+	      CALL GRAMON_PGPLOT('Iteration number K',Ylabel,' ',' ')
+	    END IF
+	    GOTO 200
+	  END DO
+	ELSE
+	  WRITE(6,*)RED_PEN
+	  WRITE(6,*)'Unrecognized command'
+	  WRITE(6,'(A)')DEF_PEN
+	  TMP_STR=' '; CALL GEN_IN(TMP_STR,'Hit any character to continue')
+	  GOTO 200
+	END IF
+!
 	END

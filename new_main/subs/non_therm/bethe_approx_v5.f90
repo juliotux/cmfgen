@@ -2,6 +2,7 @@
 	USE MOD_CMFGEN
 	IMPLICIT NONE
 !
+! Altered 08-Feb-2014: Added ATM(ID)%CROSEC_NTFAC to rate computed with collision strngth.
 ! Altered 15-Nov-2012: Changed to V5:
 !                        Call changed -- dXKT_ON_XKT passed in call instead of dXKT.
 !                        Test on XSQ rather than X
@@ -84,7 +85,7 @@
 	    END DO
 	  END DO
 	ELSE IF(ATM(ID)%NT_OMEGA(NL,NUP) .NE. 0.0D0)THEN
-	  T1=PI*A0*A0*13.6d0
+	  T1=PI*A0*A0*13.6d0*ATM(ID)%CROSEC_NTFAC
 	  T1=T1*ATM(ID)%NT_OMEGA(NL,NUP)/ATM(ID)%GXzV_F(NL)*ATM(ID)%XzV_F(NL,DPTH_INDX)
 !$OMP PARALLEL DO  
 	  DO J=1,NOUT

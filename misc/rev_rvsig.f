@@ -6,6 +6,7 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered 24-Oct-2013: Added VEL_TYPE=3 so that can do a velocity law with 2 components.
 ! Altered 14-Mar-2011: Improved header output to RVSIG_COL.
 ! Altered 15-Oct-2010: Fixed bug with SIGMA computation for the extra
 !                        points added with the EXTR option.
@@ -34,8 +35,9 @@
 !
 	REAL*8 RX
 	REAL*8 NEW_RSTAR
-	REAL*8 T1,T2
+	REAL*8 T1,T2,T3
 	REAL*8 BETA
+	REAL*8 BETA2
 	REAL*8 VINF
 	REAL*8 FAC
 	REAL*8 V_MAX
@@ -315,7 +317,7 @@
 	      EXIT
 	    END IF
 	  END DO
-	  IF(V_MIN-OLD_V(I+1) .LT. OLD_V(I)-V_MIN)I_END=I+1
+	  IF(V_MIN-OLD_V(I_END+1) .LT. OLD_V(I_END)-V_MIN)I_END=I_END+1
 	  WRITE(6,*)' I_ST=',I_ST,OLD_V(I_ST)
 	  WRITE(6,*)'I_END=',I_END,OLD_V(I_END)
 	  WRITE(6,*)'Current number of points in interval is',I_END-I_ST-1
@@ -550,6 +552,8 @@
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  ELSE
+	    BETA2=BETA
+	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
 	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
 	    WRITE(6,*)'  Transition radius is',R_TRANS
 	    WRITE(6,*)'Transition velocity is',V_TRANS
@@ -646,7 +650,7 @@
               dVdR = dTOPdR / BOT  + V(I)*dBOTdR/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
-	  ELSE
+	  ELSE IF(VEL_TYPE .EQ. 2)THEN
 	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
 	    WRITE(6,*)'  Transition radius is',R_TRANS
 	    WRITE(6,*)'Transition velocity is',V_TRANS
@@ -665,7 +669,33 @@
 	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
+	  ELSE IF(VEL_TYPE .EQ. 3)THEN
+!
+	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
+	    WRITE(6,*)'  Transition radius is',R_TRANS
+	    WRITE(6,*)'Transition velocity is',V_TRANS
+	    WRITE(6,*)'       Scale height is',SCALE_HEIGHT
+	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
+	    DO I=1,TRANS_I-1
+	      T1=R_TRANS/R(I)
+	      T2=1.0D0-T1
+	      T3=BETA+(BETA2-BETA)*T2
+	      TOP = (VINF-2.0D0*V_TRANS) * T2**T3
+	      BOT = 1.0D0 + exp( (R_TRANS-R(I))/SCALE_HEIGHT )
+
+!NB: We drop a minus sign in dBOTdR, which is fixed in the next line.
+
+	      dTOPdR = (VINF - 2.0D0*V_TRANS) * BETA * T1 / R(I) * T2**(T3-1.0D0) +
+	1                  T1*TOP*(BETA2-BETA)*(1.0D0+LOG(T2))/R(I)
+	      dBOTdR=  exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
+!
+	      TOP = 2.0D0*V_TRANS + TOP
+	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
+	      V(I) = TOP/BOT
+              SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
+	    END DO
 	  END IF
+!
 	ELSE IF(OPTION .EQ. 'PLOT')THEN
 	  ND=ND_OLD 
 	  DO I=1,ND

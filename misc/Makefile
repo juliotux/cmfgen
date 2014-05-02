@@ -1,4 +1,4 @@
-#Include file with system dependent definitions
+#        Include file with system dependent definitions
 
 include ../Makefile_definitions
 
@@ -9,6 +9,7 @@ LN1=tools
 LN2=subs
 LN3=pgplt
 LN4=newsubs
+LN5=dev
 
 #
 # These names refer to the full file name
@@ -17,6 +18,7 @@ FN1=$(LIB_DIR)lib$(LN1).a
 FN2=$(LIB_DIR)lib$(LN2).a
 FN3=$(LIB_DIR)lib$(LN3).a
 FN4=$(LIB_DIR)lib$(LN4).a
+FN5=$(LIB_DIR)lib$(LN5).a
 
 #
 # We only make dispgen.exe if there has been a change to the main *.f files,
@@ -84,7 +86,7 @@ $(EXE_DIR)wr_f_to_s.exe : wr_f_to_s.o $(OANDF)
 #
 $(EXE_DIR)chk_phot.exe : chk_phot.o recom_chk_v2.o get_exc_freq.o $(OANDF)
 	$(F90) chk_phot.o recom_chk_v2.o get_exc_freq.o \
-              $(OBJ1) -L$(LIB_DIR) -l$(LN4) -l$(LN3) -l$(LN2) -l$(LN1) \
+              $(OBJ1) -L$(LIB_DIR) -l$(LN4) -l$(LN3) -l$(LN2) -l$(LN1) -lnewsubs \
               $(LOCLIB) $(PGLIB) $(X11LIB) $(G2CLIB) \
               -o $(EXE_DIR)chk_phot.exe
 #
@@ -108,6 +110,12 @@ $(EXE_DIR)tlusty_vel.exe : tlusty_vel.o $(OANDF)
               $(OBJ1) -L$(LIB_DIR) -l$(LN4) -l$(LN3) -l$(LN2) -l$(LN1) -ldisp \
               $(LOCLIB) $(PGLIB) $(X11LIB) $(G2CLIB) \
               -o $(EXE_DIR)tlusty_vel.exe
+
+$(EXE_DIR)rev_rdinr.exe : rev_rdinr.o 
+	$(F90) rev_rdinr.o \
+              $(OBJ1) -L$(LIB_DIR) -l$(LN5) -l$(LN4) -l$(LN3) -l$(LN2) -l$(LN1) -ldisp \
+              $(LOCLIB) $(PGLIB) $(X11LIB) $(G2CLIB) \
+              -o $(EXE_DIR)rev_rdinr.exe
 
 $(EXE_DIR)guess_dc.exe : guess_dc.o $(OANDF) 
 	$(F90) guess_dc.o \
@@ -138,7 +146,8 @@ $(GEN):
 $(FN1) : lib1
 $(FN2) : lib2
 $(FN3) : lib3
-$(FN3) : lib4
+$(FN4) : lib4
+$(FN5) : lib5
 
 # We now MAKE the required libraries.
 
@@ -155,6 +164,9 @@ lib3:
 
 lib4:
 	(cd ../newsubs; make )
+
+lib5:
+	(cd ../new_main/subs; make )
 
 clean :
 	rm -f *.o

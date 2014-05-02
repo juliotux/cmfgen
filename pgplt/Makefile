@@ -59,7 +59,7 @@ $(LIB)(%.o) : %.f
 #     depend on ../tools/gen_in
 
 GEN = ../lib/libtools.a(gen_in.o)
-COL=  ../lib/libmod.a(mod_color_pen_def.o)
+COL=  ../lib/libtools.a(mod_color_pen_def.o)
 
 $(LIB)(change_color.o)    : change_color.f  $(GEN)
 $(LIB)(change_pen.o)      : change_pen.f    $(GEN)

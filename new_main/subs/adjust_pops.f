@@ -31,8 +31,6 @@
 	INTEGER N_INT
 	LOGICAL FIRST
 !
-	WRITE(6,*)ND,OLD_ND,NT
-!
 ! We assume a power law density distribution at the outer boundary.
 !
 	TB(1:OLD_ND)=OLD_ROSS_MEAN(1:OLD_ND)*OLD_CLUMP_FAC(1:OLD_ND)
@@ -145,7 +143,7 @@
 ! TB is used as a dummy vector when we are dealing with the lowest ionization
 ! stage. It is returned with the ground state population.
 !
-	WRITE(6,*)'Beginning DC interpolation'
+	WRITE(6,*)'Beginning DC interpolation in ADJUST_POPS'
 	DO ISPEC=1,NUM_SPECIES
 	  FIRST=.TRUE.
 	  DO ID=SPECIES_END_ID(ISPEC),SPECIES_BEG_ID(ISPEC),-1

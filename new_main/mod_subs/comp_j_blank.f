@@ -35,7 +35,9 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
-! Aletered : 16-Feb-2006 " CMF_FORM_SOL_V2 used for last iteration when MAXCH<100, and
+! Altered : 16-Dec-2013 : CMF_FORM_SOL_V2 (non EXT option) no longer called when ND > 199.
+!                             CMF_FORM_SOL_V2 is not parallelized and slows down large clumped models.
+! Altered : 16-Feb-2006 : CMF_FORM_SOL_V2 used for last iteration when MAXCH<100, and
 !                            not LAMBDA iteration. Sometimes it might be useful to
 !                            change so that CMF_FORM_SOL_V2 is also called when LMABDA 
 !                            iteration used. FG_COUNt was not being initialized.
@@ -607,7 +609,8 @@ C
 	1               FIRST_FREQ,NEW_FREQ,N_TYPE,NC,ND)
 !
 	     ELSE IF(USE_FORMAL_REL)THEN
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 in COMP_J_BLANK'
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)
+	1            WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 in COMP_J_BLANK'
 	       CALL CMF_FORMAL_REL_V4
 	1                 (TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
 	1                  TC,FEDD,HFLUX_AT_IB,HFLUX_AT_OB,IPLUS,
@@ -664,11 +667,11 @@ C
 	1              METHOD,COHERENT_ES,FIRST_FREQ,NEW_FREQ,
 	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
 	     ELSE IF(USE_J_REL)THEN
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_JREL_V6'
-	       CALL MOM_JREL_V6(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_JREL_V7'
+	       CALL MOM_JREL_V7(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
 	1             RJ,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,
 	1             VDOP_VEC,DELV_FRAC_MOM,
-	1             FL,dLOG_NU,DBB,
+	1             FL,dLOG_NU,DBB,IB_STAB_FACTOR,
 	1             INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,COHERENT_ES,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,ND)
@@ -680,6 +683,11 @@ C
 	         T2=HFLUX_AT_OB/RJ(1)
 	         CALL OUT_JH(TA,RSQHNU,T1,T2,FL,NCF,R,V,ND,FIRST_FREQ,'NORMAL')
 	       END IF
+	     ELSE IF(USE_LAM_ES)THEN
+	       RJ(1:ND)=TC(1:ND)
+	       IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
+               HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
+	       CALL GET_RSQH_REL(RSQHNU,R,V,FL,ND)
 	     ELSE
 	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_J_CMF_V8'
 	       CALL MOM_J_CMF_V8(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
@@ -689,7 +697,6 @@ C
 	1              FIRST_FREQ,NEW_FREQ,NC,NP,ND)
 	       IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
                HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Done Calling MOM_J_CMF_V8'
 	     END IF
 	     CALL TUNE(ITWO,'MOM_J_CMF')
 C
@@ -765,7 +772,7 @@ C
 	        IF(PLANE_PARALLEL_NO_V)V_AT_RMAX=0.0D0
 	      END IF
 	    ELSE IF( (LST_ITERATION .AND. .NOT. LAMBDA_ITERATION .AND.
-	1         MAXCH .LT.  100.0D0 .AND. .NOT. SN_MODEL) )THEN
+	1         MAXCH .LT.  100.0D0 .AND. .NOT. SN_MODEL .AND. ND .LT. 200) )THEN
 	      IF(COHERENT_ES)THEN
      	        TA(1:ND)=ETA_CLUMP(1:ND)+CHI_SCAT_CLUMP(1:ND)*RJ(1:ND)
 	      ELSE
@@ -821,15 +828,15 @@ C
 	    T1=ABS(RJ(1))+ABS(TC(1))
 	    IF(T1 .NE. 0)T1=ABS(200.0D0*(RJ(1)-TC(1))/T1)
 	    IF(T1 .GT. 100.0D0)THEN
-	      WRITE(LUER,'(A)')' Error --- J(mom) and J(ray) differ by more than 1000% for last frequency'
+	      WRITE(LUER,'(/,A)')' Error --- J(mom) and J(ray) differ by more than 1000% for last frequency'
 	      WRITE(LUER,'(A)')' It is STRONGLY suggested that you use a finer grid at the outer boundary'
 	      WRITE(LUER,'(A)')' Tail J__COMP to see bundary error and/or use plt_jh'
 	    ELSE IF(T1 .GT. 50.0D0)THEN
-	      WRITE(LUER,'(A)')' Error --- J(mom) and J(ray) differ by more than 50% for last frequency'
+	      WRITE(LUER,'(/,A)')' Error --- J(mom) and J(ray) differ by more than 50% for last frequency'
 	      WRITE(LUER,'(A)')' It is strongly suggested that you use a finer grid at the outer boundary'
 	      WRITE(LUER,'(A)')' Tail J__COMP to see bundary error'
 	    ELSE IF(T1 .GT. 20.0D0)THEN
-	      WRITE(LUER,'(A)')' Error --- J(mom) and J(ray) differ by more than 20% for last frequency'
+	      WRITE(LUER,'(/,A)')' Error --- J(mom) and J(ray) differ by more than 20% for last frequency'
 	      WRITE(LUER,'(A)')' Although this is ulikely to effect the colution, it is suggested that'
 	      WRITE(LUER,'(A)')' you use a finer grid at the outer boundary'
 	      WRITE(LUER,'(A)')' Tail J__COMP to see bundary error'
@@ -853,7 +860,7 @@ C
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJ(I),I=1,ND),T1
 	    IF(T1 .NE. FL)THEN        
-	      WRITE(LUER,*)'Error - incorrect reading of Mean Intensity' 
+	      WRITE(LUER,'(/,A)')' Error - incorrect reading of Mean Intensity' 
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP

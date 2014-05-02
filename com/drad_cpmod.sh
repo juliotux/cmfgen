@@ -68,7 +68,7 @@ else
 endif
 
 #
-# Copie files that do not necessarily exist for all models.
+# Copy files that do not necessarily exist for all models.
 # 
 
 if(-e $1/ADJUST_R_DEFAULTS)then
@@ -84,6 +84,21 @@ if(-e $1/arnaud_rothenflug.dat)then
   echo " Copyed arnaud_rothenflug.dat"
 endif
 
+if(-e $1/RDINR)then
+    echo " "
+    echo " Warning: RDINR exist in old directory"
+    echo " Enter y if you wish to copy this file"
+    set answer=$<
+    switch ($answer)
+      case [yY]:
+      cp $1/RDINR              $2/
+      echo " Copyed RDINR"
+      breaksw
+    default:
+      breaksw
+    endsw
+    echo " "
+endif
 # Change to the new model directory.
 
 cd $2
@@ -92,6 +107,6 @@ cd $2
 
 out2in
 
-echo "Need to delte the GREY_SCL_FAC_IN file since grey scaling may not work."
+echo "You may need to delete the GREY_SCL_FAC_IN file since grey scaling may not work."
 
 rm -f GREY_SCL_FAC_IN

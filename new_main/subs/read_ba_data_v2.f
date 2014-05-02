@@ -7,9 +7,11 @@
 	USE STEQ_DATA_MOD
 	IMPLICIT NONE
 !
+! Altered 12-Mar-2014 - COMPUTE_BA is nolonger changed by the routine. The value in CMFGEN 
+!                         is used to indicate whether the BA matric will be read in.
 ! Altered 07-Mar-2004 - BA no longer read in if COMPUTE_BA=.TRUE.
 ! Created 02-Apr-2001 - Created to handle SE data structure.
-!                       See READBA for earlier corrections.
+!                         See READBA for earlier corrections.
 !
 	INTEGER NION
 	INTEGER NUM_BNDS
@@ -18,16 +20,17 @@
 	LOGICAL COMPUTE_BA  		!Indicates whether BA is being computed.
 	LOGICAL STATUS                  !Indicates whether BA/STEQ read successful
 	CHARACTER DESC*(*)              !Used for filename
-C
-C Local Variables and external functions.
-C
+!
+! Local Variables and external functions.
+!
 	INTEGER NUM_BNDS_RD,ND_RD,NION_RD
 	INTEGER ID
 	INTEGER LUER,ERROR_LU,IOS
 	EXTERNAL ERROR_LU
 	LOGICAL FILE_OPEN
+	LOGICAL COMPUTE_BA_RD
 	INTEGER, PARAMETER :: IZERO=0
-C
+!
 	LUER=ERROR_LU()
 	CALL GEN_ASCI_OPEN(LU,DESC//'PNT','OLD',' ','READ',IZERO,IOS)
 	IF(IOS .NE. 0)GOTO 300
@@ -38,12 +41,12 @@ C
 	    CLOSE(UNIT=LU)
 	    RETURN
 	  END IF
-	  READ(LU,*,ERR=400,IOSTAT=IOS)COMPUTE_BA
+	  READ(LU,*,ERR=400,IOSTAT=IOS)COMPUTE_BA_RD
 	  READ(LU,*,ERR=400,IOSTAT=IOS)NION_RD
 	  READ(LU,*,ERR=400,IOSTAT=IOS)NUM_BNDS_RD
 	  READ(LU,*,ERR=400,IOSTAT=IOS)ND_RD
 	CLOSE(UNIT=LU)
-C
+!
 	IF(NION_RD .NE. NION .OR. NUM_BNDS_RD .NE. NUM_BNDS .OR. ND_RD .NE. ND)THEN
 	  WRITE(LUER,*)'Error : incompatible dimensions in BAREAD'
 	  WRITE(LUER,*)'Skipping READ of BA and STEQ'
@@ -67,48 +70,48 @@ C
 	  READ(LU,ERR=610,IOSTAT=IOS)BA_T
 	CLOSE(UNIT=LU)
 	RETURN
-C
+!
 300	WRITE(LUER,*)'Error opening '//DESC//'PNT in READBA'
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-C
+!
 400	WRITE(LUER,*)'Error reading from '//DESC//'PNT in READBA'
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-C
+!
 500	WRITE(LUER,*)'Error opening logical unit to recall :',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-c
+!
 600	WRITE(LUER,*)'Error on reading SE(ID)%BA in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-C
+!
 605	WRITE(LUER,*)'Error on reading BA_ED in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-C
+!
 610	WRITE(LUER,*)'Error on reading BA_T in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
 	STATUS=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
-C
+!
 	RETURN
 	END

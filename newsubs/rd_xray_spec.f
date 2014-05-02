@@ -72,7 +72,8 @@
 ! Read in RS data table. The fluxes are assumed to be units of
 ! 10^{-23} ergs/cm3/sec. They represent the cooling function per
 ! unit density of electrons and H ions.
-!                      
+!
+	  WRITE(LU_ER,'(A)')' '
 	  OPEN(UNIT=LU_IN,FILE='RS_XRAY_FLUXES',ACTION='READ',
 	1       STATUS='OLD',IOSTAT=IOS)
 	  IF(IOS .NE. 0)THEN
@@ -102,6 +103,7 @@
 	  CALL RD_INT(N_ED,'N_ED',LU_IN,LU_ER,'# freq bins')
 	  CALL RD_DBLE(LOG_ED_MIN,'LOG_ED_MIN',LU_IN,LU_ER,' ')
 	  CALL RD_DBLE(DEL_LOG_ED,'DEL_LOG_ED',LU_IN,LU_ER,' ')
+	  WRITE(LU_ER,'(A)')' '
 !
 ! Now that we have the vector sizes, we cab allocate memory for the X-ray 
 ! table and vectors.

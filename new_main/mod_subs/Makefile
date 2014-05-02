@@ -44,7 +44,7 @@ OBJ = $(LIB)(adjust_r_grid_v2.o)\
       $(LIB)(rd_cont_j.o)\
       $(LIB)(set_line_opac.o)\
       $(LIB)(set_ang_qw.o)\
-      $(LIB)(set_frequency_grid.o)\
+      $(LIB)(set_frequency_grid_v2.o)\
       $(LIB)(set_new_model_estimates.o)\
       $(LIB)(set_abund_clump.o)\
       $(LIB)(solve_for_pops.o)\

@@ -48,10 +48,11 @@ all : $(OBJ)   $(EXE_DIR)main_lte.exe $(EXE_DIR)wind_hyd.exe
 	mv -f *.mod $(MOD_DIR)
 $(LIB) : $(OBJ)
 
+OBJ_FILES : $(OBJ)
+
 # General rules to make obects in a library and object files
 
 $(LIB)(%.o) : %.f 
-	ar -xo ../lib/libmod.a mod_cmfgen.o
 	$(F90) -c $(FG)  $<
 	ar ruv $(LIB) $*.o
 
@@ -59,18 +60,18 @@ $(LIB)(%.o) : %.f
 # Give the dependencies of dispgen.exe and how it is created.
 #
 
-$(EXE_DIR)main_lte.exe : mod_cmfgen.o lte.o lte_sub.o set_lte_est.o det_ed.o lte_pop_sl.o \
+$(EXE_DIR)main_lte.exe : lte.o lte_sub.o $(OBJ_FILES) set_lte_est.o det_ed.o lte_pop_sl.o \
                          ltepop_wld_v1.o genopaeta_v8.o set_line_opac.o writedc_v2.o \
                           $(FN1) $(FN2) $(FN3) $(FN4) $(FN5) $(FN6)
-	$(F90) mod_cmfgen.o lte.o lte_sub.o set_lte_est.o det_ed.o lte_pop_sl.o ltepop_wld_v1.o \
+	$(F90) lte.o lte_sub.o set_lte_est.o det_ed.o lte_pop_sl.o ltepop_wld_v1.o \
                      genopaeta_v8.o set_line_opac.o writedc_v2.o \
-             -L$(LIB_DIR) -l$(LN6) -l$(LN5) -l$(LN4) -l$(LN3) -l$(LN1) -l$(LN6) \
+             -L$(LIB_DIR) -l$(LN6) -l$(LN5) -l$(LN4) -l$(LN3) -l$(LN2) -l$(LN1) -l$(LN6) \
                $(LOCLIB) $(LAPACK) $(BLAS) \
                -o $(EXE_DIR)main_lte.exe
 
-$(EXE_DIR)wind_hyd.exe : wind_hyd.o \
+$(EXE_DIR)wind_hyd.exe : wind_hyd.o $(OBJ_FILES) \
                           $(FN1) $(FN3) $(FN4) $(FN5) $(FN6) $(FN7)
-	$(F90)  wind_hyd.o get_lte_ross_v2.o wind_vel_law_v1.o det_r_grid_v1.o \
+	$(F90)  wind_hyd.o  \
              -L$(LIB_DIR) -l$(LN7) -l$(LN4) -l$(LN2) -l$(LN3) -l$(LN1) -l$(LN6) \
                $(LOCLIB) $(LAPACK) $(BLAS) $(PGLIB) $(G2CLIB) $(X11LIB) \
                -o $(EXE_DIR)wind_hyd.exe
@@ -124,6 +125,7 @@ lib2:
 	(cd ../pgplt; make )
 lib3:
 	(cd ../subs; make )
+	(cd ../stark; make )
 lib4:
 	(cd ../newsubs; make )
 lib5:

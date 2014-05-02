@@ -43,7 +43,7 @@
 	END DO
 	RADIOACTIVE_DECAY_ENERGY=0.0D0
 !
-	WRITE(6,*)'In DO_SPECIES_DECAYS, Delta T=',DELTA_T
+	WRITE(6,*)'   In DO_SPECIES_DECAYS, Delta T=',DELTA_T
 	DO IN=1,NUM_DECAY_PATHS
 !
 ! Do decay chains with a single decay route.

@@ -11,7 +11,10 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
-! Altered:   26-Mar-2012 : Changed to CALL SOLVEBA_V11. Pas POP_ATOM.
+! Altered:   21-Jan-2014 : Changed to CALL SOLVEBA_V12 - now pass MAIN_COUNTER.
+! Aleterd:   31-Dec-2013 : No longer set COMPUTE_BA=T when T_MIN_BA_EXTRAP is true. We may need to
+!                            change this.
+! Altered:   26-Mar-2012 : Changed to CALL SOLVEBA_V11. Has POP_ATOM.
 ! Altered:   12-Mar-2012 : Changed to CALL SOLVEBA_V10. Allows populations at depth 2 to be
 !                            equated to those at depth 1.
 ! Altered:   18-May-2010 : Change to allow BA to be held fixed after a LAMBDA iteration.
@@ -120,9 +123,11 @@
 	  T1=MAX_LIN_COR
 	  TEMP_CHAR=METH_SOL
 	END IF
-	CALL SOLVEBA_V11(SOL,POPS,POP_ATOM,DIAG_INDX,NT,NION,NUM_BNDS,ND,
-	1       MAXCH,TEMP_CHAR,SUCCESS,SCALE_OPT,LAM_SCALE_OPT,T1,T_MIN,
-	1       COMPUTE_BA,WR_BA_INV,WR_PART_OF_INV,LAMBDA_ITERATION,SET_POPS_D2_EQ_D1)
+	CALL SOLVEBA_V13(SOL,POPS,POP_ATOM,DIAG_INDX,NT,NION,NUM_BNDS,ND,
+	1       MAXCH,TEMP_CHAR,SUCCESS,SCALE_OPT,
+	1       LAM_SCALE_OPT,T1,MAX_dT_COR,T_MIN,
+	1       COMPUTE_BA,WR_BA_INV,WR_PART_OF_INV,LAMBDA_ITERATION,
+	1       MAIN_COUNTER,SET_POPS_D2_EQ_D1)
 !
 ! Complicated algorithim to decide when to switch off BA computation.
 ! We only switch off BA computation in WRBAMAT_RDIN is TRUE.
@@ -183,7 +188,8 @@
 	    WRBAMAT=.TRUE.
 	  END IF
 	END IF
-	IF(T_MIN_BA_EXTRAP)COMPUTE_BA=.TRUE.
+!
+!	IF(T_MIN_BA_EXTRAP)COMPUTE_BA=.TRUE.
 !
 ! The STEQ array contains the percentage changes in the populations.
 ! Shall now determine whether the population changes are too large.

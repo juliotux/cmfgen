@@ -293,6 +293,7 @@
 	CALL GET_LU(LU)				!For files open/shut immediately
 !
 	REFERENCE_RADIUS=1.0D-18*SQRT(MOD_LUM*LUM_SUN()/TEFF**4/STEFAN_BC/4.0D0/PI)
+	WRITE(6,'(/,A)')' Updating hydrostatic structure of the model'
 	WRITE(6,*)'Reference radius is',REFERENCE_RADIUS
 !
 !
@@ -892,7 +893,6 @@
 	CALL UPDATE_KEYWORD(NO_ITS_DONE,'[ITS_DONE]','HYDRO_DEFAULTS',L_FALSE,L_TRUE,LUIN)
 	DONE_HYDRO=.TRUE.
 !
-!
 ! Make sure VADAT is consitent with revised RGRID & parameters in HYDRO_PARAMS.
 ! We also return the correct RSTAR, RMAX and stellar mass.
 !
@@ -904,8 +904,8 @@
 	CALL UPDATE_KEYWORD(T1,'[RMAX]','VADAT',L_FALSE,L_FALSE,LUIN)
 	CALL UPDATE_KEYWORD(MOD_MASS,'[MASS]','VADAT',L_FALSE,L_TRUE,LUIN)
 !	CALL UPDATE_KEYWORD(REV_V(1),'[VINF]','VADAT',L_FALSE,L_TRUE,LUIN)
-	WRITE(LU_ERR,'(A)')'Revised hydrostatic structure and output new RVSIG_COL file'
-	WRITE(LU_ERR,'(A)')'Updated RSTAR,RMAX and MASS'               !  & VINF in VADAT'
+	WRITE(LU_ERR,'(A)')' Revised hydrostatic structure and output new RVSIG_COL file'
+	WRITE(LU_ERR,'(A)')' Updated RSTAR, RMAX and MASS in VADAT'
 !
 	RETURN
 	END 

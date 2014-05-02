@@ -12,8 +12,10 @@
 	USE STEQ_DATA_MOD
 	IMPLICIT NONE
 !
+! Altered 13-Mar-2014 : Issues with crude electron-energy balance equation when
+!                          non-thermal ionization was included.
 ! Altered 30-Jan-2002 : Changed to V2
-!                       REPLACE and ZERO_STEQ now passed in call.
+!                          REPLACE and ZERO_STEQ now passed in call.
 ! Altered 10-Sep-2001 : Using DIAG_INDX as logical variable in an IF statement
 ! Created 05-Apr-2001
 !
@@ -82,12 +84,14 @@
 	INTEGER ID
 	INTEGER ISPEC
 !
-	INTEGER ERROR_LU,LUER
-	EXTERNAL ERROR_LU
+	INTEGER ERROR_LU,WARNING_LU
+	INTEGER LUER,LUWARN
+	EXTERNAL ERROR_LU,WARNING_LU
 !
 ! To save typing.
 !
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU()
         K=DEPTH_INDX
 	DIAG_BAND=.FALSE.
 	IF(DIAG_INDX .EQ. BAND_INDX)DIAG_BAND=.TRUE.
@@ -254,7 +258,9 @@
 ! Crude section to create ELECTRON cooling equation.
 ! Must be done after all equations are done, but before GS equation is replaced.
 !
-	IF(DEPTH_INDX .LE. 12)THEN
+! The following was omitted 13-Mar-2014. Problem with non-thermal ionization. Needs modifcation.
+!
+	IF(DEPTH_INDX .LE. -12)THEN
           DO ISPEC=1,NUM_SPECIES
 	    IF(SPECIES_PRES(ISPEC))THEN
 	      DO ID=SPECIES_BEG_ID(ISPEC),SPECIES_END_ID(ISPEC)-1
@@ -275,7 +281,6 @@
 	            SUM=SUM+5.27296D-03*T1*STEQ_VEC(EQ)
 	          END DO
 	          STEQ_VEC(NT)=STEQ_VEC(NT)+SUM
-	          IF(DEPTH_INDX .EQ. 1)WRITE(114,*)ATM(ID)%NXzV_F,ATM(ID)%NXzV,STEQ_VEC(NT),SUM
 	        END IF
 !
 	        DO J=1,NT
@@ -325,13 +330,15 @@
 	END DO
 !
 	IF(DIAG_BAND .AND. DEPTH_INDX .EQ. ND)THEN
+	  WRITE(LUWARN,'(/,/,X,A,/)')' Equation selection in generate_full_matrix_v3.f' 
 	  DO ID=1,NION
 	    IF(REP_CNT(ID) .GT. 0)THEN
-              WRITE(LUER,'(1X,A,T9,A,I3,A)')
+              WRITE(LUWARN,'(1X,A,T9,A,I3,A)')
 	1         TRIM(ION_ID(ID)),' g.s. eq. replaced by ionization eq. at ',
 	1         REP_CNT(ID),' depths.'
 	      END IF
 	  END DO
+	  WRITE(LUWARN,'(A)')' '
 	END IF
 !
 !	IF(K .EQ. 1 .AND. DIAG_BAND)THEN
@@ -370,15 +377,15 @@
 	  END DO
 	END DO
 !
-	IF(K .EQ. 91 .AND. DIAG_BAND .AND. K .LE. ND)THEN
-	  OPEN(UNIT=96,FILE='BA_ASCI_N_D91',STATUS='UNKNOWN')
+	IF(K .EQ. 5 .AND. DIAG_BAND .AND. K .LE. ND)THEN
+	  OPEN(UNIT=96,FILE='BA_ASCI_N_D5',STATUS='UNKNOWN')
 	    CALL WR2D_MA(POPS(1,K),NT,1,'POPS_D1',96)
 	    CALL WR2D_MA(STEQ_VEC,NT,1,'STEQ_VEC_D1',96)
 	    CALL WR2D_MA(C_MAT,NT,NT,'C_MAT_D1',96)
 	  CLOSE(UNIT=96)
 	END IF
-	IF(K .EQ. 92 .AND. DIAG_BAND .AND. K .LE. ND)THEN
-	  OPEN(UNIT=96,FILE='BA_ASCI_N_D92',STATUS='UNKNOWN')
+	IF(K .EQ. 6 .AND. DIAG_BAND .AND. K .LE. ND)THEN
+	  OPEN(UNIT=96,FILE='BA_ASCI_N_D6',STATUS='UNKNOWN')
 	    CALL WR2D_MA(POPS(1,K),NT,1,'POPS_D1',96)
 	    CALL WR2D_MA(STEQ_VEC,NT,1,'STEQ_VEC_D1',96)
 	    CALL WR2D_MA(C_MAT,NT,NT,'C_MAT_D1',96)

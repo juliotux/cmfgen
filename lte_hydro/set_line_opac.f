@@ -19,6 +19,9 @@
 	USE LINE_MOD
         IMPLICIT NONE
 !
+! Incorporated 2-Jan-2014: Changes for depth depndent line profiles.
+! Altered 05-Apr-2011 : L_STAR_RATIO and U_STAR_RATIO now computed using XzVLTE_F_ON_S (29-Nov-2010).
+!                         Done to facilitate use of lower temperaturs.
 ! Altered 20-Feb-2006 : Minor bug fix --- incorrect acces VAR_IN_USE_CNT when BA not being computed
 ! Created 21-Dec-2004
 !
@@ -35,10 +38,16 @@
 	REAL*8 POPS(NT,ND)
 	LOGICAL LST_DEPTH_ONLY
 !
-	COMMON/LINE/ OPLIN,EMLIN
-	REAL*8 OPLIN,EMLIN
+	REAL*8 TA(ND),TB(ND),TC(ND),ED_MOD(ND)		!Work vectors
 !
-	REAL*8 T1,T2
+! Constants for opacity etc. These are set in CMFGEN.
+!
+        COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
+        COMMON/LINE/ OPLIN,EMLIN
+        REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
+        REAL*8 OPLIN,EMLIN
+!
+	REAL*8 T1,T2,T3
 	REAL*8 NU_DOP
 	REAL*8 FL
 !
@@ -125,10 +134,17 @@
 	  DO WHILE(LINE_STORAGE_USED(I))
 	    I=I+1
 	    IF(I .GT. MAX_SIM)THEN
-	      FIRST_LINE=N_LINE_FREQ
-	      DO SIM_INDX=1,MAX_SIM		!Not 0 as used!
-	        FIRST_LINE=MIN(FIRST_LINE,SIM_LINE_POINTER(SIM_INDX)) 
-	      END DO
+	      T1=1.0D+08
+	      DO SIM_INDX=1,MAX_SIM             !Not 0 as used!
+	        IF(LINE_END_INDX_IN_NU(SIM_LINE_POINTER(SIM_INDX)) .LT. T1)THEN
+	          FIRST_LINE=SIM_LINE_POINTER(SIM_INDX)
+	          T1=LINE_END_INDX_IN_NU(SIM_LINE_POINTER(SIM_INDX))
+                END IF
+              END DO
+!	      FIRST_LINE=N_LINE_FREQ
+!	      DO SIM_INDX=1,MAX_SIM		!Not 0 as used!
+!	        FIRST_LINE=MIN(FIRST_LINE,SIM_LINE_POINTER(SIM_INDX)) 
+!	      END DO
 	      IF( FREQ_INDX .GT. LINE_END_INDX_IN_NU(FIRST_LINE))THEN
 !
 ! Free up storage location for line.
@@ -182,11 +198,11 @@
 !
 	  TRANS_NAME_SIM(SIM_INDX)=TRIM(VEC_SPEC(LAST_LINE))
 !
-! This is a temporary measure. We currently set AMASS to AMASS_DOP for all
-! species.
-!
-!	  AMASS_SIM(SIM_INDX)=AMASS_ALL(NL)
-	  AMASS_SIM(SIM_INDX)=AMASS_DOP
+	  IF(FIX_DOP)THEN
+	    AMASS_SIM(SIM_INDX)=AMASS_DOP
+	  ELSE
+	    AMASS_SIM(SIM_INDX)=AT_MASS(SPECIES_LNK(VEC_ID(LAST_LINE)))
+	  END IF
 !
 ! 
 !
@@ -203,12 +219,12 @@
 ! MNL_F (MNUP_F) denotes the lower (upper) level in the full atom.
 ! MNL (MNUP) denotes the lower (upper) level in the super level model atom.
 !
-	MNL_F=VEC_MNL_F(LAST_LINE)
-	MNUP_F=VEC_MNUP_F(LAST_LINE)
-	DO K=D_ST,ND
-	  L_STAR_RATIO(K,SIM_INDX)=1.0D0
-	  U_STAR_RATIO(K,SIM_INDX)=1.0D0
-	END DO
+	  MNL_F=VEC_MNL_F(LAST_LINE)
+	  MNUP_F=VEC_MNUP_F(LAST_LINE)
+	  DO K=D_ST,ND
+	    L_STAR_RATIO(K,SIM_INDX)=1.0D0
+	    U_STAR_RATIO(K,SIM_INDX)=1.0D0
+	  END DO
 !
 ! T1 is used to represent b(level)/b(super level). If no interpolation of
 ! the b values in a super level has been performed, this ratio will be unity .
@@ -219,17 +235,14 @@
 	      MNL=ATM(ID)%F_TO_S_XzV(MNL_F)
 	      MNUP=ATM(ID)%F_TO_S_XzV(MNUP_F)
 	      DO K=D_ST,ND
-	        IF(ATM(ID)%XzVLTE_F(MNL_F,K) .NE. 0.0D0 .AND. ATM(ID)%XzVLTE(MNL,K) .NE. 0.0D0)THEN
-	          T1=(ATM(ID)%XzV_F(MNL_F,K)/ATM(ID)%XzVLTE_F(MNL_F,K)) /
-	1             (ATM(ID)%XzV(MNL,K)/ATM(ID)%XzVLTE(MNL,K))
-	          L_STAR_RATIO(K,SIM_INDX)=T1*ATM(ID)%W_XzV_F(MNUP_F,K)*
-	1            ATM(ID)%XzVLTE_F(MNL_F,K)/ATM(ID)%XzVLTE(MNL,K)/
-	1            ATM(ID)%W_XzV_F(MNL_F,K)
-	          T2=(ATM(ID)%XzV_F(MNUP_F,K)/ATM(ID)%XzVLTE_F(MNUP_F,K)) /
-	1               (ATM(ID)%XzV(MNUP,K)/ATM(ID)%XzVLTE(MNUP,K))
-	          U_STAR_RATIO(K,SIM_INDX)=T2*ATM(ID)%XzVLTE_F(MNUP_F,K)/
-	1              ATM(ID)%XzVLTE(MNUP,K)
-	        END IF
+	        T1=(ATM(ID)%XzV_F(MNL_F,K)/ATM(ID)%XzV(MNL,K))/ATM(ID)%XzVLTE_F_ON_S(MNL_F,K)
+	        L_STAR_RATIO(K,SIM_INDX)=T1*(ATM(ID)%W_XzV_F(MNUP_F,K)/ATM(ID)%W_XzV_F(MNL_F,K))*ATM(ID)%XzVLTE_F_ON_S(MNL_F,K)
+	        T2=(ATM(ID)%XzV_F(MNUP_F,K)/ATM(ID)%XzV(MNUP,K))/ATM(ID)%XzVLTE_F_ON_S(MNUP_F,K)
+	        U_STAR_RATIO(K,SIM_INDX)=T2*ATM(ID)%XzVLTE_F_ON_S(MNUP_F,K)
+	        dL_RAT_dT(K,SIM_INDX)=L_STAR_RATIO(K,SIM_INDX)*
+	1         (-1.5D0-HDKT*ATM(ID)%EDGEXzV_F(MNL_F)/T(K)-ATM(ID)%dlnXzVLTE_dlnT(MNL,K))/T(K)
+	        dU_RAT_dT(K,SIM_INDX)=U_STAR_RATIO(K,SIM_INDX)*
+	1         (-1.5D0-HDKT*ATM(ID)%EDGEXzV_F(MNUP_F)/T(K)-ATM(ID)%dlnXzVLTE_dlnT(MNUP,K))/T(K)
 	      END DO
 	      GLDGU(SIM_INDX)=ATM(ID)%GXzV_F(MNL_F)/ATM(ID)%GXzV_F(MNUP_F)
 	      TRANS_NAME_SIM(SIM_INDX)=TRIM(TRANS_NAME_SIM(SIM_INDX))//
@@ -238,12 +251,49 @@
 	      EXIT
 	    END IF
 	  END DO
+!
+	  IF(.NOT. INCLUDE_dSLdT)THEN
+	    DO K=D_ST,ND
+	      dU_RAT_dT(K,SIM_INDX)=0.0D0
+	      dL_RAT_dT(K,SIM_INDX)=0.0D0
+	    END DO
+	  END IF
 ! 
+!
+! If desired we can scale the line opacity/emissivities of transitions
+! among SL's. This allows us to obtain full consistency in the
+! upward/downwrd rates, and the cooling/heating rates. For the
+! cooling/heting rates, this is similar to SCL_LIN_COOL_RATES option.
+! However this option provides consistent with the radiative equilibrium
+! term appearing in the transfer equation. Implemented for SN which can
+! be totally dominated by scattering.
+!
+! This section should be consistent with corrections in CMFGEN_SUB
+! (in SCL_LINE_COO_RATES sections).
+!
+!	  IF(SCL_SL_LINE_OPAC)THEN
+!	    T3=(AVE_ENERGY(NL)-AVE_ENERGY(NUP))/FL_SIM(SIM_INDX)
+!	    IF(ABS(T3-1.0D0) .GT. SCL_LINE_HT_FAC)T3=1.0D0
+!	    DO I=D_ST,ND
+!	      IF(POP_ATOM(I) .LE. SCL_LINE_DENSITY_LIMIT)THEN
+!	        L_STAR_RATIO(I,SIM_INDX)=T3*L_STAR_RATIO(I,SIM_INDX)
+!	        U_STAR_RATIO(I,SIM_INDX)=T3*U_STAR_RATIO(I,SIM_INDX)
+!	      END IF
+!	    END DO
+!	  END IF
 !
 ! Compute line opacity and emissivity for this line.
 !
-	  T1=OSCIL(SIM_INDX)*OPLIN
-	  T2=FL_SIM(SIM_INDX)*EINA(SIM_INDX)*EMLIN
+	  T3=1.0D0
+	  IF(SCL_SL_LINE_OPAC)THEN
+	    T3=(AVE_ENERGY(NL)-AVE_ENERGY(NUP))/FL_SIM(SIM_INDX)
+	    IF(ABS(T3-1.0D0) .GT. SCL_LINE_HT_FAC)T3=1.0D0
+	  END IF
+	  T1=OSCIL(SIM_INDX)*OPLIN*T3
+	  T2=FL_SIM(SIM_INDX)*EINA(SIM_INDX)*EMLIN*T3
+	  LINE_OPAC_CON(SIM_INDX)=T1
+	  LINE_EMIS_CON(SIM_INDX)=T2
+!
 	  NL=SIM_NL(SIM_INDX)
 	  NUP=SIM_NUP(SIM_INDX)
 	  DO I=D_ST,ND
@@ -251,7 +301,7 @@
 	1            GLDGU(SIM_INDX)*U_STAR_RATIO(I,SIM_INDX)*POPS(NUP,I))
 	    ETAL_MAT(I,SIM_INDX)=T2*POPS(NUP,I)*U_STAR_RATIO(I,SIM_INDX)
 	    IF(CHIL_MAT(I,SIM_INDX) .EQ. 0)THEN
-	      CHIL_MAT(I,SIM_INDX)=0.01*T1*POPS(NL,I)*L_STAR_RATIO(I,SIM_INDX)
+	      CHIL_MAT(I,SIM_INDX)=0.01D0*T1*POPS(NL,I)*L_STAR_RATIO(I,SIM_INDX)
 	      WRITE(LUER,*)'Zero line opacity in CMFGEN_SUB'
 	      WRITE(LUER,*)'This needs to be fixed'
 	      J=LEN_TRIM(TRANS_NAME_SIM(SIM_INDX))
@@ -259,10 +309,7 @@
 	    END IF
 	  END DO
 !
-	  LINE_OPAC_CON(SIM_INDX)=T1
-	  LINE_EMIS_CON(SIM_INDX)=T2
-!
-	END DO	!Checking whether a  new line is being added.
+	END DO	!Checking whether a new line is being added.
 !
 ! 
 !
@@ -283,20 +330,62 @@
 	  END IF
 	END DO
 !
-! Compute Doppler profile. At present this is assumed, for simplicity, to be
-! depth independent.
+! Compute intrinsic line profile. This can be depth independent (simplest option) or
+! depth dependent. Note: AMASS_SIM has been set to AMASS_DOP for FIX_DOP.
+
+	IF(FIX_DOP .OR. GLOBAL_LINE_PROF .EQ. 'DOP_SPEC')THEN
+	  T1=1.0D-15/1.77245385095516D0		!1.0D-15/SQRT(PI)
+	  DO SIM_INDX=1,MAX_SIM
+	    IF(RESONANCE_ZONE(SIM_INDX))THEN
+	      NU_DOP=FL_SIM(SIM_INDX)*12.85D0*SQRT( TDOP/AMASS_SIM(SIM_INDX) + (VTURB/12.85D0)**2 )/2.998D+05
+	      LINE_PROF_SIM(ND,SIM_INDX)=EXP( -( (FL-FL_SIM(SIM_INDX))/NU_DOP )**2 )*T1/NU_DOP
+	    ELSE
+	      LINE_PROF_SIM(ND,SIM_INDX)=0.0D0
+	    END IF
+	    DO I=D_ST,ND-1
+	      LINE_PROF_SIM(I,SIM_INDX)=LINE_PROF_SIM(ND,SIM_INDX)
+	    END DO
+	  END DO                      
+	ELSE
 !
-	T1=1.0D-15/1.77245385095516D0		!1.0D-15/SQRT(PI)
-	DO SIM_INDX=1,MAX_SIM
-	  IF(RESONANCE_ZONE(SIM_INDX))THEN
-	    NU_DOP=FL_SIM(SIM_INDX)*12.85*SQRT( TDOP/AMASS_SIM(SIM_INDX) +
-	1                        (VTURB/12.85)**2 )/2.998D+05
-	    LINE_PROF_SIM(SIM_INDX)=EXP( -( (FL-FL_SIM(SIM_INDX))/
-	1              NU_DOP )**2 )*T1/NU_DOP
-	  ELSE
-	    LINE_PROF_SIM(SIM_INDX)=0.0D0
-	  END IF
-	END DO                                    
+! Because of storage issues, need to compute all ND profiles. Thus there is
+! currently no LST_DEPTH option.
+!
+! We also have a temporary limit on ED to prvent the Stark profile from becoming
+! too large. This may need to change.
+!
+	  TB(1:ND)=0.0D0; TC(1:ND)=0.0D0
+	  ED_MOD(1:ND)=ED(1:ND)
+	  DO I=1,ND
+	    ED_MOD(I)=MIN(15.0D0,ED_MOD(I))
+	  END DO
+	  DO ID=1,NUM_IONS
+	    IF(ATM(ID)%XzV_PRES .AND. ION_ID(ID) .EQ. 'HI')TB(1:ND)=ATM(ID)%DxzV(1:ND)
+	    IF(ATM(ID)%XzV_PRES .AND. ION_ID(ID) .EQ. 'HeI')TC(1:ND)=ATM(ID)%DxzV(1:ND)
+	  END DO
+	  DO SIM_INDX=1,MAX_SIM
+	    IF(RESONANCE_ZONE(SIM_INDX))THEN
+	      J=SIM_LINE_POINTER(SIM_INDX); I=FREQ_INDX
+	      ID=VEC_ID(J); T1=ATM(ID)%ZXzV+1; T3=0.0D0
+	      CALL SET_PROF_V4(TA,NU,I,
+	1               LINE_ST_INDX_IN_NU(J),LINE_END_INDX_IN_NU(J),
+	1               ED,TB,TC,T,VTURB_VEC,ND,
+	1               PROF_TYPE(J),PROF_LIST_LOCATION(J),
+	1               VEC_FREQ(J),VEC_MNL_F(J),VEC_MNUP_F(J),
+	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,
+	1               TDOP,AMASS_DOP,VTURB,
+	1               END_RES_ZONE(SIM_INDX),L_TRUE,7)
+	      LINE_PROF_SIM(1:ND,SIM_INDX)=TA(1:ND)
+	      IF(VEC_SPEC(J)(1:1) .EQ. 'H')THEN
+	        WRITE(135,'(A,T10,2ES14.5,2I4,3E12.4)')PROF_TYPE(J),VEC_FREQ(J),
+	1            3.0D+05*(NU(I)/VEC_FREQ(J)-1.0D0),
+	1            VEC_MNL_F(J),VEC_MNUP_F(J),TA(1),TA(40),TA(ND)
+	      END IF
+	    ELSE
+	      LINE_PROF_SIM(1:ND,SIM_INDX)=0.0D0
+	    END IF
+	  END DO
+	END IF
 !
 ! Compute the LINE quadrature weights. Defined so that JBAR= SUM[LINE_QW*J]
 !
@@ -307,9 +396,27 @@
 	ELSE
 	  T1=(NU(FREQ_INDX-1)-NU(FREQ_INDX+1))*0.5D+15
 	END IF
-	DO SIM_INDX=1,MAX_SIM
-	  LINE_QW_SIM(SIM_INDX)=LINE_PROF_SIM(SIM_INDX)*T1
-	END DO
+!
+	IF(LST_DEPTH_ONLY)THEN
+	  DO SIM_INDX=1,MAX_SIM
+	    LINE_QW_SIM(ND,SIM_INDX)=LINE_PROF_SIM(ND,SIM_INDX)*T1
+	  END DO
+	ELSE IF(FIX_DOP .OR. GLOBAL_LINE_PROF .EQ. 'DOP_SPEC')THEN
+!$OMP PARALLEL DO PRIVATE(SIM_INDX,I)
+	  DO SIM_INDX=1,MAX_SIM
+	    LINE_QW_SIM(1,SIM_INDX)=LINE_PROF_SIM(1,SIM_INDX)*T1
+	    DO I=2,ND
+	      LINE_QW_SIM(I,SIM_INDX)=LINE_QW_SIM(1,SIM_INDX)
+	    END DO
+	  END DO
+	ELSE
+!$OMP PARALLEL DO PRIVATE(SIM_INDX,I)
+	  DO SIM_INDX=1,MAX_SIM
+	    DO I=1,ND
+	      LINE_QW_SIM(I,SIM_INDX)=LINE_PROF_SIM(I,SIM_INDX)*T1
+	    END DO
+	  END DO
+	END IF
 !
 ! Ensure that LAST_LINE points to the next LINE that is going to be handled 
 ! in the BLANKETING portion of the code.

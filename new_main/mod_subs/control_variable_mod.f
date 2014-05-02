@@ -1,5 +1,6 @@
 	MODULE CONTROL_VARIABLE_MOD
 !
+! Incorporated: 02-Jan-2014: Changed to allow depth dependent profiles.
 ! Altered : 05-Apr-2011 : Added vriable R_GRD_REVISED (10-Feb-2011).
 ! Altered : 16-Jul-2010 : Added FIX_ALL_SPECIES variable.
 ! Altered : 23-Nov-2007 : LAM_SCALE_OPT included.
@@ -102,6 +103,7 @@
 !
 	LOGICAL USE_J_REL
 	LOGICAL USE_FORMAL_REL
+	LOGICAL USE_LAM_ES
 	LOGICAL INCL_REL_TERMS
 	LOGICAL INCL_ADVEC_TERMS_IN_TRANS_EQ
 	LOGICAL USE_OLD_MF_SCALING
@@ -199,8 +201,21 @@
 ! to be constant at all depths.
 !
 	REAL*8 TDOP
+	REAL*8 VDOP_FIX
 	REAL*8 VTURB
 	REAL*8 AMASS_DOP
+	REAL*8 VTURB_MIN
+	REAL*8 VTURB_MAX
+	LOGICAL FIX_DOP
+!
+	REAL*8 DOP_PROF_LIMIT
+	REAL*8 VOIGT_PROF_LIMIT
+	REAL*8 V_PROF_LIMIT
+	REAL*8 MAX_PROF_ED
+	LOGICAL SET_PROF_LIMS_BY_OPACITY
+	LOGICAL RD_STARK_FILE
+	LOGICAL NORM_PROFILE
+	CHARACTER(LEN=10) GLOBAL_LINE_PROF
 !
 ! Variables used to define what transitions are neglected. Cut is
 ! presently by the gf value, and the lower level of the transition.
@@ -266,6 +281,7 @@
 ! Specifies method used to compute optical depth.
 !
 	CHARACTER(LEN=6)  METHOD
+	CHARACTER(LEN=6)  LUM_FROM_ETA_METHOD
 !
         REAL*8 OVER_FREQ_DIF
         REAL*8 WEAK_LINE_LIMIT
@@ -374,6 +390,7 @@
 	INTEGER N_PAR
 	REAL*8 MAX_LAM_COR	!Maximum fractional change for Lambda iteration.
 	REAL*8 MAX_LIN_COR	!Maximum fractional change for linearization.
+	REAL*8 MAX_dT_COR       !Maximum allowed change in the temperature.
 	REAL*8 MAX_CHNG_LIM
 !
 ! Indicates how to scale the corections to the populations, so that
@@ -520,7 +537,8 @@
 	CHARACTER(LEN=10) OUTER_BND_METH
 	CHARACTER(LEN=10) INNER_BND_METH
 !
-	REAL*8  OUT_BC_PARAM_ONE
+	REAL*8 IB_STAB_FACTOR
+	REAL*8 OUT_BC_PARAM_ONE
 	REAL*8 REXT_FAC
 	INTEGER RD_OUT_BC_TYPE
 	INTEGER OUT_BC_TYPE

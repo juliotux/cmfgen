@@ -13,6 +13,7 @@
 	USE LINE_MOD
 	IMPLICIT NONE
 !
+! Altered 27-Jan-2014 : Now call TORSCL_V3
 ! Altered 05-Apr-2011 : Now call PAR_FUN_V2 (instead of V2), LTEPOP_WLD_V2 and LTE_POP_SL_V2 (28-Nov-2010).
 !                         Changes donw to give a wider dynamic rangs in LTE populations. 
 ! Altered 23-May-2010 : Changed handling of T_MIN.
@@ -193,9 +194,9 @@
 	        IF(RESONANCE_ZONE(SIM_INDX))THEN
 	          DO I=1,ND
 	            CHI(I)=CHI(I) +
-	1             CHIL_MAT(I,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
+	1             CHIL_MAT(I,SIM_INDX)*LINE_PROF_SIM(I,SIM_INDX)
 	            ETA(I)=ETA(I) +
-	1             ETAL_MAT(I,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
+	1             ETAL_MAT(I,SIM_INDX)*LINE_PROF_SIM(I,SIM_INDX)
 	          END DO
 	        END IF
 	      END DO
@@ -240,9 +241,14 @@
 ! TC are used as temporary vectors.
 !
 	    IF(MAIN_COUNTER .EQ. 1)THEN
-	      CALL TORSCL(TA,ROSSMEAN,R,TB,TC,ND,METHOD,' ')
+	      J=5
+	      DO K=J+1,10
+	        IF(ESEC(J)/ESEC(1) .GT. 5)EXIT
+	        J=K
+	      END DO
+	      CALL TORSCL_V3(TA,ROSSMEAN,R,TB,TC,ND,METHOD,'PCOMP',J,L_FALSE)
 	      CALL ESOPAC(ESEC,ED,ND)
-	      CALL TORSCL(TB,ESEC,R,SOURCE,TC,ND,METHOD,' ')
+	      CALL TORSCL_V3(TB,ESEC,R,SOURCE,TC,ND,METHOD,'PCOMP',J,L_FALSE)
 	      WRITE(LUER,*)' '
 	      WRITE(LUER,'(A,ES10.3)')' Thompson scattering optical depth at inner boundary is:',TB(ND)
 	      WRITE(LUER,'(A,ES10.3)')' Rosseland optical depth at inner boundary is:          ',TA(ND)
@@ -264,7 +270,7 @@
 ! ROSSMEAN already includes the effect of clumping.
 !
 	    CHI(1:ND)=ROSSMEAN(1:ND)
-	    WRITE(LUER,*)'Callng COMP_GREY in GREY_T_ITERATE'
+	    IF(MAIN_COUNTER .EQ. 1)WRITE(LUER,*)'Calling COMP_GREY_V2 in GREY_T_ITERATE'
 	    CALL COMP_GREY_V2(POPS,TGREY,TA,ROSSMEAN,LUER,NC,ND,NP,NT)
 !
 ! SCALE_GREY modifies the computed grey temperature distribution according
@@ -309,8 +315,8 @@
 	        T2=MAX(T3/T(I),T2)
 	      END IF
 	    END DO
-	    WRITE(LUER,'('' Largest correction to T in GREY initialization loop '//
-	1              'is '',1P,E9.2,'' %'')')100.0*T2
+	    WRITE(LUER,'(X,A,I2,A,ES9.2,A)')'Iteration',MAIN_COUNTER,
+	1      ' --- Largest correction to T in GREY initialization loop is',100.0*T2,'%'
 !
 ! Now compute non-LTE partition functions. These assume that the
 ! departure coefficients are independent of Temperature. This

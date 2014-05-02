@@ -7,9 +7,10 @@
 	1               POPATOM,N,ND,LU_IN,INTERP_OPTION,FILE_NAME)
 	IMPLICIT NONE
 !
-! Altered 16-Oct-2012 - Added BA_TX_CONV and NO_TX_CONV
+! Altered 18-Jan-2014 - Fixed minor bug -- needed ABS when checkikng equality of R(1) and OLD_R(1).
+! Altered 16-Oct-2012 - Added BA_TX_CONV and NO_TX_CONV.
 ! Altered: 18-Nov-2011: Big fix. Not all DPOP was being set and this could cause a crash
-!                        when taking LOGS (levels unused).
+!                            when taking LOGS (levels unused).
 ! Created: 18-Dec-2010: This routine replace REGRIDWSC_V3, REGRIDB_ON_NE, REGRID_TX_R.
 !                       Interplation options are 'R', 'ED', 'SPH_TAU', and 'RTX'.
 !                       Routine handled INPUT files with departure coefficients, or
@@ -50,8 +51,8 @@
 	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
 	COMMON/CONSTANTS/ CHIBF,CHIFF,HDKT,TWOHCSQ
 !
-	INTEGER ERROR_LU,LUER
-	EXTERNAL ERROR_LU
+	INTEGER ERROR_LU,LUER,LUWARN,WARNING_LU
+	EXTERNAL ERROR_LU,WARNING_LU
 !
 ! Local Variables.
 !
@@ -63,6 +64,7 @@
 	INTEGER NZ,NOLD,NDOLD
 	INTEGER NX,NX_ST,NX_END
 	INTEGER COUNT,IOS
+	LOGICAL, SAVE :: FIRST=.TRUE.
 	LOGICAL BAD_TX_CONV
 	LOGICAL NO_TX_CONV(ND)
 	LOGICAL TAKE_LOGS
@@ -72,6 +74,7 @@
 	CHARACTER(LEN=*) FILE_NAME
 !
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU()
 !
 ! Read in values from previous model.
 !
@@ -161,8 +164,15 @@
 	NX_END=ND
 	IF(INTERP_OPTION .EQ. 'R')THEN
 	  IF(DABS(OLD_R(NDOLD)/R(ND)-1.0D0) .GT. 0.0001D0)THEN
-	    WRITE(LUER,*)'Warning - core radius not identical in REGRID_LOG_DC_V1'
-	    WRITE(LUER,*)'Rescaling to make Rcore identical'
+	    IF(FIRST)THEN
+	      WRITE(LUWARN,*)'Warning - core radius not identical in REGRID_LOG_DC_V1'
+	      WRITE(LUER,*)'Warning - core radius not identical in REGRID_LOG_DC_V1'
+	      WRITE(LUER,*)'Rescaling to make Rcore identical --- ',TRIM(FILE_NAME)
+	      WRITE(LUER,*)'Additional warnings will be output to WARNINGS'
+	      FIRST=.FALSE.
+	    ELSE
+	      WRITE(LUWARN,*)'Rescaling to make Rcore identical --- ',TRIM(FILE_NAME)
+	    END IF
 	    DO I=1,NDOLD
 	      OLD_R(I)=R(ND)*( OLD_R(I)/OLD_R(NDOLD) )
 	    END DO
@@ -170,7 +180,7 @@
 	  ELSE
 	    OLD_R(NDOLD)=R(ND)
 	  END IF
-	  IF( 1.0D0-OLD_R(1)/R(1) .LE. 1.0D-10 )OLD_R(1)=R(1)
+	  IF( ABS(1.0D0-OLD_R(1)/R(1)) .LE. 1.0D-10 )OLD_R(1)=R(1)
 	  IF(OLD_R(2) .GE. OLD_R(1))THEN
 	    WRITE(LUER,*)'Reset OLD_R(1) in REGRID_T_ED but now OLD_R(2) .GE. OLD_R(1))'
 	    STOP

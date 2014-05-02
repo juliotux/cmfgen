@@ -301,14 +301,15 @@
 !
 ! NB Using TA for ETA, TC for JNU_VEC, and TB for HNU_VEC
 !
+	     FG_COUNT=FG_COUNT+1
 	     CALL TUNE(IONE,'FG_J_CMF_ACC')
 	     IF(PLANE_PARALLEL_NO_V)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling FCOMP_PP_V2 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling FCOMP_PP_V2 with accurate grid'
 	       SOURCEEXT(1:NDEXT)=TA(1:NDEXT)/CHIEXT(1:NDEXT)
 	       CALL FCOMP_PP_V2(REXT,TC,FEDD,SOURCEEXT,CHIEXT,IPLUS,HBC_CMF,
 	1               NBC_CMF,INBC,DBB,IC,THK_CONT,DIF,NDEXT,NC,METHOD)
 	     ELSE IF(PLANE_PARALLEL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling PP_FORM_CMF_V2 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling PP_FORM_CMF_V2 with accurate grid'
 	       CALL PP_FORM_CMF_V2(TA,CHIEXT,CHI_SCAT_EXT,VEXT,SIGMAEXT,REXT,
 	1               TC,TB,FEDD,GEDD,N_ON_J,INBC,
 	1               HBC_CMF(1),HBC_CMF(2),NBC_CMF(1),NBC_CMF(2),
@@ -316,7 +317,7 @@
 	1               METHOD,FG_SOL_OPTIONS,THK_CONT,L_FALSE,
 	1               FIRST_FREQ,NEW_FREQ,N_TYPE,NC,NDEXT)
              ELSE IF(USE_FORMAL_REL)THEN
-               IF(FIRST_FREQ)WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 with accurate grid in COMP_JCONT_V4.INC'
+               IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 with accurate grid in COMP_JCONT_V4.INC'
                CALL CMF_FORMAL_REL_V4
 	1              (TA,CHIEXT,CHI_SCAT_EXT,VEXT,SIGMAEXT,REXT,PEXT,
 	1              TC,FEDD,HFLUX_AT_IB,HFLUX_AT_OB,IPLUS,FL,dLOG_NU,
@@ -324,7 +325,7 @@
 	1              VDOP_VEC_EXT,DELV_FRAC_FG,REXT_FAC,
 	1              METHOD,FIRST_FREQ,NEW_FREQ,NCEXT,NPEXT,NDEXT)
 	     ELSE
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling FG_J_CMF_V12 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling FG_J_CMF_V12 with accurate grid'
 	       CALL FG_J_CMF_V12(TA,CHIEXT,CHI_SCAT_EXT,
 	1              VEXT,SIGMAEXT,REXT,PEXT,TC,FEDD,
 	1              AQWEXT,HQWEXT,KQWEXT,NQWEXT,HMIDQWEXT,NMIDQWEXT,
@@ -340,8 +341,6 @@
 ! RSQHNU/TB not needed as computed by MOM routines.
 !	     CALL UNGRID(RSQHNU,ND,TB,NDEXT,POS_IN_NEW_GRID)
 !
-	     FG_COUNT=FG_COUNT+1
-!
 ! We assume Rayleigh scattering, when present, is coherent in the CMF. 
 ! NB: We have to pass a non zero CHI_RAY_EXT to MOM_J_CMF_V6, since it is 
 ! interpolated in the LOG plane.
@@ -355,7 +354,7 @@
 	     END IF
 	     CALL TUNE(IONE,'MOM_J_CMF_ACC')
              IF(PLANE_PARALLEL_NO_V)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_PP_V1 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_PP_V1 with accurate grid'
 	       CALL MOM_J_PP_V1(TA,CHIEXT,TB,
 	1                  REXT,FEDD,RJEXT,RSQHNU,HBC_CMF,NBC_CMF,INBC,
 	1                  FL,DIF,DBB,IC,METHOD,L_TRUE,
@@ -363,7 +362,7 @@
 	       HFLUX_AT_OB=HBC_CMF(1)*RJ(1)-HBC_CMF(2)
 	       IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
              ELSE IF(PLANE_PARALLEL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling PP_MOM_CMF_V1 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling PP_MOM_CMF_V1 with accurate grid'
                CALL PP_MOM_CMF_V1(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
 	1                  FEDD,GEDD,N_ON_J,RJEXT,RSQHNU,
 	1                  VDOP_VEC_EXT,DELV_FRAC_MOM,
@@ -374,7 +373,7 @@
 	       HFLUX_AT_OB=HBC_CMF(1)*RJ(1)-HBC_CMF(2)
 	       IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
 	     ELSE IF(USE_DJDT_RTE)THEN
-	      IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
+	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
 	      CALL MOM_J_DDT_V2(TA,CHIEXT,TB,
 	1              VEXT,REXT,FEDD,RJEXT,RSQHNU,XM,                  !Use XM for DJDt_TERM,
 	1              HFLUX_AT_IB,HFLUX_AT_OB,
@@ -384,10 +383,10 @@
 	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NCEXT,NPEXT,NDEXT,NCF)
 
              ELSE IF(USE_J_REL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_JREL_V6 with accurate grid'
-	       CALL MOM_JREL_V6(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_JREL_V7 with accurate grid'
+	       CALL MOM_JREL_V7(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
 	1             RJEXT,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,
-	1             VDOP_VEC_EXT,DELV_FRAC_MOM,FL,dLOG_NU,DBB,
+	1             VDOP_VEC_EXT,DELV_FRAC_MOM,FL,dLOG_NU,DBB,IB_STAB_FACTOR,
 	1             INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,L_TRUE,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,NDEXT)
@@ -400,12 +399,12 @@
                    CALL OUT_JH(TA,RSQHNU,T1,T2,FL,NCF,REXT,VEXT,NDEXT,FIRST_FREQ,'NORMAL')
 	        END IF
 	     ELSE IF(USE_LAM_ES)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Using J from formal-solution for ray-by-ray solution'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Using J from formal-solution for ray-by-ray solution'
 	       RJEXT(1:NDEXT)=TC(1:NDEXT); RSQHNU(1:NDEXT)=0.0D0
 	       CALL GET_RSQH_REL(RSQHNU, REXT, VEXT, FL, NDEXT)
 	       IF(L .LT. 3)FOLD(1:ND)=0.0D0
 	     ELSE
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_CMF_V8 with accurate grid'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_CMF_V8 with accurate grid'
 	       CALL MOM_J_CMF_V8(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
 	1  	       RJEXT,RSQHNU,VDOP_VEC_EXT,DELV_FRAC_MOM,
 	1              FL,dLOG_NU,DIF,DBB,IC,
@@ -652,13 +651,14 @@
 ! NB Using TA for ETA, TC for JNU_VEC, and TB for HNU_VEC
 !
 	     CALL TUNE(IONE,'FG_J_CMF')
+	     FG_COUNT=FG_COUNT+1
 	     IF(PLANE_PARALLEL_NO_V)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling FCOMP_PP'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling FCOMP_PP'
 	       SOURCE(1:ND)=TA(1:ND)/CHI_CLUMP(1:ND)
 	       CALL FCOMP_PP_V2(R,TC,FEDD,SOURCE,CHI_CLUMP,IPLUS,HBC_CMF,
 	1               NBC_CMF,INBC,DBB,IC,THK_CONT,DIF,ND,NC,METHOD)
 	     ELSE IF(PLANE_PARALLEL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling PP_FORM_CMF_V2'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling PP_FORM_CMF_V2'
 	       CALL PP_FORM_CMF_V2(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
 	1               TC,TB,FEDD,GEDD,N_ON_J,INBC,
 	1               HBC_CMF(1),HBC_CMF(2),NBC_CMF(1),NBC_CMF(2),
@@ -666,7 +666,7 @@
 	1               METHOD,FG_SOL_OPTIONS,THK_CONT,L_FALSE,
 	1               FIRST_FREQ,NEW_FREQ,N_TYPE,NC,ND)
              ELSE IF(USE_FORMAL_REL)THEN
-               IF(FIRST_FREQ)WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 in COMP_JCONT_V4.INC'
+               IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling CMF_FORMAL_REL_V4 in COMP_JCONT_V4.INC'
                CALL CMF_FORMAL_REL_V4
 	1                 (TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
 	1                  TC,FEDD,HFLUX_AT_IB,HFLUX_AT_OB,IPLUS,
@@ -676,7 +676,7 @@
 	1                  METHOD,FIRST_FREQ,NEW_FREQ,NC,NP,ND)
 	       INBC=0.0D0
 	     ELSE 
-	        IF(FIRST_FREQ)WRITE(LUER,*)'Calling FG_J_CMF_V12'
+	        IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling FG_J_CMF_V12'
 	        CALL FG_J_CMF_V12(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
 	1                  TC,FEDD,AQW,HQW,KQW,NQW,HMIDQW,NMIDQW,
 	1                  INBC,HBC_CMF(1),IPLUS,FL,dLOG_NU,DIF,DBB,IC,
@@ -686,7 +686,6 @@
 	     END IF
 !
 	     CALL TUNE(ITWO,'FG_J_CMF')
-	     FG_COUNT=FG_COUNT+1
 !
 ! We assume that the Rayleig scattering component is coherent.
 ! Only the e.s. component may be incoherent. NB: We have to pass 
@@ -702,7 +701,7 @@
 	     END IF
 	     CALL TUNE(IONE,'MOM_J_CMF')
              IF(PLANE_PARALLEL_NO_V)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_PP_V1'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_PP_V1'
 	       CALL MOM_J_PP_V1(TA,CHI_CLUMP,TB,
 	1                  R,FEDD,RJ,RSQHNU,HBC_CMF,NBC_CMF,INBC,
 	1                  FL,DIF,DBB,IC,METHOD,L_TRUE,
@@ -710,7 +709,7 @@
 	       HFLUX_AT_OB=HBC_CMF(1)*RJ(1)-HBC_CMF(2)
 	       IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
              ELSE IF(PLANE_PARALLEL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling PP_MOM_CMF_V1'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling PP_MOM_CMF_V1'
 	       CALL PP_MOM_CMF_V1(TA,CHI_CLUMP,TB,V,SIGMA,R,
 	1                  FEDD,GEDD,N_ON_J,RJ,RSQHNU,
 	1                  VDOP_VEC,DELV_FRAC_MOM,
@@ -722,7 +721,7 @@
                IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
 !
 	    ELSE IF(USE_DJDT_RTE)THEN
-	      IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
+	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
 	      CALL MOM_J_DDT_V2(TA,CHI_CLUMP,TB,
 	1              V,R,FEDD,RJ,RSQHNU,XM,                    !Use TC for DJDt_TERM,
 	1              HFLUX_AT_IB,HFLUX_AT_OB,
@@ -732,10 +731,10 @@
 	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
 
              ELSE IF(USE_J_REL)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_JREL_V5'
-	       CALL MOM_JREL_V6(TA,CHI_CLUMP,TB,V,SIGMA,R,
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_JREL_V7'
+	       CALL MOM_JREL_V7(TA,CHI_CLUMP,TB,V,SIGMA,R,
 	1             RJ,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,VDOP_VEC,DELV_FRAC_MOM,
-	1             FL,dLOG_NU,DBB,
+	1             FL,dLOG_NU,DBB,IB_STAB_FACTOR,
 	1             INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,L_TRUE,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,ND)
@@ -748,12 +747,12 @@
                  CALL OUT_JH(TA,RSQHNU,T1,T2,FL,NCF,R,V,ND,FIRST_FREQ,'NORMAL')
                END IF
 	     ELSE IF(USE_LAM_ES)THEN
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Using J from formal-solution for ray-by-ray solution'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Using J from formal-solution for ray-by-ray solution'
 	       RJ(1:ND)=TC(1:ND); RSQHNU(1:ND)=0.0D0
 	       CALL GET_RSQH_REL(RSQHNU, R, V, FL, ND)
 	       IF(L .LT. 3)FOLD(1:ND)=0.0D0
 	     ELSE
-	       IF(FIRST_FREQ)WRITE(LUER,*)'Calling MOM_J_CMF_V8'
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_CMF_V8'
 	       CALL MOM_J_CMF_V8(TA,CHI_CLUMP,TB,V,SIGMA,R,
 	1  	       RJ,RSQHNU,VDOP_VEC,DELV_FRAC_MOM,
 	1              FL,dLOG_NU,DIF,DBB,IC,

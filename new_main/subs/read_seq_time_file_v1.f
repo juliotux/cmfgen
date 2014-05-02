@@ -88,7 +88,8 @@
 	INTEGER IOS
 	INTEGER LU_OSC
 	INTEGER LUER,ERROR_LU
-	EXTERNAL ERROR_LU
+	INTEGER LUWARN,WARNING_LU
+	EXTERNAL ERROR_LU,WARNING_LU
 	LOGICAL DO_THIS_ID
 	LOGICAL DID_LAST_ID
 	CHARACTER(LEN=11) DATE
@@ -97,6 +98,7 @@
 	LOGICAL, SAVE :: FIRST=.TRUE.
 !
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU( )
         HDKT=4.7994145D0					!1.0D+15*H/k/1.0D+04
 	POPS=0.0D0
 	OLD_ION_STAGE_PRES(1:NUM_IONS)=.FALSE.
@@ -132,6 +134,11 @@
 !
 ! Loop over all species, and all ionization stages, in the file.
 !
+	IF(FIRST)THEN
+	  WRITE(LUWARN,'(A)')
+	  WRITE(LUWARN,'(/,X,A)')'Reading old populations in READ_SEQ_TIME_FILE_V1'
+	  WRITE(LUWARN,'(A)')
+	END IF
 	ALLOCATE (TMP_DXzV(ND))
 	DO WHILE(1. EQ. 1)
 	  READ(LU,END=2000)ID_BEG_RD,ID_END_RD,SPECIES_NAME
@@ -160,8 +167,8 @@
 	        ELSE
 	          READ(LU)I,NX,ZXzV
 	          IF(FIRST)THEN
-	            WRITE(LUER,'(A4,A,2(A,I5),A,F4.1)')'read_seq_time_file_v1: ',
-	1                   TRIM(SPECIES_NAME),': I=',I,'  NX=',NX,'  ZxZV=',ZXzV
+	            WRITE(LUWARN,'(X,A,T10,2(A,I5),A,F4.1)')TRIM(SPECIES_NAME),
+	1                   ': I=',I,'  NX=',NX,'  ZxZV=',ZXzV
 	          END IF
 	          ID=ID_BEG+NINT(ZXzV-ATM(ID_BEG)%ZXzV)
 	          IF(ZxZV .LT. ATM(ID_BEG)%ZXzV .OR. ZxZV .GT. ATM(ID_END-1)%ZXzV)THEN

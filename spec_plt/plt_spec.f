@@ -441,8 +441,15 @@ C
 	    NCF=NCF_CONT
 	    NU(1:NCF)=NU_CONT(1:NCF)
 	    OBSF(1:NCF)=OBSF_CONT(1:NCF)
-	  ELSE
-	    IF(IOS .EQ. 0)CALL DP_CURVE(NCF_CONT,NU_CONT,OBSF_CONT)
+	  ELSE IF(IOS .EQ. 0)THEN
+	    T1=MAXVAL(OBSF_CONT(1:NCF_CONT))
+	    IF(T1 .GT. 1.0D+38)THEN
+	      WRITE(6,*)'Data exceeds single precision range: Maximum=',T1 
+	      WRITE(6,*)'Necessary to scale data for plotting'
+	      CALL GEN_IN(T1,'Factor to divide data by')
+	      OBSF_CONT(1:NCF_CONT)=OBSF_CONT(1:NCF_CONT)/T1
+	    END IF
+	    CALL DP_CURVE(NCF_CONT,NU_CONT,OBSF_CONT)
 	  END IF
 !
 	ELSE IF(X(1:7) .EQ. 'RROW')THEN

@@ -13,7 +13,9 @@ LIB_MOD=$(LIB_DIR)libmod.a
 # Entries for library
 #
 OBJ = $(LIB)(add_par_to_full_v2.o)\
+      $(LIB)(adjust_sn_r_grid.o)\
       $(LIB)(adjust_pops.o)\
+      $(LIB)(auto_clump_rev.o)\
       $(LIB)(ba_update_v7.o)\
       $(LIB)(check_hydro_def.o)\
       $(LIB)(check_ions_present.o)\
@@ -23,6 +25,7 @@ OBJ = $(LIB)(add_par_to_full_v2.o)\
       $(LIB)(determine_nse.o)\
       $(LIB)(det_lte_ed.o)\
       $(LIB)(ddt_work.o)\
+      $(LIB)(do_full_r_grid_v1.o)\
       $(LIB)(do_vel_regrid_v2.o)\
       $(LIB)(do_tau_regrid_v2.o)\
       $(LIB)(do_gam_abs_approx.o)\
@@ -33,7 +36,7 @@ OBJ = $(LIB)(add_par_to_full_v2.o)\
       $(LIB)(evalse_lowt_v1.o)\
       $(LIB)(evalse_x_qwvj_v4.o)\
       $(LIB)(eval_temp_ddt_v2.o)\
-      $(LIB)(fiddle_pop_corrections.o)\
+      $(LIB)(fiddle_pop_corrections_v2.o)\
       $(LIB)(fixpop_in_ba_v2.o)\
       $(LIB)(fixpop_t.o)\
       $(LIB)(fixpop_in_ba_v3.o)\
@@ -47,11 +50,12 @@ OBJ = $(LIB)(add_par_to_full_v2.o)\
       $(LIB)(read_time_model_v1.o)\
       $(LIB)(read_seq_time_file_v1.o)\
       $(LIB)(set_ba_storage.o)\
+      $(LIB)(set_depth_consistency.o)\
       $(LIB)(set_rv_hydro_model_v3.o)\
       $(LIB)(set_imp_vec.o)\
       $(LIB)(set_sn_r_grid.o)\
       $(LIB)(set_new_grid.o)\
-      $(LIB)(solveba_v11.o)\
+      $(LIB)(solveba_v13.o)\
       $(LIB)(steq_multi_v8.o)\
       $(LIB)(steqne_v4.o)\
       $(LIB)(steq_advec_v4.o)\
@@ -108,6 +112,10 @@ $(LIB)(adjust_pops.o) : adjust_pops.f $(LIB)(old_grid_module.o) $(MOD) $(CONT)
 $(LIB)(check_ions_present.o) : check_ions_present.f $(MOD)
 	$(F90) -c $(OPTION) check_ions_present.f
 	ar ruv $(LIB) check_ions_present.o
+
+$(LIB)(auto_clump_rev.o) : auto_clump_rev.f $(MOD)
+	$(F90) -c $(OPTION) auto_clump_rev.f
+	ar ruv $(LIB) auto_clump_rev.o
 
 $(LIB)(create_iv_links_v2.o) : create_iv_links_v2.f $(STEQ) $(MOD)
 	$(F90) -c $(OPTION)  create_iv_links_v2.f

@@ -73,6 +73,10 @@ $(LIB)(%.o) : %.f
 	$(F90) -c $(FG)  $<
 	ar ruv $(LIB) $*.o
 
+$(LIB)(map_plot.o) : map_plot.f  
+	$(F90) -c  $(FD) -O1 map_plot.f
+	ar ruv $(LIB) map_plot.o
+
 $(LIB)(%.o) : %.f90 ../mod_disp.o $(NT)
 	$(F90) -c $(FFREE)  -I../ -I../../new_main/subs/non_therm $<
 	ar ruv $(LIB) $*.o

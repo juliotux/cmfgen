@@ -76,9 +76,14 @@ if(-e $1/RDINR)then
   echo "    Copyed RDINR"
 endif
 
+if(-e $1/ADJUST_R_DEFAULTS)then
+  cp $1/ADJUST_R_DEFAULTS $2/
+  echo "    Copyed ADJUST_R_DEFAULTS"
+endif
+
 #If not a supernovae model, we exit.
 
-if(-e $1/JH_AT_OLD_TIME)then
+if(-e $1/SN_HYDRO_DATA || -e $1/JH_AT_OLD_TIME)then
   echo " "
   echo " SN data files available "
   echo " "

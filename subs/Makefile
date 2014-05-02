@@ -16,6 +16,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(undo_it.o)\
       $(LIB)(blkband.o)\
       $(LIB)(chk_eq_num.o)\
+      $(LIB)(chk_col_name.o)\
       $(LIB)(cmf_form_sol.o)\
       $(LIB)(cmf_form_sol_v2.o)\
       $(LIB)(cnvt_fr_dc.o)\
@@ -71,7 +72,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(hydanggaunt.o)\
       $(LIB)(hydcrossl.o)\
       $(LIB)(hydro_terms.o)\
-      $(LIB)(hydro_terms_v4.o)\
+      $(LIB)(hydro_terms_v5.o)\
       $(LIB)(hyper.o)\
       $(LIB)(ichrlen.o)\
       $(LIB)(impar.o)\
@@ -79,7 +80,8 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(init_temp_v2.o)\
       $(LIB)(ins_line_obs_v2.o)\
       $(LIB)(ins_line_obs_v3.o)\
-      $(LIB)(ins_line_v4.o)\
+      $(LIB)(ins_line_obs_v5.o)\
+      $(LIB)(ins_line_v6.o)\
       $(LIB)(integrate.o)\
       $(LIB)(interp_knowncoeef.o)\
       $(LIB)(jfeau_ibc.o)\
@@ -103,6 +105,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(ltepop_wld_v1.o)\
       $(LIB)(ltepop_wld_v2.o)\
       $(LIB)(lum_from_eta.o)\
+      $(LIB)(lum_from_eta_v2.o)\
       $(LIB)(marupv.o)\
       $(LIB)(mat5pen.o)\
       $(LIB)(mess.o)\
@@ -115,6 +118,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(mon_int_funs_v2.o)\
       $(LIB)(mon_int_ins_v1.o)\
       $(LIB)(mon_interp.o)\
+      $(LIB)(mon_interp_fast.o)\
       $(LIB)(monotonic_integrate.o)\
       $(LIB)(mult2d.o)\
       $(LIB)(multvec.o)\
@@ -149,6 +153,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(rd_f_to_s_ids_v2.o)\
       $(LIB)(rd_free_val.o)\
       $(LIB)(rd_log.o)\
+      $(LIB)(rd_t_ed.o)\
       $(LIB)(rdgendie_v4.o)\
       $(LIB)(readba.o)\
       $(LIB)(regrid_b_on_ne.o)\
@@ -175,9 +180,11 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(set_cont_freq_v4.o)\
       $(LIB)(set_dc_lte_v2.o)\
       $(LIB)(set_edge_freq_v2.o)\
+      $(LIB)(set_t_ed_grid.o)\
       $(LIB)(set_x_freq.o)\
       $(LIB)(set_gm_all.o)\
       $(LIB)(set_z_pop.o)\
+      $(LIB)(specfy_it_cycle.o)\
       $(LIB)(simq.o)\
       $(LIB)(sobew.o)\
       $(LIB)(sobew_grad.o)\
@@ -202,6 +209,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(thomas_rh.o)\
       $(LIB)(torscl.o)\
       $(LIB)(torscl_v2.o)\
+      $(LIB)(torscl_v3.o)\
       $(LIB)(transposeba.o)\
       $(LIB)(tuvghd.o)\
       $(LIB)(tuvghd_rh.o)\

@@ -42,7 +42,7 @@ $(LIB)(steq_ba_chg_exch_v3.o) : steq_ba_chg_exch_v3.f $(CG) $(ST)
 	ar ruv $(LIB) steq_ba_chg_exch_v3.o
 
 $(LIB)(set_chg_lev_id_v4.o) : set_chg_lev_id_v4.f $(CG) $(CMF)
-	$(F90) -c $(FD) set_chg_lev_id_v4.f
+	$(F90) -c $(FG) set_chg_lev_id_v4.f
 	ar ruv $(LIB) set_chg_lev_id_v4.o
 
 $(CG):

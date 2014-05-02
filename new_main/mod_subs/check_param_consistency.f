@@ -29,7 +29,7 @@
 	    WRITE(LUER,*)TRIM(ER_LAB),' DO_FULL_REL_CMF should be true for SN MODEL'
 	    IF(STOP_IF_BAD_PARAM)STOP
 	  END IF
-	  IF(.NOT. USE_J_REL .AND. .NOT. USE_DJDT_RTE)THEN
+	  IF(.NOT. USE_J_REL .AND. .NOT. USE_DJDT_RTE .AND. .NOT. USE_LAM_ES)THEN
 	    WRITE(LUER,*)TRIM(ER_LAB),' Problem with control parameters in VADAT'
 	    WRITE(LUER,*)TRIM(ER_LAB),' USE_JREL or USE_DJDT_RTE should be true for SN MODEL'
 	    IF(STOP_IF_BAD_PARAM)STOP

@@ -7,6 +7,9 @@
 	USE MOD_COLOR_PEN_DEF
 	IMPLICIT NONE
 !
+! Altered:  14-Jan-2014 : Revised LG option
+! Altered:  22-Nov-2013 : Added LG option for curve type. This plots the log of the absolute 
+!                           value of the data but indicates where the data is -ve.
 ! Altered:  04-Sep-2013 : Increased MAXPEN (=MAX_PLOTS). Minor cleaning.
 ! Altered:  31-Aug-2013 : Added long-plot option.
 ! Altered:  26-Nov-2011 : Curves cycle over pen-colors 2 to 13.
@@ -51,7 +54,7 @@
 	EXTERNAL SPACING,GET_INDX_SP
 	REAL*4 SPACING
 !
-	CHARACTER*1 TYPE_CURVE(MAX_PLTS)
+	CHARACTER(LEN=2) TYPE_CURVE(MAX_PLTS)
 !
 	LOGICAL DO_ERROR
 	CHARACTER*5 LOG_AXIS
@@ -201,6 +204,7 @@
 	REAL*4 T1,T2,T3,T4
  	REAL*4 XVAL,YVAL
 	REAL*4 XVAL_SAV,YVAL_SAV
+	REAL*4, ALLOCATABLE :: TA(:)
 !
 	INTEGER BEG
 	INTEGER Q	!Used for pen color
@@ -649,10 +653,26 @@ C roughly the correct scaling even though the oridinates values may be vastly
 C different outside the plot window. We only use those plots that will be
 C displayed.
 C
+	    WRITE(6,*)'Getting Y limits'
 	    YMIN=1.0E+32
 	    YMAX=-1.0E+32
 	    DO IP=1,NPLTS
-	      IF(TYPE_CURVE(IP) .NE. 'I')THEN
+	      IF(TYPE_CURVE(IP) .EQ. 'LG')THEN
+	        T1=1.0E+32;T2=-1.0E+32
+	        DO I=1,NPTS(IP)
+	          IF( (CD(IP)%XVEC(I) .GE. XPAR(1) .AND. CD(IP)%XVEC(I) .LE. XPAR(2)) .OR.
+	1           (CD(IP)%XVEC(I) .GE. XPAR(2) .AND. CD(IP)%XVEC(I) .LE. XPAR(1)) )THEN
+	             T2=MAX(T2,ABS(CD(IP)%DATA(I)))
+	             T1=MIN(T1,ABS(CD(IP)%DATA(I)))
+	          END IF
+	        END DO
+	        YMAX=MAX(LOG10(T2),YMAX)
+	        IF(T1 .EQ. 0.0D0)THEN
+	          YMIN=-38
+	        ELSE
+	          YMIN=MIN(YMIN,LOG10(T1))
+	        END IF
+	      ELSE IF(TYPE_CURVE(IP) .NE. 'I')THEN
 	        DO I=1,NPTS(IP)
 	          IF( (CD(IP)%XVEC(I) .GE. XPAR(1) .AND. CD(IP)%XVEC(I) .LE. XPAR(2)) .OR.
 	1           (CD(IP)%XVEC(I) .GE. XPAR(2) .AND. CD(IP)%XVEC(I) .LE. XPAR(1)) )THEN
@@ -667,14 +687,9 @@ C
 	      WRITE(T_OUT,*)'YMIN=',YMIN,'  YMAX=',YMAX
 	      YMIN=0.0
 	      YMAX=1.0
-!	    ELSE IF(ABS(YMAX-YMIN)/MAX(ABS(YMAX),ABS(YMIN)) .LT. 1.0D-08 .OR.
-!	1        YMIN .EQ. 1.0E+32 .OR. YMAX .EQ. -1.0E+32)THEN
-!	      WRITE(T_OUT,*)'Poor YMIN & YMAX values'
-!	      WRITE(T_OUT,*)'YMIN=',YMIN,'  YMAX=',YMAX
-!	      YMIN=0.0
-!	      YMAX=1.0
 	    END IF
 !
+	  WRITE(6,*)YMIN,YMAX
 	  IF(XPAR(2) .NE. XPAR_SAV(2) .OR. XPAR(1) .NE. XPAR_SAV(1) .OR.
 	1    YMAX .NE. YMAX_SAV .OR. YMIN .NE. YMIN_SAV)THEN
 	    YINC=SPACING(YMIN,YMAX)
@@ -934,14 +949,15 @@ C
 	  DO IP=1,NPLTS
 850	    WRITE(T_OUT,'(I3,'' : '',$)')IP
 	    CALL NEW_GEN_IN(TYPE_CURVE(IP),'TC=')
-	    CALL SET_CASE_UP(TYPE_CURVE(IP),1,1)
+	    CALL SET_CASE_UP(TYPE_CURVE(IP),IONE,IZERO)
 	    IF( TYPE_CURVE(IP) .NE. 'L' .AND.              !Normal line
 	1       TYPE_CURVE(IP) .NE. 'E' .AND.              !non-monotonic
 	1       TYPE_CURVE(IP) .NE. 'B' .AND.              !Broken
 	1       TYPE_CURVE(IP) .NE. 'I' .AND.              !Invisible
 	1       TYPE_CURVE(IP) .NE. 'V' .AND.              !Verticle lines
 	1       TYPE_CURVE(IP) .NE. 'A' .AND.              !Hist - X vert
-	1       TYPE_CURVE(IP) .NE. 'H' )THEN              !Histogram
+	1       TYPE_CURVE(IP) .NE. 'H' .AND.              !Histogram
+	1       TYPE_CURVE(IP) .NE. 'LG' )THEN             !Log(ABS)
 !
 	        WRITE(T_OUT,*)'Invalid connection specifier. Specifiers are:'
 	        WRITE(T_OUT,*)'L --- Normal line'
@@ -951,6 +967,7 @@ C
 	        WRITE(T_OUT,*)'V --- Verticle lines'
 	        WRITE(T_OUT,*)'A --- Hist - X vert'
 	        WRITE(T_OUT,*)'H --- Histogram'
+	        WRITE(T_OUT,*)'LG --- Marked ABS(LG)'
 	      GOTO 850
 	    END IF
 	  END DO
@@ -2321,6 +2338,47 @@ C
 	      IEND=IST+1
 	    END DO
 !
+	  ELSE IF(TYPE_CURVE(IP) .EQ. 'LG')THEN
+	    IST=1
+	    IEND=2
+	    WRITE(6,*)'Best to use negative marker style'
+	    L=ABS(MARKER_STYLE(IP))
+	    CALL PGSCH(EXPMARK)
+	    IF(ALLOCATED(TA))THEN
+	      J=SIZE(TA)
+	      IF(J .LT. NPTS(IP))DEALLOCATE(TA)
+	    END IF
+	    IF(.NOT. ALLOCATED(TA))THEN
+	      J=MAXVAL(NPTS(1:NPLTS))
+	      ALLOCATE (TA(J))
+	    END IF
+	    TA(1:NPTS(IP))=0.0D0
+	    DO I=1,NPTS(IP)
+	      IF(CD(IP)%DATA(I) .NE. 0)THEN
+	        TA(I)=LOG10(ABS(CD(IP)%DATA(I)))
+	      ELSE
+	        TA(I)=-38.0D0
+	      END IF
+	    END DO
+	    DO WHILE(IEND .LT. NPTS(IP))
+	      DO WHILE(IEND .LT. NPTS(IP))
+	         IF( CD(IP)%DATA(IEND)*CD(IP)%DATA(IEND-1) .GT. 0)THEN
+	           IEND=IEND+1
+	         ELSE
+	           EXIT
+	         END IF
+	      END DO
+	      J=IEND-IST
+	      IF(J .NE. 1 .AND. MARKER_STYLE(IP) .GT. 0)CALL PGLINE(J,CD(IP)%XVEC(IST),TA(IST))
+	      DO J=IST,IEND-1
+	        IF(MARK)CALL PGPT(1,CD(IP)%XVEC(J),TA(J),L)
+	        IF(CD(IP)%DATA(J) .LT. 0)CALL PGPT(1,CD(IP)%XVEC(J),TA(J),24)
+	      END DO
+	      IST=IEND
+	      IEND=IST+1
+	    END DO
+	    CALL PGSCH(EXPCHAR)		!Reset character size
+!
 	  ELSE IF(TYPE_CURVE(IP) .EQ. 'H' .AND. (MARKER_STYLE(IP) .GE. 0 .OR. .NOT. MARK))THEN
 	    CALL PGBIN(NPTS(IP),CD(IP)%XVEC,CD(IP)%DATA,.TRUE.)
 !
@@ -2399,7 +2457,8 @@ C
 !
 ! Don't draw if invisible curve.
 !
-	    IF(L .NE. 0 .AND. TYPE_CURVE(IP) .NE. 'I')THEN
+	    IF(L .NE. 0 .AND. TYPE_CURVE(IP) .NE. 'I' .AND. 
+	1                     TYPE_CURVE(IP) .NE. 'LG')THEN
 !	      CALL PGSLS(LINE_STYLE(IP))
 	      Q=PEN_COL(IP+1)
 	      CALL PGSCI(Q)     ! START WITH COLOR INDEX 2

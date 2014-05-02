@@ -22,9 +22,8 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
-! Altered 10-Jul-2013 : After NG acceleration program plots the accelerated T correction, and the
-!                         previous T correction. This will allow a prompt check as to whether the
-!                         NG acceleration should be used.
+! Altered 22-Feb-2014 : Default for NG acceleration has been reset to use 4 iterations.
+! Altered 17-Jan-2014 : Changed I3 to I4 to allow for ND > 99
 ! Altered 01-Nov-2012 : Bug fix with TG option. Values when r < 1 were not being updated.
 ! Altered 05-May-2007 : Fixed bug when do NG accleration with band size < ND
 ! Altered 07-Mar-2006 : Acceleratiion can now start at ND_ST.
@@ -77,6 +76,7 @@
 	INTEGER LOCATION(1)
 	INTEGER IVAR
 	INTEGER T_INDEX
+        INTEGER ITS_PER_NG
 !
 	INTEGER, PARAMETER :: RITE_N_TIMES=1
 	INTEGER, PARAMETER :: T_OUT=6
@@ -136,7 +136,7 @@
 	ND_END=ND
 	NBAND=1
 	IT_STEP=1
-	N_ITS_TO_RD=8	!Was 4
+	N_ITS_TO_RD=4
 !
 	OPTION='NG'
 	WRITE(T_OUT,*)'Options are:'
@@ -157,6 +157,13 @@
 	  WRITE(T_OUT,'(A)')' Code uses LAST, LAST-IT_SEP, LAST-2*IT_STEP and LAST-3*IT_STEP for the acceleration'
 	  WRITE(T_OUT,'(A)')' The default value of 1 should generally be used.'
 	  CALL GEN_IN(IT_STEP,'Iteration step size for NG acceleration')
+	  ITS_PER_NG=0
+	  DO WHILE(ITS_PER_NG .NE. 4 .AND. ITS_PER_NG .NE. 8)
+	    ITS_PER_NG=4
+	    CALL GEN_IN(ITS_PER_NG,'Number of iterations used for acceleration (4 or 8)')
+	    IF(ITS_PER_NG .NE. 4 .AND. ITS_PER_NG .NE. 8)WRITE(T_OUT,*)'Error: ITS_PER_NG must be 4 or 8'
+	  END DO
+          N_ITS_TO_RD=ITS_PER_NG
 	  DO_REGARDLESS=.FALSE.
 	  WRITE(T_OUT,'(/,A)')' The next parameter indicates the number of depths treated simultaneously'
 	  WRITE(T_OUT,'(A)')' The acceleration starts in blocks from the inner boundary'
@@ -261,8 +268,8 @@
 !
 	  J=NT+3
 	  T_INDEX=NT
-	  CALL NG_MIT_OPTS_V2(BIG_POPS,RDPOPS,ND,J,NBAND,ND_ST,ND_END,T_INDEX,
-	1                     DO_REGARDLESS,SCALE_INDIVIDUALLY,NG_DONE,T_OUT)
+	  CALL NG_MIT_OPTS_V3(BIG_POPS,RDPOPS,ND,J,NBAND,ND_ST,ND_END,T_INDEX,
+	1                     ITS_PER_NG,DO_REGARDLESS,SCALE_INDIVIDUALLY,NG_DONE,T_OUT)
 !
 	  WRITE(6,*)'Finished NG accleration'
 	ELSE IF(OPTION(1:2) .EQ. 'AV')THEN
@@ -461,17 +468,18 @@
 ! If IFLAG is returned with zero, the NG acceleration was successful.
 ! Otherwise an error condition occurred.
 !
-	SUBROUTINE GENACCEL_V2(NEWPOP,RDPOPS,LST,LEND,NT,ND,NS)
+	SUBROUTINE GENACCEL_V3(NEWPOP,RDPOPS,ITS_PER_NG,LST,LEND,NT,ND,NS)
 	IMPLICIT NONE
 !
 	INTEGER LST,LEND
 	INTEGER NT
 	INTEGER ND
 	INTEGER NS
+        INTEGER ITS_PER_NG
 	REAL*8 NEWPOP(NS)
-	REAL*8 RDPOPS(NT,ND,8)
+	REAL*8 RDPOPS(NT,ND,ITS_PER_NG)
 !
-	REAL*8 TEMP(8,NS)
+	REAL*8 TEMP(ITS_PER_NG,NS)
 	INTEGER I,J,K,L
 	LOGICAL WEIGHT
 !
@@ -484,7 +492,7 @@
 !
 ! Rewrite the relevant poulations in a form suitable for NGACCEL.
 !
-	DO J=1,8
+	DO J=1,ITS_PER_NG
 	  DO L=LST,LEND
 	    DO I=1,NT
 	      K=I+NT*(L-LST)
@@ -496,15 +504,15 @@
 !
 	WRITE(6,*)'Calling NGACCEL'
 !	CALL NGACCEL(NEWPOP,TEMP,NS,WEIGHT)
-	I=6
+	I=ITS_PER_NG-2
 	CALL NGACCEL_ARB_ORD(NEWPOP,TEMP,NS,I,WEIGHT)
 !
 	RETURN
 	END
 !
 !
-	SUBROUTINE NG_MIT_OPTS_V2(POPS,RDPOPS,ND,NT,NBAND,ND_ST,ND_END,T_INDEX,
-	1                           DO_REGARDLESS,SCALE_INDIVIDUALLY,NG_DONE,LUER)
+	SUBROUTINE NG_MIT_OPTS_V3(POPS,RDPOPS,ND,NT,NBAND,ND_ST,ND_END,T_INDEX,
+	1                           ITS_PER_NG,DO_REGARDLESS,SCALE_INDIVIDUALLY,NG_DONE,LUER)
 	USE MOD_COLOR_PEN_DEF
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
@@ -521,7 +529,7 @@
 	INTEGER T_INDEX
 	INTEGER LUER
 	REAL*8 POPS(NT,ND)
-	REAL*8 RDPOPS(NT,ND,8)
+	REAL*8 RDPOPS(NT,ND,ITS_PER_NG)
 	LOGICAL DO_REGARDLESS
 	LOGICAL SCALE_INDIVIDUALLY
 	LOGICAL NG_DONE
@@ -545,21 +553,24 @@
 	INTEGER DEC_LOC,INC_LOC
 	INTEGER I,K,L
 	INTEGER LST,LEND
+        INTEGER ITS_PER_NG
+	INTEGER IOS
 	INTEGER, PARAMETER :: IONE=1
 	LOGICAL DO_PLTS
+	CHARACTER(LEN=80) STRING
 !
 	NUM_BAD_NG=0
 	VEC_INC(1:ND)=0.0D0
 	VEC_DEC(1:ND)=0.0D0
 	IF(NBAND .GE. ND .AND. ND_ST .EQ. 1 .AND. ND_END .EQ. ND)THEN
 	  NS=NT*ND
-	  CALL GENACCEL_V2(NEWPOP,RDPOPS,IONE,ND,NT,ND,NS)
+	  CALL GENACCEL_V3(NEWPOP,RDPOPS,ITS_PER_NG,IONE,ND,NT,ND,NS)
 	ELSE
 	  DO K=ND_END,ND_ST,-NBAND
 	    LST=MAX(K-NBAND+1,ND_ST)
 	    LEND=K				!LST+NBAND-1
 	    NS=(LEND-LST+1)*NT
-	    CALL GENACCEL_V2(NEWPOP(1,LST),RDPOPS,LST,LEND,NT,ND,NS)
+	    CALL GENACCEL_V3(NEWPOP(1,LST),RDPOPS,ITS_PER_NG,LST,LEND,NT,ND,NS)
 	  END DO
 	  IF(ND_ST .GT. 1)NEWPOP(:,1:ND_ST-1)=POPS(:,1:ND_ST-1)
 	  IF(ND_END .LT. ND)NEWPOP(:,ND_END+1:ND)=POPS(:,ND_END+1:ND)
@@ -576,14 +587,36 @@
 	WRITE(6,'(1X,90A)')('*',I=1,90)
 	WRITE(6,*)' '//DEF_PEN
 !
+	T1=0.0D0
 	DO L=1,ND
 	  INT_ARRAY(L)=L
-	  TA(L)=100.0D0*(1.0D0-RDPOPS(T_INDEX,L,2)/NEWPOP(T_INDEX,L))
+	  TA(L)=100.0D0*(1.0D0-RDPOPS(T_INDEX,L,1)/NEWPOP(T_INDEX,L))
 	  TB(L)=100.0D0*(1.0D0-RDPOPS(T_INDEX,L,3)/RDPOPS(T_INDEX,L,2))
+	  T1=MAX(ABS(TA(L)),T1);  T1=MAX(ABS(TB(L)),T1)
 	END DO
-	CALL DP_CURVE(ND,INT_ARRAY,TA)
-	CALL DP_CURVE(ND,INT_ARRAY,TB)
-	CALL GRAMON_PGPLOT('Depth Index','100[T(new)-T(old)]/T(new)',' ',' ')
+	IF(T1 .EQ. 0.0D0)THEN
+	  OPEN(UNIT=12,FILE='CORRECTION_LINK',STATUS='OLD',ACTION='READ',IOSTAT=IOS)
+	    K=1
+	    IF(IOS .NE. 0)THEN
+	      DO I=1,27
+	        READ(10,'(A)')STRING
+	        IF(STRING .NE. ' ')WRITE(6,'(A)')TRIM(STRING)
+	      END DO
+	      CLOSE(UNIT=12)
+	    END IF
+	  CALL GEN_IN(K,'Input new variable to be plotted as T correction is zero')
+	  DO L=1,ND
+	    TA(L)=100.0D0*(1.0D0-RDPOPS(K,L,1)/NEWPOP(K,L))
+	    TB(L)=100.0D0*(1.0D0-RDPOPS(K,L,3)/RDPOPS(K,L,2))
+	  END DO
+	  CALL DP_CURVE(ND,INT_ARRAY,TA)
+	  CALL DP_CURVE(ND,INT_ARRAY,TB)
+	  CALL GRAMON_PGPLOT('Depth Index','100[X(new)-X(old)]/X(new)',' ',' ')
+	ELSE
+	  CALL DP_CURVE(ND,INT_ARRAY,TA)
+	  CALL DP_CURVE(ND,INT_ARRAY,TB)
+	  CALL GRAMON_PGPLOT('Depth Index','100[T(new)-T(old)]/T(new)',' ',' ')
+	END IF
 !
 	WRITE(6,*)' '
 	WRITE(6,'(1X,70A)')('*',I=1,70)
@@ -653,7 +686,7 @@
                 POPS(K,L)=POPS(K,L)+T1*(NEWPOP(K,L)-POPS(K,L))
               END DO
 	      IF(T1 .NE. 1.0D0)WRITE(LUER,8000)L,LOCINC,LOCDEC
-8000	      FORMAT(1X,'Scaling performed at depth ',I3,':',
+8000	      FORMAT(1X,'Scaling performed at depth ',I4,':',
 	1          1X,'Biggest increase/decrease was ',2ES12.2)
 	    END IF
 !
@@ -673,7 +706,7 @@
 	    NUM_BAD_NG=NUM_BAD_NG+1
 	    WRITE(LUER,*)'NUM_BAD_NG=',NUM_BAD_NG
 	    WRITE(LUER,9000)L,LOCINC,LOCDEC
-9000	    FORMAT(1X,'No NG acceleration performed at depth ',I3,/,
+9000	    FORMAT(1X,'No NG acceleration performed at depth ',I4,/,
 	1          1X,'Biggest increase was ',1PE10.2,/,
 	1          1X,'Biggest decrease was ',E10.2)
 	
@@ -726,9 +759,9 @@
 	MAXINC=100.0D0*(MAXINC-1.0D0)
 	MAXDEC=100.0D0*(1.0D0/MAXDEC-1.0D0)
 	WRITE(LUER,9800)INC_LOC,MAXINC
-9800	FORMAT(1X,'Max NG % increase at depth ',I3,' is',1PE10.2)
+9800	FORMAT(1X,'Max NG % increase at depth ',I4,' is',1PE10.2)
 	WRITE(LUER,9900)DEC_LOC,MAXDEC
-9900	FORMAT(1X,'Max NG % decrease at depth ',I3,' is',1PE10.2)
+9900	FORMAT(1X,'Max NG % decrease at depth ',I4,' is',1PE10.2)
 C
 	NG_DONE=.TRUE.  		!Successful acceleration
 C

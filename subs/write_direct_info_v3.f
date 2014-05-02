@@ -93,8 +93,7 @@
         OPEN(UNIT=LU_EDD,FILE=NEW_FILENAME,STATUS='OLD',ACTION='READ',IOSTAT=IOS)
 	  IF(IOS .NE. 0)THEN
 	    WRITE(ERROR_LU(),'(A,A)')' Unable to open ',TRIM(NEW_FILENAME)
-	    WRITE(ERROR_LU(),*)'Error occurred in READ_DIRECT_INFO'
-	    WRITE(ERROR_LU(),*)'IOS=',IOS
+	    WRITE(ERROR_LU(),*)'Error occurred in READ_DIRECT_INFO: IOS=',IOS
 	    RETURN
 	  END IF
 	  STRING='!'

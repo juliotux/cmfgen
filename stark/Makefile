@@ -7,8 +7,8 @@ include ../Makefile_definitions
 LIB=$(LIB_DIR)libsubs.a
 LIB2=$(LIB_DIR)libsubs.a
                          
-OBJ = prof_mod.o init_prof_module.o set_prof_v3.o \
-      griem_stark_mod.o griem_v2.o set_prof_limits_v2.o \
+OBJ = prof_mod.o init_prof_module.o set_prof_v4.o set_prof_v5.o \
+      get_prof_storage_limits.o griem_stark_mod.o griem_v2.o set_prof_limits_v3.o set_prof_limits_v4.o \
       conv_strk_v2.o rd_strk_list.o strk_bs_hhe.o \
       rd_bs_strk_tab.o voigtn.o
 
@@ -36,7 +36,7 @@ $(LIB2)(%.o) : %.f90
 
 $(LIB)(prof_mod.o)             : prof_mod.f 
 $(LIB)(init_prof_module.o)     : init_prof_module.f   $(LIB)(prof_mod.o) 
-$(LIB)(set_prof_v3.o)          : set_prof_v3.f        $(LIB)(prof_mod.o)  $(LIB)(rd_strk_list.o)
+$(LIB)(set_prof_v4.o)          : set_prof_v4.f        $(LIB)(prof_mod.o)  $(LIB)(rd_strk_list.o)
 $(LIB)(set_prof_limits_v2.o)   : set_prof_limits_v2.f $(LIB)(prof_mod.o) $(LIB)(rd_strk_list.o)
 $(LIB)(strk_bs_hhe.o)          : strk_bs_hhe.f        $(LIB)(rd_bs_strk_tab.o)
                                          

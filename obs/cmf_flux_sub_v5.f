@@ -5,8 +5,7 @@
 ! or INCOHERENT electron scattering can be assumed. This data is then passed
 ! to OBS_FRAME_SUB for computation of the OBSERVER's flux.
 !
-! This routine is a heavily stripped down and modified version of
-! CMFGEN.
+! This routine is a heavily stripped down and modified version of CMFGEN.
 !
 	SUBROUTINE CMF_FLUX_SUB_V5(ND,NC,NP,NDMAX,NPMAX,NT,NLINE_MAX)
 	USE MOD_CMF_OBS
@@ -57,12 +56,11 @@
 !
 	INTEGER, PARAMETER :: MAX_SIM=3000
 !
-! Allow space to be set aside for the intrinsic line profiles. This saves 
-! computational efort. An error message will be printed if these values
-! are too small.
+! Define vinteger variables to set aside for storage for the intrinsic line profiles.
+! These are now computed by a subroutine (as of Nov-2013).
 !
-	INTEGER, PARAMETER :: NLINES_PROF_STORE=500
-        INTEGER, PARAMETER :: NFREQ_PROF_STORE=20000
+	INTEGER NLINES_PROF_STORE
+	INTEGER NFREQ_PROF_STORE
 !
 	INTEGER NCF
 	INTEGER ND,NC,NP
@@ -447,11 +445,11 @@
 !
 	LUER=ERROR_LU()
 	IF(EQNE .NE. I)THEN
-	  WRITE(LUER,*)'Error - EQNE has wrong value in CMFGEN'
+	  WRITE(LUER,*)'Error - EQNE has wrong value in CMF_FLUX_SUB_V5'
 	  STOP
 	END IF
 	IF(NT .NE. I+1)THEN
-	  WRITE(LUER,*)'Error - NT has wrong value in CMFGEN'
+	  WRITE(LUER,*)'Error - NT has wrong value in CMF_FLUX_SUB_V5'
 	  STOP
 	END IF
 !
@@ -687,7 +685,7 @@
 	        IF(ATM(ID)%AXzV_F(MNL,MNUP) .NE. 0)THEN
 	          ML=ML+1
 	          IF(ML .GT. NLINE_MAX)THEN
-	            WRITE(LUER,*)'NLINE_MAX is too small in CMFGEN'
+	            WRITE(LUER,*)'NLINE_MAX is too small in CMF_FLUX_SUB_V5'
 	            STOP
 	          END IF
 	          VEC_FREQ(ML)=ATM(ID)%EDGEXzV_F(MNL)-ATM(ID)%EDGEXzV_F(MNUP)
@@ -711,12 +709,13 @@
 	          PROF_TYPE(ML)=ATM(ID)%XzV_PROF_TYPE
 	          IF(GLOBAL_LINE_PROF .NE. 'NONE')PROF_TYPE(ML)=GLOBAL_LINE_PROF
 	          T2=0.0D0
-	          CALL SET_PROF_LIMITS_V2(VEC_STRT_FREQ(ML),VEC_VDOP_MIN(ML),
+	          CALL SET_PROF_LIMITS_V4(VEC_STRT_FREQ(ML),VEC_VDOP_MIN(ML),
 	1             CHIL,ED,T,VTURB_VEC,ND,PROF_TYPE(ML),PROF_LIST_LOCATION(ML),
 	1             VEC_FREQ(ML),MNL,MNUP,
 	1             VEC_SPEC(ML),AT_MASS(SPECIES_LNK(ID)), ATM(ID)%ZXzV,
-	1             VEC_ARAD(ML),T2,VTURB_FIX,                !T1,T2: Garbage at presnet
-	1             DOP_PROF_LIMIT,VOIGT_PROF_LIMIT,SET_PROF_LIMS_BY_OPACITY)
+	1             VEC_ARAD(ML),T2,TDOP,AMASS_DOP,VTURB_FIX,                !2: Garbage at present
+	1             DOP_PROF_LIMIT,VOIGT_PROF_LIMIT,V_PROF_LIMIT,MAX_PROF_ED,
+	1             SET_PROF_LIMS_BY_OPACITY)
 	        END IF
 	      END DO
 	    END DO
@@ -740,8 +739,6 @@
 	  END DO
 	END IF
 !
-	CALL INIT_PROF_MODULE(ND,NLINES_PROF_STORE,NFREQ_PROF_STORE)
-!
 ! If desired, we can set transitions with:
 !      wavelengths > FLUX_CAL_LAM_END (in A) to the SOBOLEV option.
 !      wavelengths < FLUX_CAL_LAM_BEG (in A) to the SOBOLEV option.
@@ -758,15 +755,9 @@
 !
 	IF(SET_TRANS_TYPE_BY_LAM)THEN
 	  IF(FLUX_CAL_LAM_END .LT. FLUX_CAL_LAM_BEG)THEN
-	    WRITE(LUER,*)'Error in CMFGEN'
+	    WRITE(LUER,*)'Error in CMF_FLUX_SUB_V5'
 	    WRITE(LUER,*)'FLUX_CAL_LAM_END must be > FLUX_CAL_LAM_BEG'
 	    STOP
-	  END IF
-	  IF( (.NOT. FLUX_CAL_ONLY) .AND. FLUX_CAL_LAM_BEG .NE. 0)THEN
-	    WRITE(LUER,*)'WARNING in CMFGEN'
-	    WRITE(LUER,*)'WARNING in CMFGEN'
-	    WRITE(LUER,*)'FLUX_CAL_LAM_BEG is normally zero for non-FLUX'
-	    WRITE(LUER,*)'calculations:'
 	  END IF
 	  GLOBAL_LINE_SWITCH='NONE'
 	  T1=SPEED_OF_LIGHT()*1.0D-07
@@ -880,7 +871,6 @@
 	WRITE(LUER,*)' '
 	WRITE(LUER,'(A,1X,I7)')' Number of line frequencies is:',N_LINE_FREQ
 	WRITE(LUER,'(A,6X,I7)')' Number of continuum frequencies is:',NCF
-	WRITE(LUER,*)' '
 !
 ! Used inthis context, every edge must be with V_DOP km/s of a frequency in the NU
 ! array.
@@ -915,7 +905,10 @@
 	1		NU_MAX_OBS,NU_MIN_OBS,VINF,
 	1               FRAC_DOP_OBS,dV_OBS_PROF,dV_OBS_WING,dV_OBS_BIG,
 	1               OBS_PRO_EXT_RAT,ES_WING_EXT,VTURB_MAX)
-
+!
+	CALL GET_PROFILE_STORAGE_LIMITS(NLINES_PROF_STORE,NFREQ_PROF_STORE,
+	1         LINE_ST_INDX_IN_NU,LINE_END_INDX_IN_NU,PROF_TYPE,N_LINE_FREQ,NCF)
+	CALL INIT_PROF_MODULE(ND,NLINES_PROF_STORE,NFREQ_PROF_STORE)
 !
 ! 
 ! Need to calculate impact parameters, and angular quadrature weights here
@@ -1126,8 +1119,7 @@
 	        COMPUTE_EDDFAC=.TRUE.
 	      END IF
 	    ELSE
-	      WRITE(LUER,*)'Error opening EDDFACTOR'//
-	1                    ' - will compute new F'
+	      WRITE(LUER,'(/,X,A)')'Error opening EDDFACTOR - will compute new F'
 	        COMPUTE_EDDFAC=.TRUE.
 	    END IF
 	  END IF
@@ -1449,13 +1441,14 @@
 	    IF(RESONANCE_ZONE(SIM_INDX))THEN
               J=SIM_LINE_POINTER(SIM_INDX); I=ML
 	      T1=Z_POP(VEC_NL(J))+1.0D0; T3=0.0D0
-              CALL SET_PROF_V3(TA,NU,I,
+              CALL SET_PROF_V5(TA,NU,I,
 	1               LINE_ST_INDX_IN_NU(J),LINE_END_INDX_IN_NU(J),
 	1               ED,TB,TC,T,VTURB_VEC,ND,
 	1               PROF_TYPE(J),PROF_LIST_LOCATION(J),
 	1               VEC_FREQ(J),VEC_MNL_F(J),VEC_MNUP_F(J),
-	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,VTURB_FIX,
-	1               END_RES_ZONE(SIM_INDX),L_TRUE,LUIN)
+	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,
+	1               TDOP,AMASS_DOP,VTURB_FIX,MAX_PROF_ED,
+	1               END_RES_ZONE(SIM_INDX),NORM_PROFILE,LUIN)
               LINE_PROF_SIM(1:ND,SIM_INDX)=TA(1:ND)
 	    ELSE              
 	      LINE_PROF_SIM(1:ND,SIM_INDX)=0.0D0
@@ -1554,11 +1547,12 @@
 	  END DO
 !
 	  IF(LST_ITERATION .AND. ML .NE. NCF)THEN
+	    T1=MAX( LOG(DENSITY(5)/DENSITY(1))/LOG(R(1)/R(5))-1.0D0,1.0D0 )
 	    DO I=1,N_TAU_EDGE
-	      IF(NU(ML) .GE. TAU_EDGE(I) .AND. 
-	1                     NU(ML+1) .LT. TAU_EDGE(I))THEN
+	      IF(NU(ML) .GE. TAU_EDGE(I) .AND. NU(ML+1) .LT. TAU_EDGE(I))THEN
+	        IF(I .EQ. 1)WRITE(LUER,'(A)')' '
 	        WRITE(LUER,'(A,1P,E10.4,A,E10.3)')' Tau(Nu=',NU(ML),
-	1          ') at outer boundary is:',CHI_CONT(1)*R(1)
+	1          ') at outer boundary is:',CHI_CONT(1)*R(1)/T1
 	      END IF
 	    END DO
 	  END IF

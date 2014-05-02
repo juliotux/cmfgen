@@ -5,6 +5,7 @@
 	SUBROUTINE TORSCL(TOR,CHI,R,DTAU,dCHI_dR,ND,METHOD,TYPE_ATM)
 	IMPLICIT NONE
 !
+! Altered 26-Jan-2014 : No longer use fixed format for reading exponent from TYPE_ATM.
 ! Altered 24-Mar-2011 : Addoption Pnnnnn where nnnn is a poistive exponent indicating
 !                         the power law density exponent.
 ! Altered 21-Dec-2004 : Bug fix. For TYPE_ATM .NE. 'EXP', the routine was always
@@ -47,7 +48,7 @@
 	    WRITE(LUER,*)'Warning - optical depth at boundary set to 10^{-5} in TORSCL'
 	  END IF
 	ELSE IF(TYPE_ATM(1:1) .EQ. 'P')THEN
-	  READ(TYPE_ATM(2:6),*)T1
+	  READ(TYPE_ATM(2:),*)T1
 	  TOR(1)=CHI(1)*R(1)/(T1-1.0D0)
 	ELSE
 	  TOR(1)=CHI(1)*R(1)

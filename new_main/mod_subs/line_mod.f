@@ -4,6 +4,7 @@
 !
 	MODULE LINE_MOD
 !
+! Incorporated 02-Jan-2013 : Altered to allow depth dependent profiles (from cur_cmf_25jun13).
 ! Arrays and variables for treating lines simultaneously.
 !
 	REAL*8,  ALLOCATABLE :: EINA(:)                !MAX_SIM
@@ -27,7 +28,6 @@
 	REAL*8,  ALLOCATABLE :: BETA(:)                !ND : Sobolev escape probability
 	REAL*8,  ALLOCATABLE :: BETAC(:)               !ND : Dilution factor weighted "escape probaility"
 !
-	REAL*8,  ALLOCATABLE :: LINE_QW_SUM(:)         !MAX_SIM
 	REAL*8,  ALLOCATABLE :: BETAC_SIM(:,:)         !ND,MAX_SIM
 	REAL*8,  ALLOCATABLE :: ZNET_SIM(:,:)          !ND,MAX_SIM
 	REAL*8,  ALLOCATABLE :: JBAR_SIM(:,:)          !ND,MAX_SIM
@@ -88,9 +88,10 @@ C
 C Variables, vectors and arrays for treating lines simultaneously with the
 C continuum.
 C
-	REAL*8,    ALLOCATABLE :: LINE_PROF_SIM(:)            !MAX_SIM
-	REAL*8,    ALLOCATABLE :: LINE_QW_SIM(:)              !MAX_SIM
-	REAL*8,    ALLOCATABLE :: NEG_OPAC_FAC(:)             !ND
+	REAL*8, ALLOCATABLE :: LINE_PROF_SIM(:,:)             !ND,MAX_SIM
+	REAL*8, ALLOCATABLE :: LINE_QW_SIM(:,:)               !ND,MAX_SIM
+	REAL*8, ALLOCATABLE :: LINE_QW_SUM(:,:)               !ND,MAX_SIM
+	REAL*8, ALLOCATABLE :: NEG_OPAC_FAC(:)                !ND
 
 	REAL*8, ALLOCATABLE :: LINE_OPAC_CON(:)               !MAX_SIM
 	REAL*8, ALLOCATABLE :: LINE_EMIS_CON(:)               !MAX_SIM
@@ -141,7 +142,6 @@ C
 	IF(IOS .EQ. 0)ALLOCATE( BETAC_SIM(ND,MAX_SIM) ,STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE( ZNET_SIM(ND,MAX_SIM) ,STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE( JBAR_SIM(ND,MAX_SIM) ,STAT=IOS)
-	IF(IOS .EQ. 0)ALLOCATE( LINE_QW_SUM(MAX_SIM) ,STAT=IOS)
 !
 	IF(IOS .EQ. 0)ALLOCATE( TRANS_NAME_SIM(MAX_SIM) ,STAT=IOS)
 !
@@ -182,8 +182,9 @@ C
 ! Variables, vectors and arrays for treating lines simultaneously with the
 ! continuum.
 !
-	IF(IOS .EQ. 0)ALLOCATE( LINE_PROF_SIM(MAX_SIM) ,STAT=IOS)
-	IF(IOS .EQ. 0)ALLOCATE( LINE_QW_SIM(MAX_SIM) ,STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE( LINE_PROF_SIM(ND,MAX_SIM) ,STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE( LINE_QW_SIM(ND,MAX_SIM) ,STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE( LINE_QW_SUM(ND,MAX_SIM) ,STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE( NEG_OPAC_FAC(ND) ,STAT=IOS)
 
 	IF(IOS .EQ. 0)ALLOCATE( LINE_OPAC_CON(MAX_SIM) ,STAT=IOS)

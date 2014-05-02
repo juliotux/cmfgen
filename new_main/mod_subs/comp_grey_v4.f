@@ -15,6 +15,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered 27-Jan-2014 : Now use TORSCL_V3.
 ! Altered 03-Apr-2009 : Inserted OUT_JH call in REL section.
 ! Altered 20-Jan-2008 : POPS & NT inserted into call. Changed to V2.
 !                       Now call JGREY_HUB_DDT_V2
@@ -68,6 +69,8 @@
 	REAL*8 HFLUX
 !
 	INTEGER I,J,K,L
+	INTEGER LUWARN,WARNING_LU
+	EXTERNAL WARNING_LU
 !
 	LOGICAL LST_DEPTH_ONLY
 	LOGICAL FIRST_FREQ
@@ -79,15 +82,25 @@
 	REAL*8 CHIBF,CHIFF,HDKT,TWOHCSQ
 !
 	COMPUTED=.TRUE.
-	WRITE(6,*)'BEGIN COMP_GREY_V4',ND,NC,NP
+	LUWARN=WARNING_LU()
+	WRITE(LUWARN,'(/,A,3I6)')' Begin COMP_GREY_V4',ND,NC,NP
+	WRITE(LUER,'(/,A,3I6)')' Begin COMP_GREY_V4',ND,NC,NP
 	PI=4.0D0*ATAN(1.0D0)
 	CHI(1:ND)=ROSSMEAN(1:ND)
 !
-! Compute the Rosseland optical depth scale. The ' ' in TORSCL indicates TYPE of atmosphere,
-! and here is set to ' ' so that TORSCL assumes a power law dependence. If CHI(3) .LT. CHI(1),
-! an 1/r^2 density dependence at the outer boundary is assumed.
+! Compute the Rosseland optical depth scale. J is used to indicate the second
+! depth used to compute exponential or power law slope.
 !
-        CALL TORSCL(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,' ')
+	J=5
+	DO K=5,10
+	  IF(CHI(J)/CHI(1) .GT. 5.0D0)EXIT
+	  J=K
+	END DO
+	IF(PLANE_PARALLEL_NO_V)THEN
+	  CALL TORSCL_V3(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,'EXP',J,L_FALSE)
+	ELSE
+	  CALL TORSCL_V3(TAU_ROSS,CHI,R,TB,TC,ND,METHOD,'PCOMP',J,L_FALSE)
+	END IF
 !
 	IF(PLANE_PARALLEL_NO_V)THEN
            FEDD=0.3333D0
@@ -204,11 +217,13 @@
 !
 ! TA is a temporary vector with the change in enthalpy.
 !
-	   WRITE(6,*)'Calling JGREY_HUB_DDT_V3'
+	   WRITE(LUER,*)'Calling JGREY_HUB_DDT_V4'
+	   WRITE(LUWARN,*)'Calling JGREY_HUB_DDT_V4'
 	   T2=1.0D-06		!Accuracy to converge f
-	   CALL JGREY_HUB_DDT_V3(RJ,SOB,CHI,PLANCKMEAN,R,V,SIGMA,POPS,
+	   CALL JGREY_HUB_DDT_V4(RJ,SOB,CHI,PLANCKMEAN,R,V,SIGMA,POPS,
 	1              P,AQW,HMIDQW,KQW,LUM,METHOD,DIF,IC,
-	1              T2,INCL_DJDT_TERMS,TIME_SEQ_NO,ND,NC,NP,NT)
+	1              T2,INCL_DJDT_TERMS,TIME_SEQ_NO,COMPUTED,ND,NC,NP,NT)
+	   IF(.NOT. COMPUTED)RETURN
 !
 	ELSE
 !
@@ -235,6 +250,7 @@
 !	      WRITE(LUER,'('' Maximum change in Grey F is '',1P,E11.4)')T1
 	    END DO
 	END IF
+	WRITE(LUWARN,'(A)')' '
 !
 ! Compute the temperature distribution, and the Rosseland optical depth scale.
 ! NB sigma=5.67D-05 and the factor of 1.0D-04 is to convert T from units of 

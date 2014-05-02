@@ -36,6 +36,7 @@
 	1               FREQ,OUT_BC_TYPE,
 	1               DO_THIS_TX_MATRIX,METHOD,ND,NM,NM_KI)
 	USE MOD_RAY_MOM_STORE
+	USE MOD_VAR_MOM_J_CMF
 	IMPLICIT NONE
 !
 ! Altered:   06-Aug-2007 : Installed integer OUT_BC_TYPE
@@ -94,35 +95,8 @@
 	LOGICAL DIF,INIT
 	INTEGER OUT_BC_TYPE
 !
-! Vectors required by future calls to VAR_MOM_J_CMF.
-!
-	INTEGER NV
-	PARAMETER (NV=200)
-	REAL*8 JNUM1(NV),RSQ_HNUM1(NV)
-	SAVE JNUM1,RSQ_HNUM1
-!
-! Work vectors.
-!
-	COMMON /SCRATCH/  PROGDESC,TA,TB,TC,DTAU,RSQ_DTAUONQ,
-	1                   XM,SOURCE,Q,JNU,RSQ_HNU,
-	1                   VB,VC,HU,HL,HS,
-	1                   EPS_A,EPS_B,EPS_PREV_A,EPS_PREV_B,
-	1                   TX_OLD_d_T,TX_OLD_d_dTdR,
-	1                   GAM,GAMH,W,WPREV,PSI,PSIPREV_MOD,PSIPREV
-!
-	REAL*8 TA(NV),TB(NV),TC(NV),DTAU(NV),RSQ_DTAUONQ(NV)
-	REAL*8 XM(NV),SOURCE(NV),Q(NV),JNU(NV),RSQ_HNU(NV)
-	REAL*8 VB(NV),VC(NV),HU(NV),HL(NV),HS(NV)
-	REAL*8 GAM(NV),GAMH(NV),W(NV),WPREV(NV)
-	REAL*8 PSI(NV),PSIPREV_MOD(NV),PSIPREV(NV)
-	REAL*8 EPS_A(NV),EPS_B(NV)
-	REAL*8 EPS_PREV_A(NV),EPS_PREV_B(NV)
-	REAL*8 TX_OLD_d_T(NV),TX_OLD_d_dTdR(NV)
-!
-	REAL*8 PROGDESC	
 	REAL*8 T1
 	REAL*8 DTAU_BND
-	REAL*8, PARAMETER :: PROG_ID=2.2281463D+08  !Must be unique (VAR_MOM_)
 !
 	INTEGER ERROR_LU
 	EXTERNAL ERROR_LU
@@ -132,44 +106,22 @@
 	INTEGER I
 	REAL*8 AV_SIGMA
 !
-! PROGDESC is a variable use to confirm that the scratch block is not
-! being used by some other routine.
-!
-	PROGDESC=PROG_ID
-	IF(ND .GT. NV)THEN
-	  I=ERROR_LU()
-	  WRITE(I,*)'Error in VAR_MOM_J_CMF - NV smaller than ND'
-	  WRITE(I,*)'ND=',ND,'NV',NV
-	  STOP
-	END IF
-!
-! Zero common block. There are currently 29 vectors in the common block.
-! TA must be the first vector, and PSIPREV the last.
-!
-	PSIPREV(NV-1)=1.0D0
-	PSIPREV(NV)=1.0D0
-	I=(NV*28)-1
-	CALL DP_ZERO(TA,I)
-	IF(PSIPREV(NV-1) .NE. 0.0D0 .OR. PSIPREV(NV) .NE. 1.0D0)THEN
-	  I=ERROR_LU()
-	  WRITE(I,*)'Error in zeroing SCRATCH block in VAR_MOM_J_CMF'
-	  STOP
-	ELSE
-	  PSIPREV(NV)=0.0D0
-	END IF
-!
 ! 
-!
-! Zero relevant vectors and matrices.
-!
-	DO I=1,ND
-	  JNU(I)=0.0D0
-	  RSQ_HNU(I)=0.0D0
-	END DO
 !
 	IF(INIT)THEN
 	  CALL DP_ZERO(TX, ND*ND*NM )
 	  CALL DP_ZERO(TVX, (ND-1)*ND*NM )
+	  IF(ALLOCATED(TA))THEN
+	    IF(ND .NE. VEC_LENGTH)THEN
+	      I=ERROR_LU()
+	      WRITE(I,*)'Problem in VAR_MOM_J_CMF_V9'
+	      WRITE(I,*)'Incompatible vector size'
+	      WRITE(I,*)'ND=',ND,'ND(vec_size)=',VEC_LENGTH
+	      STOP
+	    END IF
+	  ELSE
+	    CALL MOD_VAR_MOM_ALLOC(ND)
+	  END IF
 	  DO I=1,ND
 	    JNUM1(I)=0.0D0
 	    RSQ_HNUM1(I)=0.0D0
@@ -187,6 +139,13 @@
 	    EPS_PREV_B(I)=0.0D0
  	  END DO
 	END IF
+!
+! Zero relevant vectors and matrices.
+!
+	DO I=1,ND
+	  JNU(I)=0.0D0
+	  RSQ_HNU(I)=0.0D0
+	END DO
 !
 	DO I=1,ND
 	  SOURCE(I)=ETA(I)/CHI(I)
@@ -420,14 +379,6 @@
 	  JNUM1(I)=JNU(I)
 	  RSQ_HNUM1(I)=RSQ_HNU(I)
 	END DO
-!
-! 
-!
-	IF(PROGDESC .NE. PROG_ID)THEN
-	  I=ERROR_LU()
-	  WRITE(I,*)'Error - SCRATCH block corrupted in VAR_MOM_J_CMF'
-	  STOP
-	END IF
 !
 	RETURN
 	END

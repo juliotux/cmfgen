@@ -11,6 +11,9 @@ set cmfdist = ~jdh/cur_cmf
 set CMFDIST = ~jdh/cur_cmf
 set atomic  = ~jdh/atomic 
 set ATOMIC  = ~jdh/atomic 
+set sn_atomic  = ~jdh/sn_atomic 
+set SN_ATOMIC  = ~jdh/sn_atomic 
+
 
 # Used to assign help fles for DISPGEN, PLT_SPEC etc
 # Creates soft links.

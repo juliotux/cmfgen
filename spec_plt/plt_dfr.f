@@ -16,6 +16,8 @@
 !
 	IMPLICIT NONE
 !
+! Altered:  2-Nov-2013 - Remove an excess allocation of XV_SAV.
+!                          USe R_RVTJ for R grid from RVTJ file to allow a check for inconsistencies.
 ! Created: 20-Feb-2012 - Based in PLT_IP
 !
 	INTEGER NCF
@@ -35,6 +37,7 @@
 	REAL*8 RLUM
 	REAL*8 ABUND_HYD
 	REAL*8 LAMBDA
+	REAL*8, ALLOCATABLE :: R_RVTJ(:)
 	REAL*8, ALLOCATABLE :: R(:)
 	REAL*8, ALLOCATABLE :: V(:)
 	REAL*8, ALLOCATABLE :: SIGMA(:)
@@ -181,8 +184,8 @@
 	1                 RECL=REC_LENGTH,ACCESS='DIRECT',FORM='UNFORMATTED')
 	  READ(LU_IN,REC=3)ST_REC,NCF,ND
 	  ALLOCATE (dFR(ND,NCF))
-	  ALLOCATE (R(ND))
 	  ALLOCATE (NU(NCF))
+	  ALLOCATE (R(ND))
 	  IF( INDEX(FILE_DATE,'20-Aug-2000') .NE. 0)THEN
 	    READ(LU_IN,REC=ST_REC)(R(I),I=1,ND)
 	    ST_REC=ST_REC+1
@@ -218,7 +221,7 @@
 	CLOSE(LU_IN)
 	CALL RD_RVTJ_PARAMS_V2(RMDOT,RLUM,ABUND_HYD,TIME,NAME_CONVENTION,
 	1             ND2,NC2,NP2,FILENAME,LU_IN)
-	ALLOCATE (R(ND))
+	ALLOCATE (R_RVTJ(ND))
 	ALLOCATE (V(ND))
 	ALLOCATE (SIGMA(ND))
 	ALLOCATE (T(ND))
@@ -229,9 +232,19 @@
 	ALLOCATE (MASS_DENSITY(ND))
 	ALLOCATE (POPION(ND))
 	ALLOCATE (CLUMP_FAC(ND))
-	CALL RD_RVTJ_VEC(R,V,SIGMA,ED,T,ROSS_MEAN,FLUX_MEAN,
+	CALL RD_RVTJ_VEC(R_RVTJ,V,SIGMA,ED,T,ROSS_MEAN,FLUX_MEAN,
 	1       POPTOM,POPION,MASS_DENSITY,CLUMP_FAC,ND,LU_IN)
 	CLOSE(LU_IN)
+!
+	DO I=1,ND
+	  IF( ABS(1.0D0-R(I)/R_RVTJ(I)) .GT. 1.0D-08 )THEN
+	    WRITE(6,*)' '
+	    WRITE(6,*)' ERORR -- R in dFR_DATA not the same as in RVTJ'
+	    WRITE(6,*)' The may cause unexpected an wrong bahaviour'
+	    WRITE(6,*)' '
+	    STOP
+	  END IF
+	END DO
 !
 ! Now compute the important optical depth scales.
 !

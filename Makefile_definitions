@@ -16,10 +16,14 @@
 HOST :=$(shell hostname)
 
 ifeq ($(HOST),ibis.phyast.pitt.edu)
-INSTALL_DIR=/Users/jdh/cmf_releases/cur_cmf_16sep13/
+INSTALL_DIR=/Users/jdh/cur_cmf/
 endif
 
 ifeq ($(HOST),lorikeet.phyast.pitt.edu)
+INSTALL_DIR=/export/home/jdh/cur_cmf/
+endif
+
+ifeq ($(HOST),osprey.phyast.pitt.edu)
 INSTALL_DIR=/export/home/jdh/cur_cmf/
 endif
 
@@ -37,15 +41,19 @@ EXE_DIR=$(INSTALL_DIR)exe/
   
 
 ifeq ($(HOST),ibis.phyast.pitt.edu)
- F90 = pgf95 -mp -Mlarge_arrays -Ktrap=fp 
- F90nomp = pgf95  -Mlarge_arrays -Ktrap=fp
 
+# F90 = pgf95 -mp -Mlarge_arrays -Ktrap=fp 
+# F90nomp = pgf95  -Mlarge_arrays -Ktrap=fp
 
- FG  = -O2 -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
- FH  = -O2 -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
+ F90 = pgf95 -mp -Mlarge_arrays 
+ F90nomp = pgf95 -Mlarge_arrays -fast
+
+ FG  = -O2 -fast -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
+ FH  = -O2 -fast -Mconcur  -Mextend -Mbackslash  -I$(MOD_DIR)
 ! FG  = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
 ! FH = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
- FD  = -g  -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
+  FD  = -g  -Mextend -Mbackslash  -I$(MOD_DIR)
+! FD  = -O1   -Mextend -Mbackslash  -I$(MOD_DIR)
 
 # FG  = -g  -Mbounds -Mchkstk -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
 # FH  = -g  -Mbounds -Mchkstk -Mconcur   -Mextend -Mbackslash  -I$(MOD_DIR)
@@ -56,8 +64,9 @@ ifeq ($(HOST),ibis.phyast.pitt.edu)
 
  BLAS=-lblas
  LAPACK=-llapack
-# LOCLIB=-L/opt/pgi/osx86-64/12.9/lib
  LOCLIB=-L/opt/pgi/osx86-64/11.8/lib
+# LOCLIB=-L/opt/pgi/osx86-64/12.9/lib
+# LOCLIB=-L/opt/pgi/osx86-64/14.3/lib
  PGLIB= -pgf77libs -L/Users/jdh/pgplot/pgplot -lpgplot 
  X11LIB=-L/usr/X11R6/lib -lX11
 
@@ -82,6 +91,28 @@ ifeq ($(HOST),gfortran.phyast.pitt.edu)
  X11LIB=-L/usr/X11R6/lib -lX11
 endif
 
+
+ifeq ($(HOST),osprey.phyast.pitt.edu)
+
+ F90 = pgf95 -mp -fPIC -Mlarge_arrays -Mipa=fast
+ F90nomp = pgf95 -Mlarge_arrays  -Mipa=fast
+
+ FG  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FH  = -O2 -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FD  = -g  -Mconcur  -Mextend -Mbackslash   -I$(MOD_DIR)
+ FFREE  = -Mbackslash -Mconcur  -I$(MOD_DIR)
+ FFRED  = -Mbackslash -g -Ktrap=fp -I$(MOD_DIR)
+
+ BLAS=
+# LAPACK=-L/opt/pgi/linux86-64/2011/acml/4.4.0/libs -lacml -lacml_mp
+ LAPACK=-L/opt/pgi/linux86-64/2011/acml/4.4.0/lib -lacml_mp
+# LAPACK=-L/opt/pgi/linux86-64/2013/acml/4.4.0/libs -lacml -lacml_mp
+ LOCLIB= 
+
+ PGLIB= -pgf77libs -L/export/home/jdh/pgplot -lpgplot 
+ X11LIB=-L/usr/lib64/ghostscript/8.70 -lX11
+
+endif
 
 ifeq ($(HOST),lorikeet.phyast.pitt.edu)
 

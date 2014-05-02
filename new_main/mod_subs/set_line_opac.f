@@ -19,6 +19,7 @@
 	USE LINE_MOD
         IMPLICIT NONE
 !
+! Incorporated 2-Jan-2014: Changes for depth depndent line profiles.
 ! Altered 05-Apr-2011 : L_STAR_RATIO and U_STAR_RATIO now computed using XzVLTE_F_ON_S (29-Nov-2010).
 !                         Done to facilitate use of lower temperaturs.
 ! Altered 20-Feb-2006 : Minor bug fix --- incorrect acces VAR_IN_USE_CNT when BA not being computed
@@ -36,6 +37,8 @@
 	REAL*8 NU(NCF)
 	REAL*8 POPS(NT,ND)
 	LOGICAL LST_DEPTH_ONLY
+!
+	REAL*8 TA(ND),TB(ND),TC(ND),ED_MOD(ND)		!Work vectors
 !
 ! Constants for opacity etc. These are set in CMFGEN.
 !
@@ -131,10 +134,17 @@
 	  DO WHILE(LINE_STORAGE_USED(I))
 	    I=I+1
 	    IF(I .GT. MAX_SIM)THEN
-	      FIRST_LINE=N_LINE_FREQ
-	      DO SIM_INDX=1,MAX_SIM		!Not 0 as used!
-	        FIRST_LINE=MIN(FIRST_LINE,SIM_LINE_POINTER(SIM_INDX)) 
-	      END DO
+	      T1=1.0D+08
+	      DO SIM_INDX=1,MAX_SIM             !Not 0 as used!
+	        IF(LINE_END_INDX_IN_NU(SIM_LINE_POINTER(SIM_INDX)) .LT. T1)THEN
+	          FIRST_LINE=SIM_LINE_POINTER(SIM_INDX)
+	          T1=LINE_END_INDX_IN_NU(SIM_LINE_POINTER(SIM_INDX))
+                END IF
+              END DO
+!	      FIRST_LINE=N_LINE_FREQ
+!	      DO SIM_INDX=1,MAX_SIM		!Not 0 as used!
+!	        FIRST_LINE=MIN(FIRST_LINE,SIM_LINE_POINTER(SIM_INDX)) 
+!	      END DO
 	      IF( FREQ_INDX .GT. LINE_END_INDX_IN_NU(FIRST_LINE))THEN
 !
 ! Free up storage location for line.
@@ -188,11 +198,11 @@
 !
 	  TRANS_NAME_SIM(SIM_INDX)=TRIM(VEC_SPEC(LAST_LINE))
 !
-! This is a temporary measure. We currently set AMASS to AMASS_DOP for all
-! species.
-!
-!	  AMASS_SIM(SIM_INDX)=AMASS_ALL(NL)
-	  AMASS_SIM(SIM_INDX)=AMASS_DOP
+	  IF(FIX_DOP)THEN
+	    AMASS_SIM(SIM_INDX)=AMASS_DOP
+	  ELSE
+	    AMASS_SIM(SIM_INDX)=AT_MASS(SPECIES_LNK(VEC_ID(LAST_LINE)))
+	  END IF
 !
 ! 
 !
@@ -299,7 +309,7 @@
 	    END IF
 	  END DO
 !
-	END DO	!Checking whether a  new line is being added.
+	END DO	!Checking whether a new line is being added.
 !
 ! 
 !
@@ -320,20 +330,62 @@
 	  END IF
 	END DO
 !
-! Compute Doppler profile. At present this is assumed, for simplicity, to be
-! depth independent.
+! Compute intrinsic line profile. This can be depth independent (simplest option) or
+! depth dependent. Note: AMASS_SIM has been set to AMASS_DOP for FIX_DOP.
+
+	IF(FIX_DOP .OR. GLOBAL_LINE_PROF .EQ. 'DOP_SPEC')THEN
+	  T1=1.0D-15/1.77245385095516D0		!1.0D-15/SQRT(PI)
+	  DO SIM_INDX=1,MAX_SIM
+	    IF(RESONANCE_ZONE(SIM_INDX))THEN
+	      NU_DOP=FL_SIM(SIM_INDX)*12.85D0*SQRT( TDOP/AMASS_SIM(SIM_INDX) + (VTURB/12.85D0)**2 )/2.998D+05
+	      LINE_PROF_SIM(ND,SIM_INDX)=EXP( -( (FL-FL_SIM(SIM_INDX))/NU_DOP )**2 )*T1/NU_DOP
+	    ELSE
+	      LINE_PROF_SIM(ND,SIM_INDX)=0.0D0
+	    END IF
+	    DO I=D_ST,ND-1
+	      LINE_PROF_SIM(I,SIM_INDX)=LINE_PROF_SIM(ND,SIM_INDX)
+	    END DO
+	  END DO                      
+	ELSE
 !
-	T1=1.0D-15/1.77245385095516D0		!1.0D-15/SQRT(PI)
-	DO SIM_INDX=1,MAX_SIM
-	  IF(RESONANCE_ZONE(SIM_INDX))THEN
-	    NU_DOP=FL_SIM(SIM_INDX)*12.85D0*SQRT( TDOP/AMASS_SIM(SIM_INDX) +
-	1                        (VTURB/12.85D0)**2 )/2.998D+05
-	    LINE_PROF_SIM(SIM_INDX)=EXP( -( (FL-FL_SIM(SIM_INDX))/
-	1              NU_DOP )**2 )*T1/NU_DOP
-	  ELSE
-	    LINE_PROF_SIM(SIM_INDX)=0.0D0
-	  END IF
-	END DO                                    
+! Because of storage issues, need to compute all ND profiles. Thus there is
+! currently no LST_DEPTH option.
+!
+! We also have a temporary limit on ED to prvent the Stark profile from becoming
+! too large. This may need to change.
+!
+	  TB(1:ND)=0.0D0; TC(1:ND)=0.0D0
+	  ED_MOD(1:ND)=ED(1:ND)
+	  DO I=1,ND
+	    ED_MOD(I)=MIN(15.0D0,ED_MOD(I))
+	  END DO
+	  DO ID=1,NUM_IONS
+	    IF(ATM(ID)%XzV_PRES .AND. ION_ID(ID) .EQ. 'HI')TB(1:ND)=ATM(ID)%DxzV(1:ND)
+	    IF(ATM(ID)%XzV_PRES .AND. ION_ID(ID) .EQ. 'HeI')TC(1:ND)=ATM(ID)%DxzV(1:ND)
+	  END DO
+	  DO SIM_INDX=1,MAX_SIM
+	    IF(RESONANCE_ZONE(SIM_INDX))THEN
+	      J=SIM_LINE_POINTER(SIM_INDX); I=FREQ_INDX
+	      ID=VEC_ID(J); T1=ATM(ID)%ZXzV+1; T3=0.0D0
+	      CALL SET_PROF_V5(TA,NU,I,
+	1               LINE_ST_INDX_IN_NU(J),LINE_END_INDX_IN_NU(J),
+	1               ED,TB,TC,T,VTURB_VEC,ND,
+	1               PROF_TYPE(J),PROF_LIST_LOCATION(J),
+	1               VEC_FREQ(J),VEC_MNL_F(J),VEC_MNUP_F(J),
+	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,
+	1               TDOP,AMASS_DOP,VTURB,MAX_PROF_ED,
+	1               END_RES_ZONE(SIM_INDX),NORM_PROFILE,7)
+	      LINE_PROF_SIM(1:ND,SIM_INDX)=TA(1:ND)
+	      IF(VEC_SPEC(J)(1:1) .EQ. 'H')THEN
+	        WRITE(135,'(A,T10,2ES14.5,2I4,3E12.4)')PROF_TYPE(J),VEC_FREQ(J),
+	1            3.0D+05*(NU(I)/VEC_FREQ(J)-1.0D0),
+	1            VEC_MNL_F(J),VEC_MNUP_F(J),TA(1),TA(40),TA(ND)
+	      END IF
+	    ELSE
+	      LINE_PROF_SIM(1:ND,SIM_INDX)=0.0D0
+	    END IF
+	  END DO
+	END IF
 !
 ! Compute the LINE quadrature weights. Defined so that JBAR= SUM[LINE_QW*J]
 !
@@ -344,9 +396,27 @@
 	ELSE
 	  T1=(NU(FREQ_INDX-1)-NU(FREQ_INDX+1))*0.5D+15
 	END IF
-	DO SIM_INDX=1,MAX_SIM
-	  LINE_QW_SIM(SIM_INDX)=LINE_PROF_SIM(SIM_INDX)*T1
-	END DO
+!
+	IF(LST_DEPTH_ONLY)THEN
+	  DO SIM_INDX=1,MAX_SIM
+	    LINE_QW_SIM(ND,SIM_INDX)=LINE_PROF_SIM(ND,SIM_INDX)*T1
+	  END DO
+	ELSE IF(FIX_DOP .OR. GLOBAL_LINE_PROF .EQ. 'DOP_SPEC')THEN
+!$OMP PARALLEL DO PRIVATE(SIM_INDX,I)
+	  DO SIM_INDX=1,MAX_SIM
+	    LINE_QW_SIM(1,SIM_INDX)=LINE_PROF_SIM(1,SIM_INDX)*T1
+	    DO I=2,ND
+	      LINE_QW_SIM(I,SIM_INDX)=LINE_QW_SIM(1,SIM_INDX)
+	    END DO
+	  END DO
+	ELSE
+!$OMP PARALLEL DO PRIVATE(SIM_INDX,I)
+	  DO SIM_INDX=1,MAX_SIM
+	    DO I=1,ND
+	      LINE_QW_SIM(I,SIM_INDX)=LINE_PROF_SIM(I,SIM_INDX)*T1
+	    END DO
+	  END DO
+	END IF
 !
 ! Ensure that LAST_LINE points to the next LINE that is going to be handled 
 ! in the BLANKETING portion of the code.

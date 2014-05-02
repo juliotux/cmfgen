@@ -9,6 +9,7 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered: 12-Mar-2014: Added read/ouput of non-thermal cooling.
 ! Altered: 17-Nov-2009: Now read in charge exchange cooling.
 !                         Slight format change.
 ! Altered: 29-Jan-2009: ND is now read in from MODEL (if it exists).
@@ -90,6 +91,12 @@
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
 	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'FF ',TRIM(STRING)
+	      ELSE IF( INDEX(STRING,'Non-thermal') .NE. 0)THEN
+	        TMP_STR=STRING
+	        TMP_STR=ADJUSTL(TMP_STR)
+	        K=INDEX(TMP_STR,' ')
+	        READ(20,'(A)')STRING
+	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'NT ',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'K-shell') .NE. 0)THEN
 	        TMP_STR=STRING
 	        TMP_STR=ADJUSTL(TMP_STR)

@@ -38,6 +38,13 @@
 	USE VAR_RAD_MOD
 	IMPLICIT NONE
 !
+! Altered 27-Mar-2013 : dE_WORK and RAD_DECAY_LUM updated for clumping.
+!                       LUWARN inserted (done earlier)
+!                       LIN_PROF_SIM is now depth dependent -- code cannow handle depth dependent 
+!                          line profiles.
+!                       Calls to AUTO_CLUMP_REV and SPECIFY_IT_CYCLE added.       
+! Altered  6-Dec-2013 : When removing lines from the variation set we assume a minimum terminal
+!                          velocity of 300 km/s. Important for plane-parallel models with Vinf=0.
 ! Altered 29-Nov-2011 : Call to STEQ_CO_MOV_DERIV changed to _V3. Done to facilitae
 !                         hadling of additional levels with time dependence.
 ! Altered 07-Nov-2011 : Now output MNL_F, MNUP_F to NETRATE and TOTRATE.
@@ -64,7 +71,7 @@
 	INTEGER NCF
 	LOGICAL, PARAMETER :: IMPURITY_CODE=.FALSE.
 !
-	CHARACTER(LEN=12), PARAMETER :: PRODATE='16-Jan-2013'		!Must be changed after alterations
+	CHARACTER(LEN=12), PARAMETER :: PRODATE='27-Mar-2014'		!Must be changed after alterations
 !
 ! 
 !
@@ -106,9 +113,10 @@
 ! Logical Unit assignments. Those indicated with a # after the ! are open in
 !  large sections of the code. Other units generally used temprarily.
 !
-	INTEGER               LUER        !Output/Error file.
-	INTEGER, PARAMETER :: LUIN=7      !General input unit (closed after accesses).
-	INTEGER, PARAMETER :: LUMOD=8     !Model Description file.
+	INTEGER               LUER      	!Output/Error file.
+	INTEGER               LUWARN	        !
+	INTEGER, PARAMETER :: LUIN=7            !General input unit (closed after accesses).
+	INTEGER, PARAMETER :: LUMOD=8           !Model Description file.
 !
 	INTEGER, PARAMETER :: LU_DC=9      	!Departure coefficient Output.
 	INTEGER, PARAMETER :: LU_FLUX=10   	!Flux/Luminosity Data (OBSFLUX)
@@ -170,7 +178,7 @@
 !
 ! Functions called
 !
-	INTEGER ICHRLEN,ERROR_LU
+	INTEGER ICHRLEN,ERROR_LU,WARNING_LU
 	REAL*8 DOP_PRO
 	REAL*8 S15ADF
 	REAL*8 LAMVACAIR
@@ -181,7 +189,7 @@
 	REAL*8 TEFF_SUN
 	REAL*8 MASS_SUN
 	LOGICAL EQUAL
-	EXTERNAL ICHRLEN,ERROR_LU,SPEED_OF_LIGHT,GRAVITATIONAL_CONSTANT
+	EXTERNAL ICHRLEN,ERROR_LU,WARNING_LU,SPEED_OF_LIGHT,GRAVITATIONAL_CONSTANT
 	EXTERNAL MASS_SUN,RAD_SUN,TEFF_SUN
 !
 	INTEGER GET_DIAG
@@ -448,11 +456,13 @@
 ! Initialization section
 !
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU()
 	ACCESS_F=5
 	COMPUTE_LAM=.FALSE.
 	COMPUTE_EW=.TRUE.
 	FULL_ES=.TRUE.
 	SN_MODEL=.FALSE.
+	VINF=0.0D0				!Will be reset later
         TREAT_NON_THERMAL_ELECTRONS=.FALSE.
 	INCL_RADIOACTIVE_DECAY=.FALSE.
 	ZERO_REC_COOL_ARRAYS=.TRUE.
@@ -685,6 +695,7 @@
 ! NB: The passed GF_CUT is set to zero if the Atomic NO. of the species
 !      under consideration is less than AT_NO_GF_CUT.
 !
+	WRITE(LUWARN,'(/,A,/)')' Reading in atomic data'
 	DO ISPEC=1,NUM_SPECIES
 	  DO ID=SPECIES_END_ID(ISPEC),SPECIES_BEG_ID(ISPEC),-1
 	    IF( ATM(ID)%XzV_PRES)THEN
@@ -694,10 +705,11 @@
 	        T2=GF_CUT
 	      END IF
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_OSCDAT'
-	      CALL GENOSC_V6( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,
-	1                 ATM(ID)%XzVLEVNAME_F, T1, ATM(ID)%ZXzV,
+	      CALL GENOSC_V8( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F, 
+	1                 ATM(ID)%ARAD,ATM(ID)%GAM2,ATM(ID)%GAM4,ATM(ID)%OBSERVED_LEVEL,
+	1                 T1, ATM(ID)%ZXzV,
 	1                 ATM(ID)%XzV_OSCDATE, ATM(ID)%NXzV_F,I,
-	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,
+	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,
 	1                 LUIN,LUSCR,TMP_STRING)
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_TO_S'
 	      CALL RD_F_TO_S_IDS_V2( ATM(ID)%F_TO_S_XzV, ATM(ID)%INT_SEQ_XzV,
@@ -754,7 +766,7 @@
 	  WRITE(LUER,*)'Error opening MODEL in CMFGEN, IOS=',IOS
 	  STOP
 	END IF
-	WRITE(6,*)'Opened MODEL'
+	WRITE(6,'(/,A)')' Successfully opened file MODEL'
 !
 ! Output description of model. This is done after the reading of most data
 ! since some of the model information is read in.
@@ -835,36 +847,6 @@
 !
 ! 
 !
-! Compute profile frequencies such that for the adopted doppler
-! velocity the profile ranges from 5 to -5 doppler widths.
-! This section needs to be rewritten if we want the profile to
-! vary with depth.
-!
-! ERF is used in computing the Sobolev incident intensity at the
-! outer boundary. ERF = int from "x" to "inf" of -e(-x^2)/sqrt(pi).
-! Note that ERF is not the error function. ERF is related to the
-! complementary error function by ERF =-0.5D0 . erfc(X).
-! S15ADF is a NAG routine which returns erfc(x).
-!
-! The incident Sobolev intensity is S[ 1.0-exp(tau(sob)*ERF) ]
-! NB -from the definition, -1<erf<0 .
-!
-	T1=4.286299D-05*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
-	J=0
-	DO I=1,NLF
-	  ERF(I)=-0.5D0*S15ADF(PF(I),J)
-	  PF(I)=PF(I)*T1
-	END DO
-        VDOP_VEC(1:ND)=12.85D0*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
-!
-! Compute the frequency grid for CMFGEN. Routine also allocates the vectors 
-! needed for the line data, sets the line data, and puts the line data into 
-! numerical order.
-!
-	CALL SET_FREQUENCY_GRID(NU,FQW,LINES_THIS_FREQ,NU_EVAL_CONT,
-	1               NCF,NCF_MAX,N_LINE_FREQ,
-	1               OBS_FREQ,OBS,N_OBS,LUIN,IMPURITY_CODE)
-!
 ! Define the average energy of each super level. At present this is
 ! depth independent, which should be adequate for most models.
 ! This average energy is used to scale the line cooling rates in
@@ -915,7 +897,7 @@
 ! will need to be reset if we have rewound a model (i.e., changed POINT1 to
 ! use older iterations) when computing the hyrostatic structure.
 !
-	  IF(RP .NE. R(ND) .OR. R(1) .NE. RMAX)THEN
+	  IF(.NOT. SN_HYDRO_MODEL .AND. (RP .NE. R(ND) .OR. R(1) .NE. RMAX))THEN
 	    WRITE(LUER,*)'Warning: updating RP and RMAX in CMFGEN to make them consistent'
 	    WRITE(LUER,*)'with values in SCRTEMP. This inconsistency should only have occured'
             WRITE(LUER,*)'if you have rewound (changd POINT1) a model with DO_HYDRO=T'
@@ -1000,7 +982,52 @@
 	   WRITE(LUER,*)'Invalid Velocity Law'
 	    STOP
 	  END IF
+!
+	  IF(SN_HYDRO_MODEL)THEN
+	    T1=RMAX/RP
+	    CALL UPDATE_KEYWORD(RP,'[RSTAR]','VADAT',L_TRUE,L_FALSE,LUIN)
+	    CALL UPDATE_KEYWORD(T1,'[RMAX]','VADAT',L_FALSE,L_TRUE,LUIN)
+	    WRITE(LUER,*)'Updated RP and RMAX in VADAT as new SN hydro model'
+	  END IF
 	END IF
+!
+	IF(VINF .EQ. 0.0D0)VINF=V(1)
+!
+! Compute profile frequencies such that for the adopted doppler
+! velocity the profile ranges from 5 to -5 doppler widths.
+! This section needs to be rewritten if we want the profile to
+! vary with depth.
+!
+! ERF is used in computing the Sobolev incident intensity at the
+! outer boundary. ERF = int from "x" to "inf" of -e(-x^2)/sqrt(pi).
+! Note that ERF is not the error function. ERF is related to the
+! complementary error function by ERF =-0.5D0 . erfc(X).
+! S15ADF is a NAG routine which returns erfc(x).
+!
+! The incident Sobolev intensity is S[ 1.0-exp(tau(sob)*ERF) ]
+! NB -from the definition, -1<erf<0 .
+!
+	T1=4.286299D-05*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
+	J=0
+	DO I=1,NLF
+	  ERF(I)=-0.5D0*S15ADF(PF(I),J)
+	  PF(I)=PF(I)*T1
+	END DO
+        VDOP_VEC(1:ND)=12.85D0*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
+	VTURB_VEC(1:ND)=VTURB_MIN+(VTURB_MAX-VTURB_MIN)*V(1:ND)/V(1)
+!
+	IF(GLOBAL_LINE_PROF(1:4) .EQ. 'LIST')THEN
+	  CALL RD_STRK_LIST(LUIN)
+	END IF
+!
+! Compute the frequency grid for CMFGEN. Routine also allocates the vectors 
+! needed for the line data, sets the line data, and puts the line data into 
+! numerical order.
+!
+	CALL SET_FREQUENCY_GRID_V2(NU,FQW,LINES_THIS_FREQ,NU_EVAL_CONT,
+	1               NCF,NCF_MAX,N_LINE_FREQ,ND,
+	1               OBS_FREQ,OBS,N_OBS,LUIN,IMPURITY_CODE)
+!
 !
 ! 
 !
@@ -1103,7 +1130,7 @@
 	1                  LAST_NG,WRITE_RVSIG,NT,ND,LUSCR,NEWMOD)
 	  END IF
 	  LST_ITERATION=.TRUE.
-	  CALL TUNE(1,'GIT')
+	  CALL TUNE(IONE,'GIT')
 	  GOTO 9999			!End (write out POPS.)
 	END IF
 ! 
@@ -1153,8 +1180,10 @@
            IF(RD_COHERENT_ES)NUM_ITS_TO_DO=1
 	END IF
 !
+! Removed TMIN consistency check since I now use LOG(LTE pops).
+!
 	CALL CHECK_IONS_PRESENT(ND,NUM_IONS)
-	CALL CHECK_TMIN()
+!	CALL CHECK_TMIN()
 !
 ! Temporary check
 !
@@ -1193,8 +1222,12 @@
 	IF(NUM_ITS_TO_DO .EQ. 0)LST_ITERATION=.TRUE.
 	MAIN_COUNTER=MAIN_COUNTER+1
 !
-	CALL MESS(LUER,'Current great iteration count is')
-	WRITE(LUER,*)MAIN_COUNTER
+	WRITE(LUER,'(A)')' '
+	WRITE(LUER,'(X,80A)')('*',I=1,80)
+	WRITE(LUER,'(X,80A)')('*',I=1,80)
+	WRITE(LUER,'(A)')' '
+	WRITE(LUER,'(A,I4)')' Current great iteration count is',MAIN_COUNTER
+	WRITE(LUER,'(A)')' '
 !
 ! Used as a initializing switch for COMP_OBS.
 !
@@ -1228,8 +1261,7 @@
 	    I=WORD_SIZE*(NDEXT+1)/UNIT_SIZE
 	    CALL READ_DIRECT_INFO_V3(K,J,STRING,'EDDFACTOR',LU_EDD,IOS)
 	    IF(IOS .NE. 0)THEN
-	      WRITE(LUER,*)'Error --- unable to open EDDFACTOR_INFO'
-	      WRITE(LUER,*)'Will compute new f'
+	      WRITE(LUER,*)'Error --- unable to open EDDFACTOR_INFO -- will compute new f'
 	      COMPUTE_EDDFAC=.TRUE.
 	      IOS=0
 	    ELSE IF(.NOT. COMPUTE_EDDFAC .AND. K .NE. ND)THEN
@@ -1245,7 +1277,7 @@
 	      IF(IOS .EQ. 0)THEN
 	        READ(LU_EDD,REC=5,IOSTAT=IOS)T1
 	        IF(T1 .EQ. 0.0D0 .OR. IOS .NE. 0)THEN
-	          WRITE(LUER,*)'Error --- All Eddfactors not'//
+	          WRITE(LUER,'(/,A)')' Warning --- All Eddfactors not'//
 	1                      ' computed - will compute new F'
 	          COMPUTE_EDDFAC=.TRUE.
 	        END IF
@@ -1376,7 +1408,7 @@
 	  LINE_STORAGE_USED(SIM_INDX)=.FALSE.
 	END DO
 !
-	CALL TUNE(1,'DTDR')
+	CALL TUNE(IONE,'DTDR')
 	DTDR=0.0D0
 	SECTION='DTDR'
 	IF(IMPURITY_CODE .OR. USE_FIXED_J .OR. FLUX_CAL_ONLY .OR. (RD_LAMBDA .AND. NEWMOD .AND. .NOT. SN_MODEL))THEN
@@ -1412,22 +1444,22 @@
 	      COMPUTE_NEW_CROSS=.FALSE.
 	    END IF
 !
-	    CALL TUNE(1,'DTDR_OPAC')
+	    CALL TUNE(IONE,'DTDR_OPAC')
 	      CALL COMP_OPAC(POPS,NU_EVAL_CONT,FQW,
 	1                FL,CONT_FREQ,FREQ_INDX,NCF,
 	1                SECTION,ND,NT,LST_DEPTH_ONLY)
 !	    INCLUDE 'OPACITIES_V4.INC'
-	    CALL TUNE(2,'DTDR_OPAC')
+	    CALL TUNE(ITWO,'DTDR_OPAC')
 !
 ! 
 !
 ! Compute variation of opacity/emissivity. Store in VCHI and VETA.
 !
 	    IF(.NOT. LAMBDA_ITERATION .AND. COMPUTE_BA)THEN
-	      CALL TUNE(1,'DTDR_VOPAC')
+	      CALL TUNE(IONE,'DTDR_VOPAC')
 	      CALL COMP_VAR_OPAC(POPS,RJ,FL,CONT_FREQ,FREQ_INDX,
 	1                  SECTION,ND,NT,LST_DEPTH_ONLY)
-	      CALL TUNE(2,'DTDR_VOPAC')
+	      CALL TUNE(ITWO,'DTDR_VOPAC')
 	    END IF
 ! 
 !
@@ -1447,7 +1479,7 @@
 !
 	  DO SIM_INDX=1,MAX_SIM
 	    IF(RESONANCE_ZONE(SIM_INDX))THEN
-	       CHI(ND)=CHI(ND)+CHIL_MAT(ND,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
+	       CHI(ND)=CHI(ND)+CHIL_MAT(ND,SIM_INDX)*LINE_PROF_SIM(ND,SIM_INDX)
 	    END IF
 	  END DO
 !
@@ -1458,9 +1490,9 @@
 	    IF(RESONANCE_ZONE(SIM_INDX))THEN
 	      NL=SIM_NL(SIM_INDX)
 	      NUP=SIM_NUP(SIM_INDX)
-	      VCHI(NL,ND)=VCHI(NL,ND)+LINE_PROF_SIM(SIM_INDX)*
+	      VCHI(NL,ND)=VCHI(NL,ND)+LINE_PROF_SIM(ND,SIM_INDX)*
 	1        LINE_OPAC_CON(SIM_INDX)*L_STAR_RATIO(ND,SIM_INDX)
-	      VCHI(NUP,ND)=VCHI(NUP,ND)-LINE_PROF_SIM(SIM_INDX)*
+	      VCHI(NUP,ND)=VCHI(NUP,ND)-LINE_PROF_SIM(ND,SIM_INDX)*
 	1        LINE_OPAC_CON(SIM_INDX)*U_STAR_RATIO(ND,SIM_INDX)*
 	1        GLDGU(SIM_INDX)
 	    END IF
@@ -1470,7 +1502,7 @@
 !
 ! Set TA = to the variation vector at the inner boundary.
 !
-	    CALL TUNE(1,'DTDR_VEC')
+	    CALL TUNE(IONE,'DTDR_VEC')
 	    DO I=1,NT
 	      TA(I)=VCHI(I,ND)
 	    END DO
@@ -1486,7 +1518,7 @@
 	    END DO
 	    DIFFW(NT)=DIFFW(NT)+T3*(TA(NT)/CHI(ND)-(T1*(1.0D0+EMHNUKT(ND))
 	1           /(1.0D0-EMHNUKT(ND))-2.0D0)/T(ND))
-	    CALL TUNE(2,'DTDR_VEC')
+	    CALL TUNE(ITWO,'DTDR_VEC')
 !
 	  END DO
 !
@@ -1503,11 +1535,11 @@
 	IF(LAMBDA_ITERATION .OR. .NOT. COMPUTE_BA)THEN
 	  DIFFW(1:NT)=0.0D0
 	END IF
-	CALL TUNE(2,'DTDR')
-	CALL TUNE(3,'  ')
+	CALL TUNE(ITWO,'DTDR')
 !
 	LST_DEPTH_ONLY=.FALSE.
 	WRITE(LUER,*)'The value of DTDR is :',DTDR
+	WRITE(LUER,'(A)')' '
 ! 
 !
 ! Zero STEQ and BA arrays.
@@ -1556,7 +1588,7 @@
 !	  DST=K
 !	  DEND=K
 !
-	  CALL TUNE(1,'STEQ')
+	  CALL TUNE(IONE,'STEQ')
           DO ID=1,NUM_IONS-1
             LOC_ID=ID
 	    IF(ATM(ID)%XzV_PRES)THEN
@@ -1583,7 +1615,7 @@
 	1         TMP_STRING,         NUM_BNDS,ND,COMPUTE_BA,DST,DEND)
 	    END IF
 	  END DO
-	  CALL TUNE(2,'STEQ')
+	  CALL TUNE(ITWO,'STEQ')
 !        
 ! Update charge equation. No longer done in STEQHEII
 !
@@ -1593,12 +1625,12 @@
 !
 	IF(TREAT_NON_THERMAL_ELECTRONS)THEN
 	  WRITE(6,*)'Beginning calculation of non-thermal electron spectrum: ED next'
-	  CALL TUNE(1,'NON_THERM')
+	  CALL TUNE(IONE,'NON_THERM')
 	    CALL ELECTRON_NON_THERM_SPEC(ND)
-	  CALL TUNE(2,'NON_THERM')
-	  CALL TUNE(1,'SE_NON_THERM')
+	  CALL TUNE(ITWO,'NON_THERM')
+	  CALL TUNE(IONE,'SE_NON_THERM')
 	    CALL SE_BA_NON_THERM_V2(dE_RAD_DECAY,COMPUTE_BA,NT,ND,DEC_NRG_SCL_FAC)
-	  CALL TUNE(2,'SE_NON_THERM')
+	  CALL TUNE(ITWO,'SE_NON_THERM')
 	END IF
 !
 	IF(LST_ITERATION)
@@ -2086,8 +2118,8 @@
 	    DO SIM_INDX=1,MAX_SIM
 	      IF(RESONANCE_ZONE(SIM_INDX))THEN
 	        DO I=1,ND
-	          CHI(I)=CHI(I)+CHIL_MAT(I,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
-	          ETA(I)=ETA(I)+ETAL_MAT(I,SIM_INDX)*LINE_PROF_SIM(SIM_INDX)
+	          CHI(I)=CHI(I)+CHIL_MAT(I,SIM_INDX)*LINE_PROF_SIM(I,SIM_INDX)
+	          ETA(I)=ETA(I)+ETAL_MAT(I,SIM_INDX)*LINE_PROF_SIM(I,SIM_INDX)
 	        END DO
 	      END IF
 	    END DO
@@ -2168,8 +2200,10 @@
 	        IF(NU(ML) .GE. TAU_EDGE(I) .AND. 
 	1                       NU(ML+1) .LT. TAU_EDGE(I))THEN
 	          T1=LOG(CHI_CONT(5)/CHI_CONT(1))/LOG(R(1)/R(5))
+	          IF(I .EQ. 1)WRITE(LUER,'(A)')' '
 	          WRITE(LUER,'(A,1P,E11.4,A,E10.3)')' Tau(Nu=',NU(ML),
 	1            ') at outer boundary is:',CHI_CONT(1)*R(1)/MAX(T1-1.0D0,1.0D0)
+	          IF(I .EQ. N_TAU_EDGE)WRITE(LUER,'(A)')' '
 	        END IF
 	      END DO
 	    END IF
@@ -2313,11 +2347,11 @@
 	DO SIM_INDX=1,MAX_SIM
 	  IF(RESONANCE_ZONE(SIM_INDX))THEN
 	    DO I=1,ND
-	      ZNET_SIM(I,SIM_INDX)=ZNET_SIM(I,SIM_INDX) + LINE_QW_SIM(SIM_INDX)*
+	      ZNET_SIM(I,SIM_INDX)=ZNET_SIM(I,SIM_INDX) + LINE_QW_SIM(I,SIM_INDX)*
 	1          (1.0D0-RJ(I)*CHIL_MAT(I,SIM_INDX)/ETAL_MAT(I,SIM_INDX))
-	      JBAR_SIM(I,SIM_INDX)=JBAR_SIM(I,SIM_INDX) + LINE_QW_SIM(SIM_INDX)*RJ(I)
+	      JBAR_SIM(I,SIM_INDX)=JBAR_SIM(I,SIM_INDX) + LINE_QW_SIM(I,SIM_INDX)*RJ(I)
+	      LINE_QW_SUM(I,SIM_INDX)=LINE_QW_SUM(I,SIM_INDX) + LINE_QW_SIM(I,SIM_INDX)
 	    END DO
-	    LINE_QW_SUM(SIM_INDX)=LINE_QW_SUM(SIM_INDX) + LINE_QW_SIM(SIM_INDX)
 	  END IF
 	END DO
 !
@@ -2414,17 +2448,19 @@
 !      lower than the last frequency in the lines resonance zone it can safely
 !      be removed.
 !
-! 2. Line is removed when the current frequency is lower by EXT_LINE_VAR 
+! 2. Line is removed when the current frequency is lower by EXT_LINE_VAR*VINF 
 !      (converted to frequency units) than the last frequency in the resonance
 !       zone. This is a control parameter, and may be used to speed up the code.
-!       NB: EXT_LINE_VAR >= 0.
+!       NB: EXT_LINE_VAR >= 0. Due to strong line overlap, it was found that
+!       this method of line removal can cause issues when Vinf ~ 0 (e.g., in a 
+!       plane-parallel model). We thus put in a restriction of 300 km/s.
 !
 ! 3. To make way for another line. This is only done when necessary, and is
 !      done elsewhere. Only requirement is that the current frequency
 !      is lower that the last frequency of the resonance zone.
 !
-	CALL TUNE(1,'CHK_L_FIN')
-	T1=1.0D0-EXT_LINE_VAR*V(1)/2.998D+05         
+	CALL TUNE(IONE,'CHK_L_FIN')
+        T1=1.0D0-EXT_LINE_VAR*MAX(V(1),600.0D0)/2.998E+05
 	DO SIM_INDX=1,MAX_SIM
 	  IF(LINE_STORAGE_USED(SIM_INDX))THEN
 !
@@ -2470,7 +2506,7 @@
 	    END IF			!Outside region of influence by line?
 	  END IF			!Line is in use.
 	END DO				!Loop over line
-	CALL TUNE(2,'CHK_L_FIN')
+	CALL TUNE(ITWO,'CHK_L_FIN')
 !
 ! 
 !
@@ -2767,9 +2803,9 @@
 !	BA_T(NT,DIAG_INDX,ND)=1.0D0
 !	IF(DIAG_INDX .NE. 1)BA_T(NT,DIAG_INDX-1,ND)=-1.0D0
 	IF(COMPUTE_BA .AND. WRBAMAT .AND. .NOT. FLUX_CAL_ONLY .AND. .NOT. LAMBDA_ITERATION)THEN
-	  CALL TUNE(1,'STORE_BA')
+	  CALL TUNE(IONE,'STORE_BA')
 	    CALL STORE_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,'BAMAT')
-	  CALL TUNE(2,'STORE_BA')
+	  CALL TUNE(ITWO,'STORE_BA')
 	END IF
 !
 ! Store radiative equlibrium equation so we can check influence on radiation field.
@@ -2840,7 +2876,9 @@
 	END IF		!Only output if last iteration.
 ! 
 !
-	WRITE(LUER,*)'Luminosity of star is :',RLUMST(1),RLUMST(ND)
+	WRITE(STRING,'(I5)')MAIN_COUNTER; STRING=ADJUSTL(STRING)
+	STRING=' Luminosity of star (d=1,ND)(iteration '//TRIM(STRING)//') is:'
+	WRITE(LUER,'(A,2ES18.8,/)')TRIM(STRING),RLUMST(1),RLUMST(ND)
 	IF(RLUMST(1) .LE. 0.0D0)RLUMST(1)=1.0D-20
 	DO I=1,ND
 	  IF(RLUMST(I) .GE. 0.0D0 .AND. RLUMST(I) .LT.  1.0D-05)RLUMST(I)=1.0D-05
@@ -2848,7 +2886,10 @@
 	END DO
 !
 	CALL GEN_ASCI_OPEN(LU_FLUX,'OBSFLUX','UNKNOWN',' ',' ',IZERO,IOS)
-	  CALL WRITV(OBS_FREQ,N_OBS,'Continuum Frequencies',LU_FLUX)
+	  WRITE(STRING,'(I10)')N_OBS
+	  STRING=ADJUSTL(STRING)
+          STRING='Continuum Frequencies ( '//TRIM(STRING)//' )'
+	  CALL WRITV(OBS_FREQ,N_OBS,TRIM(STRING),LU_FLUX)
 	  CALL WRITV(OBS_FLUX,N_OBS,'Observed intensity (Janskys)',LU_FLUX)
 	  CALL WRITV(RLUMST,ND,'Luminosity',LU_FLUX)
 	CLOSE(UNIT=LU_FLUX)
@@ -2894,14 +2935,14 @@
 !
 	CALL GEN_ASCI_OPEN(LU_OPAC,'MEANOPAC','UNKNOWN',' ',' ',IZERO,IOS)
 	  WRITE(LU_OPAC,
-	1  '( ''     R        I   Tau(Ross)   /\Tau   Rat(Ross)'//
+	1  '( ''       R        I   Tau(Ross)   /\Tau   Rat(Ross)'//
 	1  '  Chi(Ross)  Chi(ross)  Chi(Flux)   Chi(es) '//
 	1  '  Tau(Flux)  Tau(es)  Rat(Flux)  Rat(es)     Kappa   V(km/s)'' )' )
 	  IF(R(1) .GE. 1.0D+05)THEN
-	    FMT='( 1X,1P,E10.4,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
+	    FMT='( 1X,1P,E12.6,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
 	1        '4(2X,E9.3),2(2X,E8.2),4(2X,E8.2) )'
 	  ELSE
-	    FMT='( 1X,F10.4,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
+	    FMT='( 1X,F12.6,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
 	1        '4(2X,E9.3),2(2X,E8.2),4(2X,E8.2) )'
 	  END IF
 	  DO I=1,ND
@@ -2943,6 +2984,11 @@
 	  TCHI(1:ND)=PLANCK_MEAN(1:ND)*CLUMP_FAC(1:ND)
 	  IF(COMP_GREY_LST_IT)THEN
 	    CALL COMP_GREY_V4(POPS,TGREY,TA,CHI,TCHI,CHK,LUER,NC,ND,NP,NT)
+	    IF(CHK)THEN
+	      WRITE(LUER,'(/,X,A,/)')'Grey solution was successfully computed'
+	    ELSE 
+	      WRITE(LUER,'(/,X,A,/)')'Grey solution was NOT successfully computed'
+	    END IF
 	  END IF
 !
 	  IF(CHK .AND. COMP_GREY_LST_IT)THEN
@@ -2969,9 +3015,9 @@
 	IF(.NOT. SN_MODEL .AND. .NOT. USE_FIXED_J)THEN
 !	IF(.NOT. USE_FIXED_J)THEN
 	  I=18
-	  CALL HYDRO_TERMS_V4(POP_ATOM,R,V,T,SIGMA,ED,RLUMST,
-	1                 STARS_MASS,MEAN_ATOMIC_WEIGHT,
-	1		  FLUX_MEAN,ESEC,
+	  CALL HYDRO_TERMS_V5(POP_ATOM,R,V,T,SIGMA,ED,CLUMP_FAC,RLUMST,
+	1                 LOGG,STARS_MASS,MEAN_ATOMIC_WEIGHT,
+	1		  FLUX_MEAN,ROSS_MEAN,ESEC,
 	1                 LAM_FLUX_MEAN_BAND_END,BAND_FLUX_MEAN,
 	1		  PRESSURE_VTURB,PLANE_PARALLEL,PLANE_PARALLEL_NO_V,
 	1                 LST_ITERATION,BAND_FLUX,N_FLUX_MEAN_BANDS,I,ND)
@@ -2980,7 +3026,6 @@
 	IF(LST_ITERATION)
 	1     CALL WR_ASCI_STEQ(NION,ND,'STEQ ARRAY- Continuum Terms',19)
 !                                   
-		CALL TUNE(ITHREE,' ')
 ! 
 	CALL TUNE(IONE,'LINE LOOP')
 !
@@ -3424,9 +3469,9 @@
 	1          .AND. WRBAMAT
 	1          .AND. .NOT. FLUX_CAL_ONLY 
 	1          .AND. .NOT. LAMBDA_ITERATION)THEN
-	  CALL TUNE(1,'BAMAT_WR')
+	  CALL TUNE(IONE,'BAMAT_WR')
 	  CALL STORE_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,'BAMAT')
-	  CALL TUNE(2,'BAMAT_WR')
+	  CALL TUNE(ITWO,'BAMAT_WR')
 	END IF
 !
 ! Ends check on GLOBAL_LINE.
@@ -3461,18 +3506,18 @@
 	  XRAY_LUM_TOT(I)=XRAY_LUM_TOT(I)*R(I)*R(I)*T1
 	  XRAY_LUM_0P1(I)=XRAY_LUM_0P1(I)*R(I)*R(I)*T1
 	  XRAY_LUM_1KEV(I)=XRAY_LUM_1KEV(I)*R(I)*R(I)*T1
-	  dE_WORK(I)=dE_WORK(I)*R(I)*R(I)*T1
-	  RAD_DECAY_LUM(I)=dE_RAD_DECAY(I)*R(I)*R(I)*T2		!As ergs/cm^3
+	  dE_WORK(I)=dE_WORK(I)*R(I)*R(I)*T1*CLUMP_FAC(I)
+	  RAD_DECAY_LUM(I)=dE_RAD_DECAY(I)*R(I)*R(I)*T2*CLUMP_FAC(I)		!As ergs/cm^3
 	END DO
 !
-	CALL LUM_FROM_ETA(LLUMST,R,ND)
-	CALL LUM_FROM_ETA(DIELUM,R,ND)
-	CALL LUM_FROM_ETA(DEP_RAD_EQ,R,ND)
-	CALL LUM_FROM_ETA(dE_WORK,R,ND)
-	CALL LUM_FROM_ETA(RAD_DECAY_LUM,R,ND)
-	CALL LUM_FROM_ETA(XRAY_LUM_TOT,R,ND)
-	CALL LUM_FROM_ETA(XRAY_LUM_0P1,R,ND)
-	CALL LUM_FROM_ETA(XRAY_LUM_1KeV,R,ND)
+	CALL LUM_FROM_ETA_V2(LLUMST,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(DIELUM,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(DEP_RAD_EQ,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(dE_WORK,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(RAD_DECAY_LUM,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(XRAY_LUM_TOT,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(XRAY_LUM_0P1,R,LUM_FROM_ETA_METHOD,ND)
+	CALL LUM_FROM_ETA_V2(XRAY_LUM_1KeV,R,LUM_FROM_ETA_METHOD,ND)
 !
 	IF(PLANE_PARALLEL_NO_V)THEN
 	  MECH_LUM(1:ND)=0.0D0
@@ -3646,10 +3691,10 @@
 !
 	CALL WRITV(STEQ_T,ND,'Radiative Equlibrium Equation',LU_SE)
 !
-	CALL TUNE(1,'SOLVE_FOR_POPS')
+	CALL TUNE(IONE,'SOLVE_FOR_POPS')
 	CALL SOLVE_FOR_POPS(POPS,NT,NION,ND,NC,NP,NUM_BNDS,DIAG_INDX,
 	1      MAXCH,MAIN_COUNTER,IREC,LU_SE,LUSCR,LST_ITERATION)
-	CALL TUNE(2,'SOLVE_FOR_POPS')
+	CALL TUNE(ITWO,'SOLVE_FOR_POPS')
 !
 ! If we have changed the R grid, we need to recomput the angular quadrature weitghts,
 ! and put the atom density ect on the new radius grid.
@@ -3747,6 +3792,28 @@
 	  END IF
 	END IF
 !
+	IF(DO_CLUMP_MODEL .AND. MAXCH .LT. 50.0D0 .AND. .NOT. FIXED_T .AND. 
+	1         LAST_LAMBDA .NE. MAIN_COUNTER)THEN
+	  CALL AUTO_CLUMP_REV(POPS,CLUMP_LAW,CLUMP_PAR,N_CLUMP_PAR,CHK,ND,NT,LUIN)
+	  IF(CHK)THEN
+	    CALL SET_ABUND_CLUMP(MEAN_ATOMIC_WEIGHT,ABUND_SUM,LUER,ND)
+	    CALL SCR_RITE_V2(R,V,SIGMA,POPS,IREC,MAIN_COUNTER,RITE_N_TIMES,
+	1                LAST_NG,WRITE_RVSIG,NT,ND,LUSCR,NEWMOD)
+	    LAMBDA_ITERATION=.TRUE.
+            FIXED_T=.TRUE.
+	    RD_FIX_T=.TRUE.
+	    FIX_IMPURITY=.FALSE.
+	    COMPUTE_BA=.TRUE.
+	    MAIN_COUNTER=MAIN_COUNTER+1
+	    MAXCH=200
+	    IF(LST_ITERATION .AND. WRITE_RATES)THEN
+	      LST_ITERATION=.FALSE.
+	      CLOSE(LU_NET); CLOSE(LU_DR); CLOSE(LU_EW)
+	      CLOSE(LU_HT); CLOSE(LU_NEG)
+	    END IF
+	  END IF
+	END IF
+!
 ! Initialize pointer file for storage of BA matrix.
 !
 	I=-1000
@@ -3783,8 +3850,7 @@
 	  WRITE(LUMOD,'(/,''Model Started on:'',15X,(A))')TIME
 	  CALL DATE_TIME(TIME)
 	  WRITE(LUMOD,'(''Model Finalized on:'',13X,(A))')TIME
-	  WRITE(LUMOD,
-	1       '(''Main program last changed on:'',3X,(A))')PRODATE
+	  WRITE(LUMOD,'(''Main program last changed on:'',3X,(A))')PRODATE
 	  WRITE(LUMOD,'()')
 !
 	  STRING=' '
@@ -4210,6 +4276,7 @@
 	  IF(FILE_OPEN)THEN
 	    CLOSE(UNIT=LUER)
 	    CALL GEN_ASCI_OPEN(LUER,'OUTGEN','OLD','APPEND',' ',IZERO,IOS)
+	    CALL SET_LINE_BUFFERING(LUER)
 	  END IF
 	  CLOSE(UNIT=LU_SE)
 	  CALL GEN_ASCI_OPEN(LU_SE,'STEQ_VALS','OLD','APPEND',' ',IZERO,IOS)
@@ -4311,6 +4378,7 @@
 	       LAMBDA_ITERATION=.FALSE.
 	       FIXED_T=RD_FIX_T
 	    END IF
+	    CALL SPECIFY_IT_CYCLE(COMPUTE_BA,LAMBDA_ITERATION,FIXED_T)
 !
 ! Check to see if the user has changed IN_ITS to modify the number of iterations being
 ! undertaken. If the file has not been modified, no action will be taken. The use may
@@ -4356,6 +4424,7 @@
 	    CLOSE(UNIT=LUSCR,STATUS='DELETE')
 	  END IF
 	  CALL TUNE(ITWO,'GIT')
+	  CALL TUNE(ITHREE,' ')
 !
 !	  WRITE(6,*)'Inserted temporary fudge for FIXED_T'
 !	  FIXED_T=.TRUE.

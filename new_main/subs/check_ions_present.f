@@ -31,8 +31,8 @@
 	INTEGER DPTH_INDX
 	LOGICAL FIRST_TIME
 !
-	INTEGER LUER,ERROR_LU
-	EXTERNAL ERROR_LU
+	INTEGER LUER,ERROR_LU,LUWARN,WARNING_LU
+	EXTERNAL ERROR_LU,WARNING_LU
 !
 ! The following table gives IP in eV. Grabbed off the web.
 ! As its only used to guide the user, the IP's need not be very accurate.
@@ -86,6 +86,7 @@
 !
 	MAX_RATIO=1.0D0
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU( )
 !
 ! Determine ionzation fractions.
 !
@@ -106,14 +107,14 @@
 !
 ! Check whether the lowest ionization stages might be omitted.
 !
-	WRITE(LUER,'(A,A)')' Checking whether some low ionization stages ',
+	WRITE(LUWARN,'(/,/,A,A)')' Checking whether some low ionization stages ',
 	1                        'may be omitted from the model.'
 	DO ISPEC=1,NUM_SPECIES
 	  IF(SPECIES_PRES(ISPEC))THEN
 	    DO ID=SPECIES_BEG_ID(ISPEC),SPECIES_END_ID(ISPEC)
 	      IF(MAX_RATIO(ID) .GT. LOW_LIMIT)THEN
 	        DO K=SPECIES_BEG_ID(ISPEC), ID-1
-	          WRITE(LUER,'(3X,A,T11,A,ES8.2,A,ES8.2)')TRIM(ION_ID(K)),
+	          WRITE(LUWARN,'(3X,A,T11,A,ES8.2,A,ES8.2)')TRIM(ION_ID(K)),
 	1           ' may not need to be include in model. Its maximum fractional abundance of ',
 	1           MAX_RATIO(K),' < ',LOW_LIMIT
 	        END DO
@@ -125,7 +126,7 @@
 !
 ! Check whether the highest ionization stages might be omitted.
 !
-	WRITE(LUER,'(A,A)')' Checking whether some high ionization stages ',
+	WRITE(LUWARN,'(A,A)')' Checking whether some high ionization stages ',
 	1                        'may be omitted from the model.'
 	DO ISPEC=1,NUM_SPECIES
 	  IF(SPECIES_PRES(ISPEC))THEN
@@ -137,7 +138,7 @@
 	          ELSE
 	            J=NINT(ATM(K)%ZXzV)
 	          END IF
-	          WRITE(LUER,'(3X,A,T11,A,ES8.2,A,ES8.2)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(J)),
+	          WRITE(LUWARN,'(3X,A,T11,A,ES8.2,A,ES8.2)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(J)),
 	1             'may not need to be include in model. Its maximum fractional abundance is ',
 	1            MAX_RATIO(K),' < ',HIGH_LIMIT
 	        END DO
@@ -154,13 +155,13 @@
 	  ID=SPECIES_BEG_ID(ISPEC)
 	  IF(SPECIES_PRES(ISPEC) .AND. ATM(ID)%ZXzV .GT. 1.1D0)THEN
 	    IF(FIRST_TIME)THEN
-	      WRITE(LUER,'(A,A)')' Checking whether lower ionization stages ',
+	      WRITE(LUWARN,'(A,A)')' Checking whether lower ionization stages ',
 	1                             'need to be included in model'
 	      FIRST_TIME=.FALSE.
 	    END IF
 	    IF(MAX_RATIO(ID) .GT. 0.1D0)THEN
 	         K=NINT(ATM(ID)%ZXzV)-1
-	         WRITE(LUER,'(3X,A,T11,A,A,A,ES8.1,A)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(K)),
+	         WRITE(LUWARN,'(3X,A,T11,A,A,A,ES8.1,A)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(K)),
 	1              'may need to be included in the model (Maximum ',TRIM(ION_ID(ID)),
 	1              ' ionization fraction is',MAX_RATIO(ID),')'
 	    ELSE
@@ -199,17 +200,17 @@
 	       ION_FRAC=ION_FRAC*(T_VAL**1.5D0)*EXP(-HDKT_EV*IP(ID,K)/T_VAL)/2.07D-22/ED_VAL
 	       IF(ION_FRAC .GT. HIGH_LIMIT)THEN
 	         IF(FIRST_TIME)THEN
-	           WRITE(LUER,'(A)')' '
-	           WRITE(LUER,'(A,A)')' Checking whether additional higher ionization stages ',
+	           WRITE(LUWARN,'(A)')' '
+	           WRITE(LUWARN,'(A,A)')' Checking whether additional higher ionization stages ',
 	1                             ' need to be included in the model.'
-	           WRITE(LUER,'(A,A,/,A)')' NB: If XzV needs to be included it will also be necessary to',
+	           WRITE(LUWARN,'(A,A,/,A)')' NB: If XzV needs to be included it will also be necessary to',
 	1                             ' include XzIV, as this was',
 	1                             '      only included as the ground state.'
-	           WRITE(LUER,'(A,X,A,I3,A,ES10.4,A,ES10.4)')' Parameters at check depth:',
+	           WRITE(LUWARN,'(A,X,A,I3,A,ES10.4,A,ES10.4)')' Parameters at check depth:',
 	1	          'Depth=',DPTH_INDX,'   T=',T_VAL,'   ED=',ED_VAL
 	           FIRST_TIME=.FALSE.
 	         END IF
-	         WRITE(LUER,'(3X,A,T11,A,ES8.1,A)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(ID)),
+	         WRITE(LUWARN,'(3X,A,T11,A,ES8.1,A)')TRIM(SPECIES_ABR(ISPEC))//TRIM(GEN_ION_ID(ID)),
 	1              'may need to be included in the model (IF ~',ION_FRAC,')'
 	         IF(ION_FRAC .GT. 1.0D0)ION_FRAC=1.0D0
 	         EXTRA_INT_EN=EXTRA_INT_EN+ION_FRAC*POP_SPECIES(DPTH_INDX,ISPEC)*IP(ID,K)
@@ -246,18 +247,18 @@
 	END DO
 !
 	T1=1.5D0*0.86173D0*T(DPTH_INDX)*(ED(DPTH_INDX)+ATOM_ION_DENSITY)
-	WRITE(6,'(A)')' '
-	WRITE(6,'(A,ES9.3,A)')'                   Temperature (10^4 K) is ',T(DPTH_INDX)
-	WRITE(6,'(A,ES9.3,A)')'           Atom/ion density (per cm^3)) is ',ATOM_ION_DENSITY
-	WRITE(6,'(A,ES9.3,A)')'                 Electrons per atom/ion is ',ED(DPTH_INDX)/ATOM_ION_DENSITY
-	WRITE(6,'(A,ES9.3,A)')' Total thermal kinetic energy (ev/atom) is ',T1/ATOM_ION_DENSITY
-	WRITE(6,'(A,ES9.3,A)')'  Approximate internal energy (ev/atom) is ',INTERNAL_ENERGY/ATOM_ION_DENSITY
-	WRITE(6,'(A,ES9.3,A)')' App. missing internal energy (ev/atom) is ',EXTRA_INT_EN/ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A)')' '
+	WRITE(LUWARN,'(A,ES9.3,A)')'                   Temperature (10^4 K) is ',T(DPTH_INDX)
+	WRITE(LUWARN,'(A,ES9.3,A)')'           Atom/ion density (per cm^3)) is ',ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A,ES9.3,A)')'                 Electrons per atom/ion is ',ED(DPTH_INDX)/ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A,ES9.3,A)')' Total thermal kinetic energy (ev/atom) is ',T1/ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A,ES9.3,A)')'  Approximate internal energy (ev/atom) is ',INTERNAL_ENERGY/ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A,ES9.3,A)')' App. missing internal energy (ev/atom) is ',EXTRA_INT_EN/ATOM_ION_DENSITY
 !
 ! 4/c . sigma T^4 conerted to eV  (NB: Int J = sigma T^4 / pi).
 !
 	T1=4.0D0*3.14159265D0*5.670400D-05*1.0D+16/1.60217733D-12/2.99792458D+10
-	WRITE(6,'(A,ES9.3,A)')'             Radiation energy (ev/atom) is ',(T1*T(DPTH_INDX)**4)/ATOM_ION_DENSITY
+	WRITE(LUWARN,'(A,ES9.3,A)')'             Radiation energy (ev/atom) is ',(T1*T(DPTH_INDX)**4)/ATOM_ION_DENSITY
 	FLUSH(UNIT=6)
 !
 	RETURN

@@ -41,6 +41,7 @@
 	INTEGER ND_OLD_P1
 	INTEGER ND_P1
 	INTEGER LU_ER
+	INTEGER LU_WARN
 	INTEGER, SAVE :: LU_IN=0
 	LOGICAL, SAVE :: FIRST_TIME=.TRUE.
 !
@@ -79,17 +80,18 @@
 	INTEGER ML		!Used as frequency index
 	INTEGER IOS		!I/O error identifier
 	INTEGER REC_LENGTH 
-	INTEGER ERROR_LU
+	INTEGER ERROR_LU,WARNING_LU
 	LOGICAL EQUAL
-	EXTERNAL EQUAL,ERROR_LU
+	EXTERNAL EQUAL,ERROR_LU,WARNING_LU
 !
 	CHARACTER*30 FILE_DATE
 	LOGICAL FILE_OPEN
 !
 	IF(FIRST_TIME)THEN
 	  LU_ER=ERROR_LU()
+	  LU_WARN=WARNING_LU()
 	  CALL GET_LU(LU_IN,'GET_JH_AT_PREV_TIME_STEP')
-	  WRITE(6,*)'Logical unit for JH input is',LU_IN
+	  WRITE(LU_WARN,'(/,X,A,I5)')'Logical unit for JH input is',LU_IN
           CALL READ_DIRECT_INFO_V3(I,REC_LENGTH,FILE_DATE,'JH_AT_OLD_TIME',LU_IN,IOS)
           IF(IOS .NE. 0)THEN
             WRITE(LU_ER,*)'Error opening/reading JH_AT_OLD_TIME_INFO file: check format'
@@ -268,7 +270,7 @@
 ! We skip 2 records, because of the R,V & grey J & H output.
 !
 	  IREC=ST_IREC+2
-	  WRITE(6,*)'Start record and IREC are ',ST_IREC,IREC
+	  WRITE(LU_WARN,*)'Start record and IREC are ',ST_IREC,IREC
 	END IF
 !
 ! We read the data in blocks of NSM for reasons of efficiency.

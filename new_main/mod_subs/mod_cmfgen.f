@@ -6,6 +6,7 @@
 !
 	MODULE MOD_CMFGEN
 !
+! Incoprated 02-Jan-2015: VTURB_VEC, ARAD, GAM2, etc added (for depth depndent profiles).
 ! Altered 29-Nov-2011 : OLD_LEV_POP_AVAIL added as vector.
 ! Altered 25-Sep-2011 : LOG_XzVLTE_F, XzVLTE_F_ON_S, LOG_XzVLTE arrays added (26-Nov-2010/5-Apr-2011).
 !                         Length of level name changed to 40.
@@ -101,6 +102,9 @@
 	  REAL*8, ALLOCATABLE :: AXzV_F(:,:)		!Oscillator strength (A(I,j), i<j)
 	  REAL*8, ALLOCATABLE :: EDGEXzV_F(:)		!Ionization energy to g.s. (10^15 Hz)
 	  REAL*8, ALLOCATABLE :: GXzV_F(:)		!Level statistical weights in full atom
+	  REAL*8, ALLOCATABLE :: ARAD(:)                !Inverse radiative lifetime of level
+	  REAL*8, ALLOCATABLE :: GAM2(:)                !Collisional profile parameter.
+	  REAL*8, ALLOCATABLE :: GAM4(:)                !Collisional profile parameter.
 	  INTEGER, ALLOCATABLE :: F_TO_S_XzV(:)		!Link of full levels to super levels
 	  INTEGER, ALLOCATABLE :: INT_SEQ_XzV(:)
 	  CHARACTER(LEN=40), ALLOCATABLE :: XzVLEVNAME_F(:)	!Level name
@@ -150,6 +154,8 @@
 	  INTEGER NXzV_IV		!Number of important levels in SL atom
 	  INTEGER EQXzV			!Equation in BA matrix for g.s. of atom
 	  INTEGER N_XzV_PHOT		!Number of states species can ionize to.
+!
+	  LOGICAL, ALLOCATABLE :: OBSERVED_LEVEL(:)     !Link of full levels to super levels
 !
 ! Ionization balance equation for each ion. Used to access BAION matrix.
 !
@@ -204,6 +210,7 @@
 	REAL*8, ALLOCATABLE :: CLUMP_FAC(:)	!Volume filling factor for clumps
 	REAL*8, ALLOCATABLE :: POPION(:)	!Ion density
 	REAL*8, ALLOCATABLE :: VOL_EXP_FAC(:)	!Volume expansion factor (for time dependent SN models).
+	REAL*8, ALLOCATABLE :: VTURB_VEC(:)     !Depth dependent turbulent velocity
 !
 	REAL*8 STARS_MASS			!In Msun
 !

@@ -378,16 +378,26 @@ mod\_prrr.exe        & Creates summary of PRRRXzV file (recombination/ionization
                                & \hspace{0.5 in} a given species. \\
 n\_col\_merge.exe     &     Merge N postscript files into a single file. \\
 n\_multi\_merge.exe     &     Merge N postscript files into a single file (row/columns). \\
-rewrite\_dc.exe        & Rewrite departure coefficient file. \\
+rev\_rvsing.exe             & Modify RVS\_COL file. Can modify file for change in \\
+                                      & mass-loss rate, velocity law, number of depth points,\\
+                                      &  grid spacing etc. \\
+rev\_rdinr.exe             & Modify file (departure coefficient format) that can be used \\
+                                   &to define the R grid (RVS\_COL cannot be in use). \\
+                                      & velocity law, number of depth points, grid spacing etc. \\
+                                      &Many options.\\                                      
+rewrite\_dc.exe          & Rewrite departure coefficient file.  \\
 rewrite\_scr.exe        & Rewrite SCRTEMP to reduce its size (default is final 2 iterations) \\
-                                           & \hspace{0.5 in} or its format. \\
+                                           & \hspace{0.5 in} or change its format. \\
+set\_new\_sn\_mod.exe        & Changes SN associated options in VADAT file making it easier \\
+                                           & to go from time step 1 to 2. Can also be used for later time steps. \\
 plt\_dfr.exe            & Plot the origin of the observed flux (as computed by cmf\_flux.exe) \\
                             & \hspace{0.5 in}  as a function of depth. \\
-plt\_jh.exe            & Plot {\bf J, H, $\chi$, $\eta$} etc from files with EDDFACTOR like formats. H, $\chi$, and \\ 
-                                  & \hspace{0.5 in} $\eta$ files can be created by cmf\_fluxe.exe \\
+plt\_jh.exe            & Plot {\bf J, H, $\chi$, $\eta$} etc from files with EDDFACTOR like formats. H, $\chi$,  \\ 
+                                  & \hspace{0.5 in} and $\eta$ files can be created by cmf\_fluxe.exe \\
 plt\_jh\_cur.exe            & Similar to plt\_jh.exe, but access the JH file produced for SN models. \\ 
 plt\_ip.exe &         Plot/examine {\bf I} as a function of impact parameter and frequency. \\
-plt\_phot\_raw.exe        & Plot cross-sections/check recombination data from photoionization file(s). Photoionization cross-sections can also be plotted in DISPGEN. \\
+plt\_phot\_raw.exe        & Plot cross-sections/check recombination data from photoionization \\
+                                    & file(s). Photoionization cross-sections can also be plotted in DISPGEN. \\
 plt\_scr.exe        &     Plot SCRTEMP file. \\
 tlusty\_vel.exe        & Create a hydrostatic structure from a TLUSTY model. \\
 wind\_hyd.exe        & Create a wind with a theoretical hydrostatic structure. \\
@@ -1732,6 +1742,41 @@ be 30.
 
 \end{indented_list} 
 
+\vfill
+\eject
+\item[SPECIFY\_IT\_CYCLE]  When this control file is present it can be used to force a particular iteration sequence of iteration types. The cycle is repeated unless the NORM option is found. Specify only one option, per line. The number of consecutive iterations of the same type is specified by a number following the option -- if no number is present 1 is assumed. Do not place [] around the iteration options. There is no check on the validity of
+the option ordering. Thus users should not allow T to vary with a fixed BA  if the previous computation geld T fixed. It is all right to follow a LAMBDA-iteration with a full iteration PROVIDED the BA matrix was computed on an earlier iteration (a LAMBDA iteration does not overwrite the BAMAT file). SPECIFY\_IT\_CYCLE  may be changed while the program is running. Unrecognized options are deleted from the file and the default iteration option is used.
+The file is read in \$cmfdist/subs/specfy\_it\_cycle.f.
+
+\begin{plt_list}{FULL(FIXT,FIXBA) N}
+
+\item[LAM  N]  Do N lambda iterations.
+\item[FULL  N] Do N full iterations -- the BA matrix is computed and the temperature is allowed to vary.
+\item[FULL(FIXT)  N] Do N full iterations -- the BA matrix is computed but the temperature is held fixed.
+\item[FULL(FIXBA) N] Do N full iterations -- the BA matrix is not computed. Behavior of T variation depends on the previous iteration. 
+\item[FULL(FIXT,FIXBA) N] Do N full iterations -- the BA matrix is not computed and the temperature is held fixed.
+\item[NORM] Return to a normal iteration cycle. When this record is reached (it is cycled to the top) lower statements are ignore.
+
+\end{plt_list} 
+
+\vspace{-10pt}
+\item[ADJUST\_CORRECTIONS]  Optional control file containing parameters that can be used to scale corrections in order to facilitate convergence. This control file may be changed while the program is running. This file is used by \$cmfdist/subs/iddle\_pop\_corrections\_v2.f.
+
+\begin{indented_list}{ATOM\_DENNNN}
+
+\item[RELAX]  A value of Z (say 0.5) indicates that all corrections should be scaled by a factor of 0.5. $Z <1$ is equivalent to under-relaxation, and can help difficult models (especially those oscillating) converge. $Z>1$ corresponds to over-relaxation and might help a model converge faster (or it might cause it to diverge, so
+be warned!).
+
+\item[T\_LIM] Maximum fractional change allowed to the temperature.
+
+\item[LST] Beginning depth. If not present, 1 is assumed.
+
+\item[LEND] End depth. If not present, ND is assumed.
+
+\item[CONSIT\_CNT] Checks every CONSIST\_CNT iterations whether adjacent populations are consistent. No consistency check is performed when the parameter is not present, or if it is $\le$ 0. This option may help
+models struggling to converge early on but users should note it is still under development.
+
+\end{indented_list}
 
 \vfill
 \eject
@@ -2374,6 +2419,10 @@ As for LOGLOG except derivatives estimated using
 
 \item[THK\_CONT]    Switch to utilize the thick boundary condition for the computation of the continuum. In CMF mode, this option only applies to the true continuum, where as in blanketing mode, where there is no ``distinction" between lines and continuua, it applies to all frequencies. In blanketing mode the atmosphere is extended by extrapolation. In other modes a crude approximation is utilized. Preferred default is TRUE --- this generally gives a smooth and more realistic run of properties at the outer boundary. Do {\color{red} NOT} confuse this option with [THK\_LINE]-- that option is only refers to lines when using the CMF mode.
 
+\item
+[REXT\_FAC]  -- Factor to extend outer radius for a thick continuum model. Default is
+ model dependent.
+ 
 \item[TRAP\_J]    Method to use for the computation of weights for the calculation of the moments J, H, K, and N. [TRAP\_J]=T is the preferred option. This indicates to assume a linear approximation for the specific intensity I between each node. For J this is equivalent to a trapezoidal rule. For other moments the appropriate weight $(\mu, \mu^2, \mu^3)$ is specifically taken into account when computing the weight.
 
 \item[OBC\_TYPE]    Hidden logical variable: Outer boundary condition type -- used by me for development work. Default is 1.
@@ -2387,14 +2436,60 @@ As for LOGLOG except derivatives estimated using
 
 \begin{mylist}{longest label}
 
+\item[FIX\_DOP] Default is TRUE. Indicates the Doppler profiles of fixed width should be
+used when computing intrinsic line-broadnening profiles.
+
 \item[TDOP]    Presently the line absorption profile is assumed to be a DOPPLER profile that is independent of depth and the atomic species. The width of the Doppler profile depends on 3 parameters --- the adopted electron temperature [TDOP] in program units of 10$^4$\,K, the adopted atomic mass  [AMASS\_DOP] in a.m.u., and the turbulent velocity [VTURB] in \kms. One day  I will update CMFGEN to use variable Doppler widths etc.
 
-\item[AMASS\_DOP]    Atomic mass (in a.m.u) used to compute the Doppler profile. At present this is the same for all species at all depths. The best approach is probably to set AMASS\_DOP=1.0D+40. Then use VTURB to control the width of the line absorption profile.
+\item[AMASS\_DOP]    Atomic mass (in a.m.u) used to compute the Doppler profile. At present this is the same for all species at all depths. The best approach is probably to set AMASS\_DOP=1.0D+40. Then use VTURB to control the width of the line absorption profile when [FIX\_DOP]=TRUE.
 
-\item[VTURB]    Turbulent velocity, in km\,s$^{-1}$, used to compute the line absorption profile. At present this is assumed to be depth independent, and the same for all species.
+\item[VTURB]    Turbulent velocity, in km\,s$^{-1}$, used to compute the line absorption profile. At present this is assumed to be depth independent, and the same for all species. Only used when
+[FIX\_DOP]=TRUE.
 
-\item[MAX\_DOP]    Maximum half-width of resonance zone in Doppler widths. Because of the possibility of very strong lines, a value of 6 is used. For weak lines a smaller value could be utilized, but at present all lines use the same value.
+\item[VTURB\_MIN] - Minimum turbulent velocity (only used when [FIX\_DOP]=FALSE).
 
+\item[VTURB\_MAX] - Maximum turbulent velocity (only used when [FIX\_DOP]=FALSE). A linear interpolation in V(r) is used to determine the turbulent velocity at other radii.
+
+\item[GLOBAL\_PROF]    Indicates method for determining intrinsic line absorption profiles when
+[FIX\_DOP]=FALSE. Options are:
+    
+\begin{plt_list}{LIST\_VOIGT}
+
+\item[NONE]    Options for each species determined by [PROF\_XzV]. 
+\item[DOP\_FIX] Fixed Doppler width for all species. 
+\item[DOP\_SPEC] Species dependent Doppler width but depth independent.
+\item[DOPPLER]    Species and depth dependent variable Doppler width.
+\item[HZ\_STARK]    Stark profile (convolved with Doppler profile) for H I and He II. 
+\item[LIST]    Profile options for individual lines are specified in the file FULL\_STRK\_LIST.
+\item[LIST\_VOIGT]  Use the option in FULL\_STRK\_LIST when available. Uses a Doppler profile for “weak” lines. Uses VOIGT profile with radiative damping for strong lines.
+
+\end{plt_list}
+
+\item
+[OPAC\_LIMS]  Set prof limits by line to cont. ratio?'
+
+\item 
+[DOP\_PROF\_LIMIT] Edge limits for Doppler line profile when [OPAC\_LIMS]=TRUE.
+Given as a ratio of line opacity to continuum opacity.
+           
+\item
+[VOIGT\_PROF\_LIMIT] Edge limits for Voigt line profile when [OPAC\_LIMS]=TRUE.
+Given as a ratio of line opacity to continuum opacity.
+
+\item
+[MAX\_ED\_PROF] Sets the maximum electron density that will be used in the evaluation of Stark profiles
+computed via the Griem routine. This is useful, for example, to limit the size of the profile at depth, especially in CMFGEN calculations. NB: Current tabulated stark profiles often have hard wired electron density limits of $10^{17}$\,cm$^{-3}$. Further, there are issues with He\,{\sc i} 4388 above an electron density of $10^{16}$\,cm$^{-3}$.
+
+\item
+[V\_PROF\_LIM] Sets the the profile limits (=1/2 full width) of the intrinsic line profile. Profile is limited to the range set by [V\_PROF\_LIM], and the integration for rates in integrated over this limit. Does not effect Stark profile,
+and it is superseded by any limit in file listing line profiles. For CMF\_FLUX\_V5 the default is 5000\,\kms, while for CMFGEN it is 3000\,\kms. Increasing this limit will often remove (or decrease) errors in OUTGEN or OUT\_FLUX
+regarding profile normalization at high electron densities.
+
+\item
+[NORM\_PROF]: Indicates that the profile (non-Doppler) area should be normalized to unity. Essential for CMFGEN, and is the default option in both CMFGEN and CMF\_FLUX\_V5.
+
+\item[MAX\_DOP]    Maximum half-width of resonance zone in Doppler widths. Because of the possibility of very strong lines, a value of 6 is used. For weak lines a smaller value could be utilized, but at present all lines use the same value (when FIX\_DOP=T).
+    
 \item[FRAC\_DOP]    Spacing in CMF resonance zone in Doppler widths. For statistical equilibrium calculations, particularly model grid calculations, use 1.0. Because of numerical instabilities, a smaller value may not give increased accuracy. The presence of instabilities depends on both the spatial and frequency grid scales, and the adopted Doppler (thermal + turbulent) velocities. We are trying to develop automatic methods to better handle the instabilities.  For the observed flux calculations use 0.5, together with VFRAC\_FG and VFRAC\_MOM set to 1.  This is generally more stringent than needed, but it does give more accurate profiles with less bleeding to the red (for OBSFLUX). Note that VFRAC\_FG and VFRAC\_MOM only directly affect the calculation in the comoving-frame. In the observer's frame it only affects the computed spectrum via the electron-scattering emissivity.
 
 \item[dV\_CMF\_PROF]    Frequency spacing in km\,s$^{-1}$ across the CMF profile (i.e., from the red edge of the resonance zone to +2$V_{\infty}$). Utilized primarily in the statistical equilibrium calculations. Use a value a few times that of the DOPPLER width. When the final flux calculation is performed this is reduced to FRAC\_DOP$\times$DOPPLER\_WIDTH (if [INS\_F\_FORM\_SOL] is TRUE).
@@ -2441,6 +2536,10 @@ As for LOGLOG except derivatives estimated using
 
 \item
 [VERBOSE]    Hidden logical keyword: Indicates that additional error messages, warnings etc are to be output. Option is not fully implemented. Default is FALSE.
+
+\item
+[WRITE\_RATES]   Defalut is FALSE. Indicates whether the very large ascii fles, NETRATE, TOTRATE, and LINEHEAT should be created.
+
 
 \end{mylist}
 %\end{description}
@@ -2528,7 +2627,6 @@ treat strong lines and the cooling, this can effect convergence.
 He\,{\sc i}(1s\,2s\,$^3$S) + H(1s\,$^2$S)  $\rightarrow$ HeI(1s$^2$\,$^1$S) +  H$^+$ + e$^-$
 
 Recall  that the 1s\, 2s\,$^3S$ state of He\,{\sc i} is highly metastable.
-
 
 \item[INC\_RAY]    Include Rayleigh scattering for H. Accurate longward of Lya, but changes needed at shorter wavelengths. In practice, this should make little difference as very little is flux emitted at these wavelengths when Rayleigh scattering is important. Rayleigh scattering due to neutral He and He$^+$ has not yet been included.    
 
@@ -2778,11 +2876,23 @@ TIMING, can be checked to see that the update of the BA matrix is not taking too
 
 \item[JG\_W\_V]    Include velocity terms when evaluating initial grey temperature structure.
 
+\item[COMP\_GREY\_LST\_IT]  -- Indicates whether grey solution should  be computed on the last iteration. The computation of the grey solution was an issue for some SN models, but a failure
+no-longer cause the code to crash.
+
 \item[GAMRAY\_TRANS] When set to LOCAL, gamma-rays deposit their energy locally --- their is no radiative transport. When set to ABS\_TRANS a simple approximation (which assumes pure absorption) is used. When set to NONLOCAL, data describing the energy deposition is read in from a file.
 
 \item[GAMMA\_SLOW] Add radioactivity decay energy slowly? This option is mainly used for developmental work.
 
 \item[DECNRG\_SCLFAC\_BEG] Initial Scale factor for adding decay energy.
+
+\item
+[N\_IB\_INS]  Number of points for fine grid at inner boundary (default is 2)
+
+\item
+[N\_OB\_INS]  Number of points for fine grid at outer boundary (default is 3)
+
+\item
+[RMAX\_ON\_RCORE]  Use when you want to shrink the outer radius of a SN model.
 
 \item[REV\_RGRID]    Indicates whether R grid should be automatically revised, after each iteration. Allows better treatment of H ionization fronts.
 
@@ -2895,13 +3005,15 @@ a continuum only calculation.
 
 \item[FULL\_STRK\_LIST]    Contains type of intrinsic line absorption profiles to be used for individual lines if [GLOBAL\_PROF] is set to LIST or LIST\_VGT. Use the latest file in \$cmfdist/misc/.
 
+
+\item[FORB\_LINE\_CONTOL] This simple file is not needed but provides a quick means of omitting forbidden lines (lines between levels of the same parity) when computing the spectrum: File should contain lines with one species (i.e., C2 or CIII ) per line, or ALL. For the later case all forbidden lines  are deleted.
+
 \item[Atomic data files]    As used by CMFGEN. Assigned using \\
  \hbox{} \hspace{20pt}   {\bf batch.sh ass}. \\
 Taken care of by batobs.sh.
 
 \item[Output files from CMFGEN]    MODEL, RVTJ,  POPDUM (for all species). The {\bf batobs.sh}
-points to the RVTJ file (usually ../RVTJ to indicate that RVTJ is in directory below the spectral calculation).
-CMF\_FLUX assumes that the other required CMFGEN files are in the same directory as RVTJ.
+points to the RVTJ file (usually ../RVTJ to indicate that RVTJ is in directory below the spectral calculation). CMF\_FLUX assumes that the other required CMFGEN files are in the same directory as RVTJ.
 
 \end{file_list}
 
@@ -3243,10 +3355,11 @@ purposes you need to know less than half-a-dozen commands.
             \item[L]    Normal line 
             \item[E]    Non-monotonic
             \item[B]    Broken
-            \item[I]    Invisible
+            \item[I]     Invisible
             \item[V]    Vertical lines 
-            \item[A]   Histogram - assume the X values are the vertices of the box.
-            \item[H]  Histogram-  box is drawn from [x(i-1)+x(i)]/2 to [x(i)+x(i+1)]/2.
+            \item[A]    Histogram - assume the X values are the vertices of the box.
+            \item[H]    Histogram-  box is drawn from [x(i-1)+x(i)]/2 to [x(i)+x(i+1)]/2.
+            \item[LG]  Plots $ \log | {\hbox{\rm Data}} |$ but indicates by distinct marker data that was originally negative. 
 \end{plt_list_2nd}
 \item[CC]  Change color settings
 \item[CP]    Change pens (Color Index)

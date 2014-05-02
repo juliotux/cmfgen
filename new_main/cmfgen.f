@@ -12,6 +12,7 @@
 	USE MOD_USR_OPTION
 	IMPLICIT NONE
 !
+! Icorporated 02-Jun-2014: Changes to allow depth dependent profiles.
 ! Altered: 29-Nov-2011: Memory allocation for OLD_LEV_POP_AVAIL added.
 ! Altered: 25-Sep-2011: ION_ID now set for last ioization stage (LAST_ION).
 !                          LOG_XzVLTE, LOG_XzVLTE_F and XzVLTE_F_ON_S allocated.
@@ -66,9 +67,9 @@
 	INTEGER ISPEC
 	INTEGER NUM_IONS_RD
 !
-	INTEGER LUER
-	INTEGER ERROR_LU
-	EXTERNAL ERROR_LU
+	INTEGER LUER,LUWARN
+	INTEGER ERROR_LU,WARNING_LU
+	EXTERNAL ERROR_LU,WARNING_LU
 !
 	LOGICAL AT_LEAST_ONE_ION_PRES
 	LOGICAL FND_END_OF_IONS
@@ -83,9 +84,11 @@
 	OPLIN=2.6540081D+08
 	EMLIN=5.27296D-03
 	LUER=ERROR_LU()
+	LUWARN=WARNING_LU()
 !
 ! Open output file for all errors and comments. Change DO_TERM_OUT to
-! have the output go to the terminal/batch log file.
+! have the output go to the terminal/batch log file. NB: The WARNINGS
+! file is overwritten.
 !
 	DO_TERM_OUT=.FALSE.                                   !TRUE.
 	IF(.NOT. DO_TERM_OUT)THEN
@@ -96,6 +99,12 @@
 	  END IF
 	  CALL SET_LINE_BUFFERING(LUER)
 	END IF
+	CALL GEN_ASCI_OPEN(LUWARN,'WARNINGS','UNKNOWN',' ',' ',IZERO,IOS)
+	IF(IOS .NE. 0)THEN
+	  WRITE(LUWARN,*)'Error opening WARNINGS in CMFGEN, IOS=',IOS
+	  STOP
+	END IF
+	CALL SET_LINE_BUFFERING(LUWARN)
 !
 ! Set all atomic data. New species can be simple added by insertion.
 ! Try to add species in order of atomic number. Hydrogen should ALWAYS
@@ -278,6 +287,10 @@
 	CALL RD_STORE_INT(NP,'NP',L_TRUE,'Number of impact parameters')
 	CALL RD_STORE_INT(NUM_BNDS,'NUM_BNDS',L_TRUE,
 	1        'Number of bands in linearization matrix (BA)')
+	IF(NUM_BNDS .NE. 1 .AND. NUM_BNDS .NE. 3)THEN
+	  WRITE(LUER,*)'Error: NUM_BNDS in MODEL_SPEC must be 1 or 3. Value is',NUM_BNDS
+	  STOP
+	END IF
 	CALL RD_STORE_INT(MAX_SIM,'MAX_SIM',L_TRUE,
 	1        'Maximum # of lines that cab treated simultaneously')
 	CALL RD_STORE_INT(N_LINE_MAX,'NLINE_MAX',L_TRUE,
@@ -432,6 +445,7 @@
 	IF(IOS .EQ. 0)ALLOCATE (POPION(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (CLUMP_FAC(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (VOL_EXP_FAC(ND),STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE (VTURB_VEC(ND),STAT=IOS)
 	IF(IOS .NE. 0)THEN
 	  WRITE(LUER,*)'Error in CMF_FLUX'
 	  WRITE(LUER,*)'Unable to allocate Atmosphere arrays'
@@ -480,6 +494,10 @@
 	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%INT_SEQ_XzV(NF),STAT=IOS)
 	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%XzVLEVNAME_F(NF),STAT=IOS)
 	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GXzV_F(NF),STAT=IOS)
+	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%ARAD(NF),STAT=IOS)
+	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GAM2(NF),STAT=IOS)
+	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GAM4(NF),STAT=IOS)
+	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%OBSERVED_LEVEL(NF),STAT=IOS)
 !
 	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%DXzV_F(ND),STAT=IOS)       ; ATM(ID)%DXzV_F(:)=0.0D0
 	  IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%DXzV(ND),STAT=IOS)         ; ATM(ID)%DXzV(:)=0.0D0
@@ -579,6 +597,8 @@
 !
 	ND_MAX=MAX(NT,2*ND)
 	NP_MAX=ND_MAX+2*NC
+!
+!       CALL INIT_PROF_MODULE(ND,NLINES_PROF_STORE,NFREQ_PROF_STORE)
 !
 	CALL CMFGEN_SUB(ND,NC,NP,NT,
 	1            NUM_BNDS,NION,DIAG_INDX,
