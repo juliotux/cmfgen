@@ -108,6 +108,11 @@
 !
 ! 
 !
+! This call allocates the vectors, and initialzes vectors such as TA etc.
+! It only allocates TA, if it is not already allocated.
+!
+	CALL MOD_VAR_MOM_ALLOC(ND)
+!
 	IF(INIT)THEN
 	  CALL DP_ZERO(TX, ND*ND*NM )
 	  CALL DP_ZERO(TVX, (ND-1)*ND*NM )
@@ -119,24 +124,10 @@
 	      WRITE(I,*)'ND=',ND,'ND(vec_size)=',VEC_LENGTH
 	      STOP
 	    END IF
-	  ELSE
-	    CALL MOD_VAR_MOM_ALLOC(ND)
 	  END IF
 	  DO I=1,ND
 	    JNUM1(I)=0.0D0
 	    RSQ_HNUM1(I)=0.0D0
-	    GAMH(I)=0.0D0
-	    GAM(I)=0.0D0
-	    W(I)=0.0D0
-	    WPREV(I)=0.0D0
-	    PSI(I)=0.0D0
-	    PSIPREV(I)=0.0D0
-	    TX_DIF_d_T(I)=0.0D0
-	    TX_DIF_d_dTdR(I)=0.0D0
-	    EPS_A(I)=0.0D0
-	    EPS_B(I)=0.0D0
-	    EPS_PREV_A(I)=0.0D0
-	    EPS_PREV_B(I)=0.0D0
  	  END DO
 	END IF
 !

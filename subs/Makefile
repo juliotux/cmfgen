@@ -36,6 +36,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(equal.o)\
       $(LIB)(esopac.o)\
       $(LIB)(estau.o)\
+      $(LIB)(estau_v2.o)\
       $(LIB)(eval_adiabatic.o)\
       $(LIB)(eval_ed.o)\
       $(LIB)(ew_format.o)\
@@ -119,6 +120,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(mon_int_ins_v1.o)\
       $(LIB)(mon_interp.o)\
       $(LIB)(mon_interp_fast.o)\
+      $(LIB)(mon_interp_fast_v2.o)\
       $(LIB)(monotonic_integrate.o)\
       $(LIB)(mult2d.o)\
       $(LIB)(multvec.o)\
@@ -184,7 +186,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(set_x_freq.o)\
       $(LIB)(set_gm_all.o)\
       $(LIB)(set_z_pop.o)\
-      $(LIB)(specfy_it_cycle.o)\
+      $(LIB)(specify_it_cycle_v2.o)\
       $(LIB)(simq.o)\
       $(LIB)(sobew.o)\
       $(LIB)(sobew_grad.o)\
@@ -215,6 +217,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(tuvghd_rh.o)\
       $(LIB)(ungrid.o)\
       $(LIB)(up_tx_tvx.o)\
+      $(LIB)(up_tx_tvx_noeps.o)\
       $(LIB)(up_tx_tvx_v2.o)\
       $(LIB)(up_tx_tvx_ext_v1.o)\
       $(LIB)(update_gam.o)\

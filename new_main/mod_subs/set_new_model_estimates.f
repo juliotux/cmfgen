@@ -33,6 +33,8 @@
 	USE LINE_MOD
 	IMPLICIT NONE
 !
+! Altered 31-Jan-2016 : Added SAVED_TWO_PHOT_METHOD.
+! Altered 07-Apr-2015 : Changed to SET_TWO_PHOT_V3.
 ! Altered 05-Apr-2011 : Many changes done in order to facilitate the USE of LTE populations
 !                         over a wider dynamic range (18-Dec-2010).
 !                         Single routine (REGRID_LOG_DC_V1) now used to read all departure coefficient files.
@@ -125,6 +127,7 @@
 !
 	CHARACTER*80 TMP_STRING
 	CHARACTER*20 SECTION
+	CHARACTER(LEN=12) SAVED_TWO_PHOTON_METHOD
 !
 ! Constants for opacity etc.
 !
@@ -134,6 +137,8 @@
 	LST_DEPTH_ONLY=.FALSE.
 	SECTION='CONTINUUM'
 	GREY_IOS=0
+	SAVED_TWO_PHOTON_METHOD=TWO_PHOTON_METHOD
+	TWO_PHOTON_METHOD='LTE'
 !
 ! Compute temperature distribution and populations. The call ' 'WSC are
 ! too allow NDOLD in the input files to be larger than ND.
@@ -223,11 +228,20 @@
 	1                POP_SPECIES(1,ISPEC),AT_NO(ISPEC),SPECIES_PRES(ISPEC),ND)
 	      END DO
 	      CALL GETELEC_V2(SPEC_DEN,AT_NO_VEC,I,ED,ND,LUIN,'GAMMAS_IN')
+!
+	      IF(INTERP_T_ON_R_GRID)THEN
+!
+! We do a simple linera interpolation on R, and assume that the Grey iteration procdure
+! will correct T in the inner region. Usefull when large changes in T.
+!
+	        CALL REGRID_T_ED(R,TA,T,POP_ATOM,ND,'T_IN')
+	      ELSE
 !                         
 ! The INIT_TEMP routine assumes that the T can interpolated using 
 ! a Spherical TAU scale computed using the electron scattering opacity.
 !
-	      CALL INIT_TEMP_V2(R,ED,CLUMP_FAC,T,LUM,T_INIT_TAU,ND,LUIN,'T_IN')
+	        CALL INIT_TEMP_V2(R,ED,CLUMP_FAC,T,LUM,T_INIT_TAU,ND,LUIN,'T_IN')
+	      END IF
 	    END IF
 	  END IF
 !
@@ -434,11 +448,12 @@
 !
 	    DO ID=1,NUM_IONS-1
 	       ID_SAV=ID
-	       CALL SET_TWO_PHOT_V2(ION_ID(ID), ID_SAV, ATM(ID)%XzVLTE, ATM(ID)%NXzV,
-	1          ATM(ID)%XzVLTE_F,   ATM(ID)%XzVLEVNAME_F,
-	1          ATM(ID)%EDGEXzV_F,  ATM(ID)%GXzV_F,
-	1          ATM(ID)%F_TO_S_XzV, ATM(ID)%NXzV_F, ND,
-	1          ATM(ID)%ZXzV,       ATM(ID)%EQXzV,  ATM(ID)%XzV_PRES)
+	       CALL SET_TWO_PHOT_V3(ION_ID(ID), ID_SAV, 
+	1          ATM(ID)%XzVLTE,          ATM(ID)%NXzV,
+	1          ATM(ID)%XzVLTE_F_ON_S,   ATM(ID)%XzVLEVNAME_F,
+	1          ATM(ID)%EDGEXzV_F,       ATM(ID)%GXzV_F,
+	1          ATM(ID)%F_TO_S_XzV,      ATM(ID)%NXzV_F, ND,
+	1          ATM(ID)%ZXzV,            ATM(ID)%EQXzV,  ATM(ID)%XzV_PRES)
 	    END DO
 !
 ! 
@@ -774,6 +789,10 @@
 	  DEALLOCATE (PHI_PAR_FN,STAT=IOS)
 	  DEALLOCATE (Z_PAR_FN,STAT=IOS)
 	END IF 
+!
+! Restore two photon method option.
+!
+	TWO_PHOTON_METHOD=SAVED_TWO_PHOTON_METHOD
 !
 	RETURN
 	END

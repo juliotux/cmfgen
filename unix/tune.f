@@ -85,8 +85,8 @@ C
 	  OPEN(UNIT=LUOUT,STATUS='REPLACE',FILE='TIMING')
 	  WRITE(LUOUT,*)' '
 	  WRITE(LUOUT,*)'Overhead is ',OVERHEAD
-	  WRITE(LUOUT,*)'   Count rate for wall colock is',IR0
-	  WRITE(LUOUT,*)'Maximum count for wall colock is',IM0
+	  WRITE(LUOUT,*)'   Count rate for wall clock is',IR0
+	  WRITE(LUOUT,*)'Maximum count for wall clock is',IM0
 	  WRITE(LUOUT,*)' '
         ENDIF
 !

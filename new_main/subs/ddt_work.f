@@ -6,14 +6,15 @@
 	USE MOD_CMFGEN
 	IMPLICIT NONE
 !
-! Altered 22-Nov-2011 : Changed call to GET_POPS_AT_PREV_TIME_STEP from V4 to V5
+! Altered 01-Sep-2016: TIME_SEQ_NO changed from integer to real.
+! Altered 22-Nov-2011: Changed call to GET_POPS_AT_PREV_TIME_STEP from V4 to V5
 !                          (POPS was added to call).
-! Altered 19-Sep-2011 : Bug fix in DDT_WORK_CHK output: ER (cur and old) were a
+! Altered 19-Sep-2011: Bug fix in DDT_WORK_CHK output: ER (cur and old) were a
 !                          factor of 4 too large.
-! Altered 13-Nov-2009 : Changed INT_EN interpolaton section. No longer use 
+! Altered 13-Nov-2009: Changed INT_EN interpolaton section. No longer use 
 !                          OLD values when outside range, and we limit changes,
 !                          when extrapolating, to a factor of 2.
-! Created 13-Dec-2005 : Based on EVAL_ADIABATIC_V3
+! Created 13-Dec-2005: Based on EVAL_ADIABATIC_V3
 !
 	INTEGER NT
 	INTEGER ND
@@ -27,7 +28,7 @@
 ! Input:
 !
 	REAL*8 POPS(NT,ND)
-	INTEGER TIME_SEQ_NO
+	REAL*8 TIME_SEQ_NO
 !
 ! Local vectors.
 !

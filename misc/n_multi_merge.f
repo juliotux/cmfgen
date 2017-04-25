@@ -34,8 +34,10 @@
 	WRITE(LU_TERM,*)'Program to merge N plots in C columns'
 	WRITE(LU_TERM,*)'2x3 plots (cr): ',
 	1    'EXPAND_CHAR=1.2; EXPAND_TICK=1.2; ASR=0.89; Plot Size=9.5 cm'
+	WRITE(LU_TERM,*)'2x5 plots (cr): ',
+	1    'EXPAND_CHAR=2.5; EXPAND_TICK=2.5; ASR=0.45; Plot Size=10.0 cm'
 	WRITE(LU_TERM,*)'3x5 plots (cr): ',
-	1    'EXPAND_CHAR=1.5; EXPAND_TICK=1.5; ASR=0.89; Plot Size=6.0 cm'
+	1    'EXPAND_CHAR=1.5; EXPAND_TICK=1.5; ASR=0.7; Plot Size=6.0 cm'
 	WRITE(LU_TERM,*)' '
 !
 	NCOLS=2;  CALL GEN_IN(NCOLS,'Number of columns on page')
@@ -47,19 +49,28 @@
 	I=7900-1300*NROWS
 	WRITE(VER_OFFSET,'(I4)')I
 	IF(NCOLS .EQ. 3 .AND. NROWS .EQ. 5)THEN
-	  HOR_OFFSET='2800'
-	  VER_OFFSET='2200'
+	  HOR_OFFSET='3200'
+	  VER_OFFSET='2300'
+	ELSE IF(NCOLS .EQ. 2 .AND. NROWS .EQ. 5)THEN
+	  HOR_OFFSET='4800'
+	  VER_OFFSET='2400'
 	END IF
 	CALL GEN_IN(HOR_OFFSET,'Horizontal offset')
 	CALL GEN_IN(VER_OFFSET,'Vertical offset')
 !
 	IREC=0
 	IOS=0
+	OUTF=' '
 	CALL GEN_IN(OUTF,'Output file')
 	CALL GEN_ASCI_OPEN(LU_OUT,OUTF,'NEW',' ',' ',IREC,IOS)
+	IF(IOS .NE. 0)THEN
+	  WRITE(6,*)'Unable to open ',TRIM(OUTF)
+	  WRITE(6,*)'Fille cannot exist already'
+	  STOP
+	END IF
 !
 	TEST=.FALSE.
-	FILE1='pgplot.ps'
+	FILE1='pgplot_1.ps'
 10	CALL GEN_IN(FILE1,'Top PGPLOT  file')
 	I=INDEX(FILE1,'(test)')
 	IF(I .NE. 0)THEN
@@ -88,8 +99,10 @@
 	    WRITE(LU_OUT,'(A)')'  500 8500 translate'
 	  ELSE IF(NROWS .EQ. 4)THEN
 	    WRITE(LU_OUT,'(A)')'  500 9700 translate'
+	  ELSE IF(NROWS .EQ. 5)THEN
+	    WRITE(LU_OUT,'(A)')'  -700 9500 translate'
 	  ELSE
-	    WRITE(LU_OUT,'(A)')'  500 10500 translate'
+	    WRITE(LU_OUT,'(A)')'  -100 9700 translate'
 	  END IF
 	  DO WHILE(1 .EQ. 1)
 	    READ(LU_IN,'(A)')STRING

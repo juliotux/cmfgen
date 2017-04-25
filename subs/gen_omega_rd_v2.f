@@ -17,6 +17,7 @@
 	1                      MAX_TRANS,MAX_TVALS,MAX_TAB_SIZE)
 	IMPLICIT NONE
 !
+! Altered 24-Apr-2015 : Code now checks "validity" of T values and collision strengths.
 ! Altered 25-Jan-2015 : Minor bug fix - could print out a wrong matching name.
 ! Altered 20-Dec-2014 : Code checks if non-matching level corresponds to a higher level not 
 !                          included in the model atom (call CHL_COL_NAME).
@@ -228,6 +229,15 @@
 	L=INDEX(STRING,'ion\T')
 	READ(STRING(L+5:),*)(T_TABLE(I),I=1,NUM_TVALS )
 !
+	DO I=1,NUM_TVALS-1
+	  IF(T_TABLE(1) .LE. 0.0D0 .OR. T_TABLE(I) .GE. T_TABLE(I+1))THEN
+	    WRITE(LUER,*)'Error in T values in ',TRIM(FILE_NAME)
+	    WRITE(LUER,*)'Values are not positive, or not monotonic increasing: I=',I
+	    WRITE(LUER,*)T_TABLE(I),T_TABLE(I+1)
+	    STOP
+	  END IF
+	END DO
+!
 	STRING=' '
 	DO WHILE(ICHRLEN(STRING) .EQ. 0)
 	  READ(LUIN,'(A)')STRING
@@ -406,6 +416,15 @@
 	    WRITE(LUER,*)'IOS=',IOS
 	    STOP
 	  END IF
+	  IF( MINVAL(COL_VEC(1:NUM_TVALS)) .LE. 0.0D0 )THEN
+	    WRITE(LUER,*)'Error in GEN_OMEGA_RD_V2'  
+	    WRITE(LUER,*)'Error in collisional data for',FILE_NAME
+	    WRITE(LUER,*)'Tabulated values are -ve or zero'
+	    WRITE(LUER,*)'UP_LEV=',TRIM(UP_LEV)
+	    WRITE(LUER,*)'LOW_LEV=',TRIM(LOW_LEV)
+	    STOP
+	  END IF
+!
 	  COL_VEC(1:NUM_TVALS)=COL_VEC(1:NUM_TVALS)*NORM_FAC
 	  IF(UP_LEV .EQ. 'I')THEN
 	    DO NL=1,NL_CNT

@@ -1,5 +1,8 @@
 	SUBROUTINE SIMP_EW(NORM,WAVE,N,LAM_ST,LAM_END,TOLERANCE)
 	IMPLICIT NONE
+!
+! Altered: 15-Jun-2014: DOING_LINE now initialized on entry into subroutine.
+!
 	INTEGER N
 	REAL*4 NORM(N)
 	REAL*4 WAVE(N)
@@ -24,7 +27,8 @@
 	WRITE(6,*)'IST=',IST,WAVE(IST)
 	WRITE(6,*)'IEND=',IEND,WAVE(IEND)
 !
-	DO I=IST,IEND
+	DOING_LINE=.FALSE.
+	DO I=IST,IEND-1
 	  IF( ABS(NORM(I)-1.0D0) .GT. TOLERANCE)THEN
 	     IF(.NOT. DOING_LINE)THEN
 	       SUM=0.0D0
@@ -32,8 +36,8 @@
 	       DOING_LINE=.TRUE.
 	       LINE_ST=WAVE(I)
 	     END IF
-	     SUM=SUM+0.5D0*(WAVE(I)-WAVE(I-1))*(NORM(I)+NORM(I+1)-2.0D0)
-	     LAM=LAM+0.5D0*(WAVE(I)-WAVE(I-1))*(WAVE(I)*(NORM(I)-1.0D0) +
+	     SUM=SUM+0.5D0*(WAVE(I+1)-WAVE(I))*(NORM(I)+NORM(I+1)-2.0D0)
+	     LAM=LAM+0.5D0*(WAVE(I+1)-WAVE(I))*(WAVE(I)*(NORM(I)-1.0D0) +
 	1                                     WAVE(I+1)*(NORM(I+1)-1.0D0) )
 	  ELSE IF(DOING_LINE)THEN
 	     LAM=LAM/SUM

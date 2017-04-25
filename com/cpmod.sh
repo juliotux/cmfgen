@@ -133,7 +133,17 @@ else
   echo "    *** Unable to copy SN_HYDRO_DATA"
 endif
 
-#
+if(-e $1/arnaud_rothenflug.dat)then
+  cp $1/arnaud_rothenflug.dat  $2/
+  echo " "
+  echo " Copyed arnaud_rothenflug.dat"
+endif
+
+if(-e $1/IT_SPECIFIER)then
+  cp $1/IT_SPECIFIER  $2/
+  echo " "
+  echo " Copyed IT_SPECIFIER"
+endif
 
 SKIPSN:
 

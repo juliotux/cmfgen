@@ -6,6 +6,7 @@
 !
 	MODULE MOD_CMFGEN
 !
+! Altered 19-Aug-2015 : Added HMI, MAX_IONS_PER_SPECIES increased to 21 (cur_hmi,12-Jun-2015)
 ! Incoprated 02-Jan-2015: VTURB_VEC, ARAD, GAM2, etc added (for depth depndent profiles).
 ! Altered 29-Nov-2011 : OLD_LEV_POP_AVAIL added as vector.
 ! Altered 25-Sep-2011 : LOG_XzVLTE_F, XzVLTE_F_ON_S, LOG_XzVLTE arrays added (26-Nov-2010/5-Apr-2011).
@@ -22,7 +23,7 @@
 ! has to be 2 or higher (as I and II). A setting of 10 implies that we can treat
 ! full atoms for ION_IX.
 !
-	INTEGER, PARAMETER :: MAX_IONS_PER_SPECIES=20
+	INTEGER, PARAMETER :: MAX_IONS_PER_SPECIES=21
 	INTEGER, PARAMETER :: MAX_NUM_IONS=NUM_SPECIES*MAX_IONS_PER_SPECIES
 !
 ! Maximum number of photoionization routes for each species.
@@ -240,7 +241,7 @@
 !
 ! Indicates generic ionization names.
 !
-	DATA GEN_ION_ID /'I','2','III','IV','V',
+	DATA GEN_ION_ID /'MI','I','2','III','IV','V',
 	1                'SIX','SEV','VIII','IX','X','XI','XII',
 	1                'XIII','XIV','XV','XSIX','XSEV','X8','X9','XX'/
 !

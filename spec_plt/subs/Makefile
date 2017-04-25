@@ -10,17 +10,21 @@ LIB=$(LIB_DIR)libspec.a
 # or if the libraries have changed since the last link.
 #
 OBJ    = $(LIB)(convolve.o)\
+         $(LIB)(divide_by_cont.o)\
          $(LIB)(do_int_rec_ap.o)\
          $(LIB)(determ_reddening.o)\
+         $(LIB)(fix_pop_oscillations.o)\
          $(LIB)(get_mag.o)\
+         $(LIB)(get_nd_nt_nit.o)\
          $(LIB)(hiabs.o)\
          $(LIB)(h2abs.o)\
          $(LIB)(int_rec_ap.o)\
-         $(LIB)(is_line_abs.o)\
+         $(LIB)(is_line_abs_v2.o)\
          $(LIB)(num_rec.o)\
-         $(LIB)(uvabs.o)\
+         $(LIB)(uvabs_v2.o)\
          $(LIB)(adjust_jes_v2.o)\
          $(LIB)(filt_pass_band.o)\
+         $(LIB)(get_prof_params.o)\
          $(LIB)(cnvlv_es_one_par_v2.o)\
          $(LIB)(cnvlv_es_two_par_v2.o)\
          $(LIB)(cnvrt.o)\
@@ -35,7 +39,7 @@ OBJ    = $(LIB)(convolve.o)\
          $(LIB)(rd_mod.o)\
          $(LIB)(recom_opac_v2.o)\
          $(LIB)(rd_row_data.o)\
-         $(LIB)(rd_xy_data.o)\
+         $(LIB)(rd_xy_data_usr.o)\
          $(LIB)(rd_obs_data_v2.o)
   
 all : $(LIB)

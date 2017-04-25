@@ -19,6 +19,7 @@
 	1               INCLUDE_LINE_CENTERS)
 	IMPLICIT NONE
 !
+! Altered 06-Jul-2015: dNU was not being compared to dV_CMF_PRO (GT instead of LT).
 ! Altered 23-Jan-2014: Cleaned and fixed issues with frequencies at bound-free edges.
 ! Created 03-Jan-2014: Essentially the same as INS_LINE_V5 except specing in resonance zone
 !                         is actually FRAC_DOP rather than 05*FRAC_DOP. INS_LINE_V5 was left
@@ -329,7 +330,7 @@
 	      dNU_NEXT=MIN(dNU_NEXT,T1)
 	    END IF
 !
-	    IF(FREQ(INDX)-dNU_NEXT .GT. CUR_RED_PROF_EXT)THEN
+	    IF(FREQ(INDX)-dNU_NEXT .LT. CUR_RED_PROF_EXT)THEN
 	      T1=FREQ(INDX)*dV_CMF_PROF/C_KMS
 	      dNU_NEXT=MIN(dNU_NEXT,T1)
 	    END IF
@@ -483,10 +484,12 @@
 	LU_ER=ERROR_LU()
 	WRITE(LU_ER,*)'Error --- insufficient frequencies to store'//
 	1               ' both line and continuum frequencies'
-	WRITE(LU_ER,*)'ML= ',ML
-	WRITE(LU_ER,*)'LN_INDX= ',LN_INDX
-	WRITE(LU_ER,*)'INDX= ',INDX
-	WRITE(LU_ER,*)'NFREQ_MAX= ',NFREQ_MAX
+	WRITE(LU_ER,*)'ML(cont. index)= ',ML
+	WRITE(LU_ER,*)'   NCF(# cont.)= ',NCF
+	WRITE(LU_ER,*)'        LN_INDX= ',LN_INDX
+	WRITE(LU_ER,*)'          NLINE= ',N_LINES
+	WRITE(LU_ER,*)'           INDX= ',INDX
+	WRITE(LU_ER,*)'       NFREQ_MAX= ',NFREQ_MAX
 !
 	STOP
 	END

@@ -10,6 +10,7 @@
 	1                FIRST_MATRIX,LAST_MATRIX,USE_PASSED_REP)
 	USE MOD_CMFGEN
 	USE STEQ_DATA_MOD
+	USE CONTROL_VARIABLE_MOD, ONLY : LTE_MODEL
 	IMPLICIT NONE
 !
 ! Altered 13-Mar-2014 : Issues with crude electron-energy balance equation when
@@ -330,7 +331,7 @@
 	END DO
 !
 	IF(DIAG_BAND .AND. DEPTH_INDX .EQ. ND)THEN
-	  WRITE(LUWARN,'(/,/,X,A,/)')' Equation selection in generate_full_matrix_v3.f' 
+	  WRITE(LUWARN,'(/,/,1X,A,/)')' Equation selection in generate_full_matrix_v3.f' 
 	  DO ID=1,NION
 	    IF(REP_CNT(ID) .GT. 0)THEN
               WRITE(LUWARN,'(1X,A,T9,A,I3,A)')
@@ -366,6 +367,10 @@
 	1       FIRST_MATRIX,LAST_MATRIX)
 	END IF
 !
+	IF(LTE_MODEL)THEN
+	  CALL ADJUST_CMAT_TO_LTE(C_MAT,STEQ_VEC,DIAG_BAND,DEPTH_INDX,NT)
+	END IF
+!
 ! Scale the BA matrix so that we solve for the fractional corrections to
 ! the populations. This seems to yield better solutions for large matrices,
 ! especially when we subsequently condition the matrices.
@@ -377,8 +382,8 @@
 	  END DO
 	END DO
 !
-	IF(K .EQ. 5 .AND. DIAG_BAND .AND. K .LE. ND)THEN
-	  OPEN(UNIT=96,FILE='BA_ASCI_N_D5',STATUS='UNKNOWN')
+	IF(K .EQ. 1 .AND. DIAG_BAND .AND. K .LE. ND)THEN
+	  OPEN(UNIT=96,FILE='BA_ASCI_N_D1',STATUS='UNKNOWN')
 	    CALL WR2D_MA(POPS(1,K),NT,1,'POPS_D1',96)
 	    CALL WR2D_MA(STEQ_VEC,NT,1,'STEQ_VEC_D1',96)
 	    CALL WR2D_MA(C_MAT,NT,NT,'C_MAT_D1',96)

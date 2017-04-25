@@ -38,6 +38,9 @@
 	USE VAR_RAD_MOD
 	IMPLICIT NONE
 !
+! Aleterd 06-Sep-2016 : Output more R digits to MEANOPAC.
+! Altered 29-Sep-2015 : Changed back to COMP_OPAC (Different TWO_PHOT in routine)
+! Altered 24-Jul-2015 : Added HMI, Changed to COMP_OPAC_V2 (cur_hmi, 19-Aug-2015)
 ! Altered 27-Mar-2013 : dE_WORK and RAD_DECAY_LUM updated for clumping.
 !                       LUWARN inserted (done earlier)
 !                       LIN_PROF_SIM is now depth dependent -- code cannow handle depth dependent 
@@ -71,7 +74,7 @@
 	INTEGER NCF
 	LOGICAL, PARAMETER :: IMPURITY_CODE=.FALSE.
 !
-	CHARACTER(LEN=12), PARAMETER :: PRODATE='27-Mar-2014'		!Must be changed after alterations
+	CHARACTER(LEN=12), PARAMETER :: PRODATE='17-Oct-2016'		!Must be changed after alterations
 !
 ! 
 !
@@ -94,6 +97,8 @@
 	REAL*8 FG_COUNT
 	REAL*8 SCL_FAC
 	REAL*8 SUM_BA
+	REAL*8 RLUMST_BND
+	REAL*8 LUM_FOR_TEFF
 !
 	LOGICAL LST_DEPTH_ONLY
 !
@@ -471,12 +476,12 @@
 	CNT_FIX_BA=0
 	MAXCH_SUM=0.0D0
 	LST_ITERATION=.FALSE.
-	DPTH_INDX=22
+!
+	DPTH_INDX=1
 	DPTH_INDX=MIN(DPTH_INDX,ND)		!Thus no problem if 84 > ND
 	VAR_INDX=366
 	VAR_INDX=MIN(VAR_INDX,NT)
 	CALL GET_VERBOSE_INFO(VERBOSE)
-!
 !
 ! When TRUE, FIXED_T indicated that T is to be heled fixed (at least at some
 ! depths) in the linearization. This variable is set automatically by the 
@@ -669,7 +674,7 @@
 	  DEC_NRG_SCL_FAC=1.0D0
 	END IF
 !
-	CALL RD_NUC_DECAY_DATA(INCL_RADIOACTIVE_DECAY,ND,LUIN)
+	CALL RD_NUC_DECAY_DATA_V2(INCL_RADIOACTIVE_DECAY,GAMRAY_TRANS,ND,LUIN)
 !
 ! 
 !
@@ -705,11 +710,11 @@
 	        T2=GF_CUT
 	      END IF
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_OSCDAT'
-	      CALL GENOSC_V8( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F, 
+	      CALL GENOSC_V9( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F, 
 	1                 ATM(ID)%ARAD,ATM(ID)%GAM2,ATM(ID)%GAM4,ATM(ID)%OBSERVED_LEVEL,
 	1                 T1, ATM(ID)%ZXzV,
 	1                 ATM(ID)%XzV_OSCDATE, ATM(ID)%NXzV_F,I,
-	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,
+	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,L_FALSE,
 	1                 LUIN,LUSCR,TMP_STRING)
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_TO_S'
 	      CALL RD_F_TO_S_IDS_V2( ATM(ID)%F_TO_S_XzV, ATM(ID)%INT_SEQ_XzV,
@@ -978,10 +983,13 @@
 	   CALL SET_RV_HYDRO_MODEL_V3(R,V,SIGMA,RMAX,RP,RMAX_ON_RCORE,SN_AGE_DAYS,
 	1                      PURE_HUBBLE_FLOW,N_IB_INS,N_OB_INS,RDINR,ND,LUIN)
            VINF=V(1)
+	 ELSE IF(VELTYPE .EQ. 12)THEN
+	   CALL RV_SN_MODEL_SNIIN(R,V,SIGMA,RMAX,RP,VCORE,V_BETA1,RDINR,LUIN,ND)
+	   VINF=V(1)
 	 ELSE
 	   WRITE(LUER,*)'Invalid Velocity Law'
-	    STOP
-	  END IF
+	   STOP
+	 END IF
 !
 	  IF(SN_HYDRO_MODEL)THEN
 	    T1=RMAX/RP
@@ -1053,8 +1061,11 @@
 	1        V,TA,SIGMA,ND)
 !
           VDOP_VEC_EXT(1:NDEXT)=12.85D0*SQRT( TDOP/AMASS_DOP + (VTURB/12.85D0)**2 )
-!
+	  CALL SET_POP_FOR_TWOJ(POS_IN_NEW_GRID,EDD_CONT_REC,LU_EDD,NDEXT)
+	ELSE
+	  CALL SET_POP_FOR_TWOJ(POS_IN_NEW_GRID,EDD_CONT_REC,LU_EDD,ND)
 	END IF
+	
 !
 ! Need to calculate impact parameters, and angular quadrature weights here
 ! as these may be required when setting up the initial temperature
@@ -1155,9 +1166,9 @@
 !
 	CHK=.FALSE.
 	IF(.NOT. NEWMOD)THEN
-          CALL READ_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,CHK,'BAMAT')
+          CALL READ_BA_DATA_V3(LU_BA,NION,NUM_BNDS,ND,CHK,FIXED_T,SUCCESS,'BAMAT')
 	END IF
-	IF(.NOT. CHK .OR. LAMBDA_ITERATION)THEN
+	IF(.NOT. SUCCESS .OR. LAMBDA_ITERATION)THEN
 	  NLBEGIN=0
           COMPUTE_BA=.TRUE.
 	  WRBAMAT=.FALSE.
@@ -1472,8 +1483,10 @@
 ! NB: Care must taken to ensure that this section remains consistent
 !      with that in continuum calculation section.
 !
+	  CALL TUNE(1,'SET_LINE_OPAC')
 	    CALL SET_LINE_OPAC(POPS,NU,FREQ_INDX,LAST_LINE,N_LINE_FREQ,
 	1          LST_DEPTH_ONLY,LUER,ND,NT,NCF,MAX_SIM)
+	  CALL TUNE(2,'SET_LINE_OPAC')
 !
 ! Add in line opacity.
 !
@@ -1593,7 +1606,7 @@
             LOC_ID=ID
 	    IF(ATM(ID)%XzV_PRES)THEN
 	      TMP_STRING=TRIM(ION_ID(ID))//'_COL_DATA'
-              CALL STEQ_MULTI_V8(CNM,DCNM,ED,T,
+              CALL STEQ_MULTI_V9(CNM,DCNM,ED,T,
 	1         ATM(ID)%XzV,            ATM(ID)%XzVLTE,         ATM(ID)%dlnXzVLTE_dlnT,
 	1         ATM(ID)%NXzV,           ATM(ID)%DXzV,           ATM(ID)%XzV_F, 
 	1         ATM(ID)%XzVLTE_F_ON_S,  ATM(ID)%W_XzV_F,        ATM(ID)%AXzV_F,
@@ -1601,7 +1614,8 @@
 	1         ATM(ID)%NXzV_F,         ATM(ID)%F_TO_S_XzV,
 	1         POP_SPECIES(1,SPECIES_LNK(ID)), ATM(ID+1)%XzV_PRES, ATM(ID)%ZXzV,
 	1         LOC_ID,TMP_STRING,OMEGA_GEN_V3,
-	1         ATM(ID)%EQXzV,NUM_BNDS,ND,NION,COMPUTE_BA,DST,DEND)
+	1         ATM(ID)%EQXzV,NUM_BNDS,ND,NION,
+	1         COMPUTE_BA,FIXED_T,LST_ITERATION,DST,DEND)
 !
 ! Handle states which can partially autoionize.
 !
@@ -1660,8 +1674,8 @@
 ! is necessary to save a rewrite of the STEQ*** routines.
 !
 	IF(.NOT. COMPUTE_BA .AND. .NOT. FLUX_CAL_ONLY)THEN
-	  CALL READ_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,IOS,CHK,'BAMAT')
-	  IF(.NOT. CHK)THEN
+	  CALL READ_BA_DATA_V3(LU_BA,NION,NUM_BNDS,ND,CHK,FIXED_T,SUCCESS,'BAMAT')
+	  IF(.NOT. SUCCESS)THEN
 	    WRITE(LUER,*)'Major Error - cant read BA File'
 	    WRITE(LUER,*)'Previously read successfully - '//
 	1             'before continuum loop'
@@ -2045,11 +2059,12 @@
 	    IF(ATM(ID)%XzV_PRES .AND. COMPUTE_NEW_CROSS)THEN
 	      DO J=1,ATM(ID)%N_XzV_PHOT
 	       PHOT_ID=J
-	       CALL QUAD_MULTI_V8(ATM(ID)%WSXzV(1,1,J), ATM(ID)%dWSXzVdT(1,1,J),
+	       CALL QUAD_MULTI_V9(ATM(ID)%WSXzV(1,1,J), ATM(ID)%dWSXzVdT(1,1,J),
 	1             ATM(ID)%WCRXzV(1,1,J),
 	1             ATM(ID)%XzVLTE, ATM(ID)%dlnXzVLTE_dlnT, ATM(ID)%NXzV,
 	1             ATM(ID)%XzVLTE_F_ON_S, ATM(ID)%EDGEXzV_F, ATM(ID)%NXzV_F,
 	1             ATM(ID)%F_TO_S_XzV, CONT_FREQ,T,ND,
+	1             COMPUTE_BA,FIXED_T,LST_ITERATION,
 	1             ION_ID(ID), ATM(ID)%ZXzV, PHOT_ID, ID)
 	      END DO
 	    END IF  
@@ -2079,8 +2094,10 @@
 !
 ! Include lines 
 !
+	CALL TUNE(1,'SET_LINE_OPAC')
         CALL SET_LINE_OPAC(POPS,NU,ML,LAST_LINE,N_LINE_FREQ,
 	1         LST_DEPTH_ONLY,LUER,ND,NT,NCF,MAX_SIM)
+	CALL TUNE(2,'SET_LINE_OPAC')
 !
 	CALL INIT_LINE_OPAC_VAR_V2(LAST_LINE,LUER,ND,TX_OFFSET,MAX_SIM,NM)
 !
@@ -2115,6 +2132,7 @@
 ! opacity and emissivity. These are used in carrying the variation of J from 
 ! one frequency to the next.
 !
+	    CALL TUNE(1,'RS_ZONE')
 	    DO SIM_INDX=1,MAX_SIM
 	      IF(RESONANCE_ZONE(SIM_INDX))THEN
 	        DO I=1,ND
@@ -2123,6 +2141,7 @@
 	        END DO
 	      END IF
 	    END DO
+	    CALL TUNE(2,'RS_ZONE')
 !
 !	    DO I=1,ND
 !	      IF(CHI(I)*R(I) .LT. 1.0D-04)THEN
@@ -2343,7 +2362,8 @@
 !
 ! Update line net rates, and the S.E. Eq. IFF we have finished a line 
 ! transition.
-!                      
+!
+	CALL TUNE(1,'JBAR_SIM')                      
 	DO SIM_INDX=1,MAX_SIM
 	  IF(RESONANCE_ZONE(SIM_INDX))THEN
 	    DO I=1,ND
@@ -2354,6 +2374,7 @@
 	    END DO
 	  END IF
 	END DO
+	CALL TUNE(2,'JBAR_SIM')                      
 !
 ! Update the S.E. Eq. IFF we have finished a line transition (i.e. are at
 ! the final point of the resonance zone.) 
@@ -2804,7 +2825,7 @@
 !	IF(DIAG_INDX .NE. 1)BA_T(NT,DIAG_INDX-1,ND)=-1.0D0
 	IF(COMPUTE_BA .AND. WRBAMAT .AND. .NOT. FLUX_CAL_ONLY .AND. .NOT. LAMBDA_ITERATION)THEN
 	  CALL TUNE(IONE,'STORE_BA')
-	    CALL STORE_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,'BAMAT')
+	    CALL STORE_BA_DATA_V3(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,FIXED_T,'BAMAT')
 	  CALL TUNE(ITWO,'STORE_BA')
 	END IF
 !
@@ -2884,13 +2905,14 @@
 	  IF(RLUMST(I) .GE. 0.0D0 .AND. RLUMST(I) .LT.  1.0D-05)RLUMST(I)=1.0D-05
 	  IF(RLUMST(I) .LE. 0.0D0 .AND. RLUMST(I) .GT. -1.0D-05)RLUMST(I)=-1.0D-05
 	END DO
+	RLUMST_BND=RLUMST(2)		!2 is used to avoid glitch at outer boundary in some models.
 !
 	CALL GEN_ASCI_OPEN(LU_FLUX,'OBSFLUX','UNKNOWN',' ',' ',IZERO,IOS)
 	  WRITE(STRING,'(I10)')N_OBS
 	  STRING=ADJUSTL(STRING)
           STRING='Continuum Frequencies ( '//TRIM(STRING)//' )'
-	  CALL WRITV(OBS_FREQ,N_OBS,TRIM(STRING),LU_FLUX)
-	  CALL WRITV(OBS_FLUX,N_OBS,'Observed intensity (Janskys)',LU_FLUX)
+	  CALL WRITV_V2(OBS_FREQ,N_OBS,ISEV,TRIM(STRING),LU_FLUX)
+	  CALL WRITV_V2(OBS_FLUX,N_OBS,IFOUR,'Observed intensity (Janskys)',LU_FLUX)
 	  CALL WRITV(RLUMST,ND,'Luminosity',LU_FLUX)
 	CLOSE(UNIT=LU_FLUX)
 	CALL TUNE(ITWO,'MLCF')
@@ -2935,15 +2957,13 @@
 !
 	CALL GEN_ASCI_OPEN(LU_OPAC,'MEANOPAC','UNKNOWN',' ',' ',IZERO,IOS)
 	  WRITE(LU_OPAC,
-	1  '( ''       R        I   Tau(Ross)   /\Tau   Rat(Ross)'//
+	1  '( ''         R          I   Tau(Ross)   /\Tau   Rat(Ross)'//
 	1  '  Chi(Ross)  Chi(ross)  Chi(Flux)   Chi(es) '//
 	1  '  Tau(Flux)  Tau(es)  Rat(Flux)  Rat(es)     Kappa   V(km/s)'' )' )
 	  IF(R(1) .GE. 1.0D+05)THEN
-	    FMT='( 1X,1P,E12.6,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
-	1        '4(2X,E9.3),2(2X,E8.2),4(2X,E8.2) )'
+	    FMT='(ES17.10,I4,2ES10.3,ES10.2,4ES11.3,4ES10.2,2ES11.3)'
 	  ELSE
-	    FMT='( 1X,F12.6,2X,I3,1X,1P,E9.3,2(2X,E8.2),1X,'//
-	1        '4(2X,E9.3),2(2X,E8.2),4(2X,E8.2) )'
+	    FMT='( F17.10,I4,2ES10.3,ES10.2,4ES11.3,4ES10.2,2ES11.3)'
 	  END IF
 	  DO I=1,ND
 	    IF(I .EQ. 1)THEN
@@ -2985,9 +3005,9 @@
 	  IF(COMP_GREY_LST_IT)THEN
 	    CALL COMP_GREY_V4(POPS,TGREY,TA,CHI,TCHI,CHK,LUER,NC,ND,NP,NT)
 	    IF(CHK)THEN
-	      WRITE(LUER,'(/,X,A,/)')'Grey solution was successfully computed'
+	      WRITE(LUER,'(/,1X,A,/)')'Grey solution was successfully computed'
 	    ELSE 
-	      WRITE(LUER,'(/,X,A,/)')'Grey solution was NOT successfully computed'
+	      WRITE(LUER,'(/,1X,A,/)')'Grey solution was NOT successfully computed'
 	    END IF
 	  END IF
 !
@@ -3336,7 +3356,7 @@
 	          FIRST_NEG=.FALSE.
 	        END IF
 	        WRITE(LU_NEG,2290)I,T2,ED(I)
-2290	        FORMAT(1X,'I= ',I3,'  : TAU(Sob)= ',1P,E10.2,'  : Ne=',E9.2)
+2290	        FORMAT(1X,'I= ',I3,'  : TAU(Sob)= ',ES10.2,'  : Ne=',ES9.2)
 	        WRITE(LU_NEG,*)CHIL(I),POPS(NL,I),R(I),V(I),T1
 	      END IF
 	      CHIL(I)=1.0D0	!Reset after we output its value.
@@ -3470,7 +3490,7 @@
 	1          .AND. .NOT. FLUX_CAL_ONLY 
 	1          .AND. .NOT. LAMBDA_ITERATION)THEN
 	  CALL TUNE(IONE,'BAMAT_WR')
-	  CALL STORE_BA_DATA_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,'BAMAT')
+	  CALL STORE_BA_DATA_V3(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,FIXED_T,'BAMAT')
 	  CALL TUNE(ITWO,'BAMAT_WR')
 	END IF
 !
@@ -3520,6 +3540,8 @@
 	CALL LUM_FROM_ETA_V2(XRAY_LUM_1KeV,R,LUM_FROM_ETA_METHOD,ND)
 !
 	IF(PLANE_PARALLEL_NO_V)THEN
+	  MECH_LUM(1:ND)=0.0D0
+	ELSE IF(USE_DJDT_RTE .AND. USE_Dr4JDt)THEN
 	  MECH_LUM(1:ND)=0.0D0
 	ELSE IF(PLANE_PARALLEL)THEN
 	  T1=R(ND)*R(ND)*1.0D+05/SPEED_OF_LIGHT()	!As V in km/s, c in cgs units.
@@ -3606,18 +3628,23 @@
 	  WRITE(LU_FLUX,'(A,T60,1PE12.4)')'Total Rad. decay luminosity:',SUM(RAD_DECAY_LUM)
 	  WRITE(LU_FLUX,'(A,T60,1PE12.4)')'              Total dE_WORK:',SUM(dE_WORK)
 !
-! The seocnd XRAY flux printed is the OBSERVED XRAY luminosity. Its should be very similar
-! to the eralier value for optically thin winds.
+! The second XRAY flux printed is the OBSERVED XRAY luminosity. Its should be very similar
+! to the earlier value for optically thin winds, and assuming that the star is not hot
+! enough to act as its own source of X-rays.
 !
+	  T1=LUM
+	  IF(SN_MODEL .AND. .NOT. USE_FIXED_J)T1=RLUMST_BND
 	  WRITE(LU_FLUX,'(A,T60,ES12.4)')'Total Shock Luminosity (Lsun):',SUM(XRAY_LUM_TOT)
 	  WRITE(LU_FLUX,'(A,T60,2ES12.4)')'Emitted & observed X-ray Luminosity (> 0.1 keV, Lsun) :',
 	1                                     SUM(XRAY_LUM_0P1),OBS_XRAY_LUM_0P1
 	  WRITE(LU_FLUX,'(A,T60,2ES12.4)')'Emitted & observed X-ray Luminosity (> 1 keV, Lsun):',
 	1                                     SUM(XRAY_LUM_1KEV),OBS_XRAY_LUM_1KEV
-	  WRITE(LU_FLUX,'(A,T60,2ES12.4)')'Emitted & observed X-ray Luminosity (> 0.1 keV, Lstar) :',
-	1                                     SUM(XRAY_LUM_0P1)/LUM,OBS_XRAY_LUM_0P1/LUM
+	  WRITE(LU_FLUX,'(A,T60,2ES12.4,3X,A,ES11.4,A)')
+	1                                 'Emitted & observed X-ray Luminosity (> 0.1 keV, Lstar) :',
+	1                                     SUM(XRAY_LUM_0P1)/T1,OBS_XRAY_LUM_0P1/T1,
+	1                                     '(Lstar[CMF]=',T1,')'
 	  WRITE(LU_FLUX,'(A,T60,2ES12.4)')'Emitted & observed X-ray Luminosity (> 1 keV, Lstar):',
-	1                                     SUM(XRAY_LUM_1KEV)/LUM,OBS_XRAY_LUM_1KEV/LUM
+	1                                     SUM(XRAY_LUM_1KEV)/T1,OBS_XRAY_LUM_1KEV/T1
 	CLOSE(UNIT=LU_FLUX)
 !
 ! Quick and dirty way of ensuring people don't take notic of OBSFLUX when USE_FIXED_J is TRUE.
@@ -3648,7 +3675,7 @@
 !
 	T1=1.0D0
 	IF(COMPUTE_EDDFAC)WRITE(LU_EDD,REC=5)T1
-	CLOSE(UNIT=LU_EDD)
+	FLUSH(UNIT=LU_EDD)
 	IF(.NOT. COHERENT_ES)CLOSE(UNIT=LU_ES)
 	COMPUTE_JEW=.FALSE.
 	COMPUTE_EDDFAC=.FALSE.
@@ -3694,9 +3721,10 @@
 	CALL TUNE(IONE,'SOLVE_FOR_POPS')
 	CALL SOLVE_FOR_POPS(POPS,NT,NION,ND,NC,NP,NUM_BNDS,DIAG_INDX,
 	1      MAXCH,MAIN_COUNTER,IREC,LU_SE,LUSCR,LST_ITERATION)
+	IF(LAST_NG .EQ. MAIN_COUNTER)NUM_ITS_TO_DO=MAX(2,NUM_ITS_TO_DO)
 	CALL TUNE(ITWO,'SOLVE_FOR_POPS')
 !
-! If we have changed the R grid, we need to recomput the angular quadrature weitghts,
+! If we have changed the R grid, we need to recompute the angular quadrature weitghts,
 ! and put the atom density ect on the new radius grid.
 !
 	IF(REVISE_R_GRID .AND. R_GRID_REVISED)THEN
@@ -3709,6 +3737,10 @@
 !				  CALL ADJUST_DEN_VECS(R_OLD,ND)
 !
 	  CALL SET_ABUND_CLUMP(MEAN_ATOMIC_WEIGHT,ABUND_SUM,LUER,ND)
+!
+! Need to update the electron non-thermal spectrum on the new grid.
+!
+	  IF(TREAT_NON_THERMAL_ELECTRONS)NT_ITERATION_COUNTER=0
 	END IF
 
 ! 
@@ -3817,7 +3849,8 @@
 ! Initialize pointer file for storage of BA matrix.
 !
 	I=-1000
-	CALL INIT_BA_DATA_PNT_V2(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,'BAMAT')
+	CALL INIT_BA_DATA_PNT_V3(LU_BA,NION,NUM_BNDS,ND,COMPUTE_BA,FIXED_T,'BAMAT')
+	CLOSE(UNIT=LU_EDD)
 !
 !
 ! 
@@ -3905,13 +3938,16 @@
 	  CALL MON_INTERP(TC,ITHREE,IONE,TB,ITHREE,R,ND,TA,ND)
 	  CALL MON_INTERP(AV,ITHREE,IONE,TB,ITHREE,V,ND,TA,ND)
 !
+	  LUM_FOR_TEFF=LUM
+	  IF(SN_MODEL)LUM_FOR_TEFF=RLUMST_BND
+!
 ! Output summary of Teff, R, and V at RSTAR, Tau=10, and TAU=2/3.
 ! For a plane-parallel atmosphere, R(ND) defines Teff.
 !
 	  NEXT_LOC=1  ;   STRING=' '
 	  CALL WR_VAL_INFO(STRING,NEXT_LOC,'Tau',TA(ND))
 	  T1=1.0D+10*RP/RAD_SUN() ; CALL WR_VAL_INFO(STRING,NEXT_LOC,'R*/Rsun',T1)
-	  T1=TEFF_SUN()*(ABS(LUM)/T1**2)**0.25D0					!ABS for SN
+	  T1=TEFF_SUN()*(ABS(LUM_FOR_TEFF)/T1**2)**0.25D0					!ABS for SN
 	  IF(PLANE_PARALLEL_NO_V .OR. PLANE_PARALLEL)THEN
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Teff(K)',T1)
 	  ELSE
@@ -3929,7 +3965,7 @@
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Tau',TB(3))		!20.0D0
 	    T1=1.0D+10*TC(3)/RAD_SUN()
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'R /Rsun',T1)
-	    T1=TEFF_SUN()*(ABS(LUM)/T1**2)**0.25D0
+	    T1=TEFF_SUN()*(ABS(LUM_FOR_TEFF)/T1**2)**0.25D0
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Teff(K)',T1)
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'V(km/s)',AV(3))
 	    IF(DO_HYDRO)THEN
@@ -3944,7 +3980,7 @@
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Tau',TB(2))		!10.0D0
 	    T1=1.0D+10*TC(2)/RAD_SUN()
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'R /Rsun',T1)
-	    T1=TEFF_SUN()*(ABS(LUM)/T1**2)**0.25D0
+	    T1=TEFF_SUN()*(ABS(LUM_FOR_TEFF)/T1**2)**0.25D0
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Teff(K)',T1)
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'V(km/s)',AV(2))
 	    IF(DO_HYDRO)THEN
@@ -3959,7 +3995,7 @@
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Tau',TB(1))		!0.67D0
 	    T1=1.0D+10*TC(1)/RAD_SUN()
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'R /Rsun',T1)
-	    T1=TEFF_SUN()*(ABS(LUM)/T1**2)**0.25D0
+	    T1=TEFF_SUN()*(ABS(LUM_FOR_TEFF)/T1**2)**0.25D0
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'Teff(K)',T1)
 	    CALL WR_VAL_INFO(STRING,NEXT_LOC,'V(km/s)',AV(1))
 	    IF(DO_HYDRO)THEN
@@ -4083,9 +4119,9 @@
 	1                                        NAME_CONVENTION
 !
 	    WRITE(LU_POP,'(A)')' Radius (10^10 cm)'
-	    WRITE(LU_POP,'(1X,1P8E18.9)')R
+	    WRITE(LU_POP,'(1X,8ES18.10)')R
 	    WRITE(LU_POP,'(A)')' Velocity (km/s)'
-	    WRITE(LU_POP,'(1X,1P8E18.9)')V
+	    WRITE(LU_POP,'(1X,8ES18.10)')V
 	    WRITE(LU_POP,'(A)')' dlnV/dlnr-1'
 	    WRITE(LU_POP,'(1X,1P8E16.7)')SIGMA
 	    WRITE(LU_POP,'(A)')' Electron density'
@@ -4248,10 +4284,8 @@
 ! next model in the time sequence. IREC is the ouput record, and is thus simply
 ! the current TIME_SEQ_NO.
 !
-	  IF(SN_MODEL .AND. TIME_SEQ_NO .NE. 0)THEN
-!	    IREC=TIME_SEQ_NO
-!	    CALL RITE_TIME_MODEL(R,V,SIGMA,POPS,IREC,L_FALSE,L_TRUE,
-!	1               NT,ND,LUSCR,CHK)
+	  IF(SN_MODEL)THEN
+!	    CALL RITE_TIME_MODEL(R,V,SIGMA,POPS,IREC,L_FALSE,L_TRUE,NT,ND,LUSCR,CHK)
 	    CALL WRITE_SEQ_TIME_FILE_V1(SN_AGE_DAYS,ND,LUSCR)
 	  END IF
 !
@@ -4304,6 +4338,24 @@
 	         CALL UPDATE_KEYWORD(L_FALSE,'[DO_LAM_IT]','IN_ITS',L_TRUE,L_TRUE,LUIN)
 	       END IF
 	    END IF
+	  ELSE IF(XRAYS .AND. MAXCH .LT. 100.0D0 .AND. .NOT. ADD_XRAYS_SLOWLY)THEN
+!
+! We do not do the scaling if there is intrinsic X-ray emssion from the star.
+! DESIRED_XRAY_LUM should be in units of LSTAR.
+!
+	    IF(OBS_XRAY_LUM_0P1 .LT. SUM(XRAY_LUM_0P1) .AND. SCALE_XRAY_LUM)THEN
+	      IF( (LUM*DESIRED_XRAY_LUM/OBS_XRAY_LUM_0P1-1.0D0) .GT. ALLOWED_XRAY_FLUX_ERROR)THEN
+	        T1=SQRT(LUM*DESIRED_XRAY_LUM/OBS_XRAY_LUM_0P1)
+	        IF(T1 .GT. 10.0D0)T1=10.0D0
+	        IF(T1 .LT. 0.1D0)T1=0.1D0
+	        FILL_FAC_XRAYS_1=T1*FILL_FAC_XRAYS_1
+	        FILL_FAC_XRAYS_2=T1*FILL_FAC_XRAYS_2
+	        CALL UPDATE_KEYWORD(FILL_FAC_XRAYS_1,'[FIL_FAC_1]','VADAT',L_TRUE,L_FALSE,LUIN)
+	        CALL UPDATE_KEYWORD(FILL_FAC_XRAYS_2,'[FIL_FAC_2]','VADAT',L_FALSE,L_TRUE,LUIN)
+	        WRITE(6,*)'Adjusted filling factors to match desired X-ray luminosity'
+	        WRITE(6,*)'Adjustment factor is',T1
+	      END IF
+	    END IF
 	  END IF
 	  IF(INCL_ADVECTION .AND. ADVEC_RELAX_PARAM .LT. 1.0D0 .AND. MAXCH .LT. 100)THEN
 	    COMPUTE_BA=.TRUE.
@@ -4327,6 +4379,10 @@
 	    END IF
 	  END IF
 !
+	  IF(SN_MODEL)THEN
+	    CALL WRITE_SEQ_TIME_FILE_V1(SN_AGE_DAYS,ND,LUSCR)
+	  END IF
+!
 ! If we have reached desired convergence, we do one final loop
 ! so as to write out all relevant model data.  
 !
@@ -4338,7 +4394,7 @@
 	       CALL UPDATE_KEYWORD(L_FALSE,'[FIX_T]','VADAT',L_TRUE,L_TRUE,LUIN)
 	  ELSE IF( ( (RD_LAMBDA .AND. .NOT. DO_LAMBDA_AUTO) .OR. (LAST_LAMBDA .NE. MAIN_COUNTER)) .AND.
 	1      MAXCH .LT. EPS .AND. NUM_ITS_TO_DO .NE. 0 .AND. .NOT. DONE_HYDRO_REVISION)THEN
-	      NUM_ITS_TO_DO=1
+	      IF(MAIN_COUNTER .NE. LAST_NG)NUM_ITS_TO_DO=1
 	  ELSE
 !
 ! If we are USING a fixed J, autmatically switched to variable J when convergence achieved.
@@ -4357,6 +4413,7 @@
 	       I=WORD_SIZE*(NDEXT+1)/UNIT_SIZE
 	       CALL WRITE_DIRECT_INFO_V3(NDEXT,I,'20-Aug-2000','EDDFACTOR',LU_EDD)
 	       COMPUTE_EDDFAC=.TRUE.
+	       CALL INIT_GET_J_FOR_TWO_PHOT
 	       OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',ACCESS='DIRECT',STATUS='REPLACE',RECL=I)
 	       WRITE(LU_EDD,REC=1)0; WRITE(LU_EDD,REC=2)0
 	       WRITE(LU_EDD,REC=3)0; WRITE(LU_EDD,REC=4)0
@@ -4367,7 +4424,8 @@
 ! If DONE_HYDRO_REVISION is TRUE, we do a LAMBDA iteration immediately afterwoods.
 ! LAMBDA_ITERATION has already been set.
 !
-	    ELSE IF(DONE_HYDRO_REVISION)THEN
+	    ELSE IF(DONE_HYDRO_REVISION .OR. R_GRID_REVISED)THEN
+	       LAMBDA_ITERATION=.TRUE.
 !
 ! If RD_LABDA is TRUE., switch to full iteration when convergence has been achieved.
 ! We switch when the convergence is 20%.
@@ -4378,7 +4436,7 @@
 	       LAMBDA_ITERATION=.FALSE.
 	       FIXED_T=RD_FIX_T
 	    END IF
-	    CALL SPECIFY_IT_CYCLE(COMPUTE_BA,LAMBDA_ITERATION,FIXED_T)
+	    CALL SPECIFY_IT_CYCLE_V2(MAIN_COUNTER,COMPUTE_BA,LAMBDA_ITERATION,FIXED_T)
 !
 ! Check to see if the user has changed IN_ITS to modify the number of iterations being
 ! undertaken. If the file has not been modified, no action will be taken. The use may

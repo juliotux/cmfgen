@@ -11,6 +11,7 @@ C
 	IMPLICIT NONE
 	REAL*4 FNTICK
 !
+! Altered 17-Feb-2015 : Can now have multi-colored titles
 ! Altered 13-Feb-2001 : Titles now correctly treated for flipped axes.
 !                       Log axex now handled for flipped axes.
 ! Altered 31-May-2000 : Y label now positioned correctly for Exponential format.
@@ -133,14 +134,15 @@ C
 !
 ! Get pen color for each title.
 !
-	DO J=1,N_TITLE
-	  I=INDEX(TITLE(J),'\p')
-	  IF(I .EQ. 0)I=INDEX(TITLE(J),'\P')
-	  IF(I .NE. 0)THEN
-	   LOC_TIT(J)(I:)=' '
-	   READ(TITLE(J)(I+2:),*)PEN_TIT(J)
-	  END IF
-	END DO
+!	DO J=1,N_TITLE
+!	  I=INDEX(TITLE(J),'\p')
+!	  IF(I .EQ. 0)I=INDEX(TITLE(J),'\P')
+!	  IF(I .NE. 0)THEN
+!	   LOC_TIT(J)(I:)=' '
+!	   READ(TITLE(J)(I+2:),*)PEN_TIT(J)
+!	  END IF
+!	END DO
+	CALL STRIP_SLASH_P(LOC_TIT,N_TITLE)
 !
 ! Get pen or axis labels
 !
@@ -340,20 +342,22 @@ C
 	  X=XPAR(1)-XTCK_SIZE
 	  DO I=1,NY
 	    Y=YNUMST+(I-1)*YINC-0.4*YCHAR_SIZE
-	    WRITE(STR,'(I4)')NINT(Y)
-	    YNUM='10\u'
-	    YNUM_LEN=4
-	    DO J=1,4
-	      IF(STR(J:J) .NE. ' ')THEN
-                YNUM=YNUM(1:YNUM_LEN)//STR(J:J)
-	        YNUM_LEN=YNUM_LEN+1
-	      END IF
-	    END DO
-            YNUM=YNUM(1:YNUM_LEN)//'\d'
-	    YNUM_LEN=YNUM_LEN+2
-	    CALL PGMOVE(X,Y)
-	    ANGLE=0.0
-	    CALL PGPTXT(X,Y,ANGLE,RONE,YNUM(1:YNUM_LEN))
+	    IF( (Y-YPAR(1))*(YPAR(2)-Y) .GT. 1.0D-04*ABS(YPAR(2)-YPAR(1)))THEN
+	      WRITE(STR,'(I4)')NINT(Y)
+	      YNUM='10\u'
+	      YNUM_LEN=4
+	      DO J=1,4
+	        IF(STR(J:J) .NE. ' ')THEN
+                  YNUM=YNUM(1:YNUM_LEN)//STR(J:J)
+	          YNUM_LEN=YNUM_LEN+1
+	        END IF
+	      END DO
+              YNUM=YNUM(1:YNUM_LEN)//'\d'
+	      YNUM_LEN=YNUM_LEN+2
+	      CALL PGMOVE(X,Y)
+	      ANGLE=0.0
+	      CALL PGPTXT(X,Y,ANGLE,RONE,YNUM(1:YNUM_LEN))
+	    END IF
 	  END DO
 	ELSE
 	  DO I=0,NY
@@ -440,7 +444,7 @@ C
 C Get bounding box for each title.
 C	
 	DO J=1,N_TITLE
-	  CALL PGQTXT(RZERO,RZERO,RZERO,RZERO,LOC_TIT(J),XBOX,YBOX)
+	  CALL PGQTXT(RZERO,RZERO,RZERO,RZERO,TRIM(LOC_TIT(J)),XBOX,YBOX)
 	  HT_TIT(J)=(YBOX(3)-YBOX(1))
 	  LEN_TIT(J)=(XBOX(4)-XBOX(2))
 	END DO
@@ -458,7 +462,8 @@ C
 	    IF(LEN_TIT(J) .NE. 0)THEN
 	      Y=Y-0.5*HT_TIT(J)
 	      IF(PEN_TIT(J) .NE. 0)CALL PGSCI(PEN_TIT(J))
-	      CALL PGPTXT(X,Y,ANGLE,RZERO,LOC_TIT(J))
+!	      CALL PGPTXT(X,Y,ANGLE,RZERO,LOC_TIT(J))
+	      CALL PUT_TEXT(X,Y,ANGLE,RZERO,TITLE(J))
 	      IF(J .NE. N_TITLE)Y=Y-0.7*HT_TIT(J+1)
 	    END IF
 	  END DO
@@ -468,8 +473,9 @@ C
 	  DO J=1,N_TITLE
 	    IF(LEN_TIT(J) .NE. 0)THEN
 	      Y=Y-0.5*HT_TIT(J)
-	      IF(PEN_TIT(J) .NE. 0)CALL PGSCI(PEN_TIT(J))
-	      CALL PGPTXT (X,Y,ANGLE,RZERO,LOC_TIT(J))
+!	      IF(PEN_TIT(J) .NE. 0)CALL PGSCI(PEN_TIT(J))
+!	      CALL PGPTXT (X,Y,ANGLE,RZERO,LOC_TIT(J))
+	      CALL PUT_TEXT (X,Y,ANGLE,RZERO,TITLE(J))
 	      IF(J .NE. N_TITLE)Y=Y-0.7*HT_TIT(J+1)
 	    END IF
 	  END DO

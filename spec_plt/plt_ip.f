@@ -6,6 +6,7 @@
 !
 	PROGRAM PLT_IP
 !
+! Altered 01-Mar-2016 : Updated to better handle plane-parallel models [5-Feb-2016].
 ! Altered 24-Jun-2009 : Use INU and INU2 instead of JNU,JNU2
 ! Altered 18-Aug-2003 : IOS added to DIRECT_INFO call
 ! Altered 16-Jun-2000 : DIRECT_INFO call inserted.
@@ -27,8 +28,10 @@
 	REAL*8, ALLOCATABLE :: NU(:)
 	REAL*8, ALLOCATABLE :: P(:)
 	REAL*8, ALLOCATABLE :: MU(:)
+	REAL*8, ALLOCATABLE :: TMP_MU(:)
 	REAL*8, ALLOCATABLE :: IP_NEW(:)
 	REAL*8, ALLOCATABLE :: P_NEW(:)
+	REAL*8, ALLOCATABLE :: HQW_AT_RMAX(:)
 !
 	REAL*8, ALLOCATABLE :: TA(:)
 	REAL*8, ALLOCATABLE :: TB(:)
@@ -128,8 +131,10 @@
 	LOGICAL USE_ARCSEC
 	LOGICAL MULT_BY_PSQ
 	LOGICAL MULT_BY_P
+	LOGICAL PLANE_PARALLEL_MOD
 !
-	REAL*8, PARAMETER :: RZERO=0.0D0
+	REAL*8,  PARAMETER :: RZERO=0.0D0
+	REAL*8,  PARAMETER :: RONE=1.0D0
 	INTEGER, PARAMETER :: IZERO=0
 	INTEGER, PARAMETER :: IONE=1
 	INTEGER, PARAMETER :: T_IN=5		!For file I/O
@@ -220,7 +225,7 @@
 	    READ(LU_IN,REC=ST_REC)(P(I),I=1,NP)
 	    ST_REC=ST_REC+1
 	    COMPUTE_P=.FALSE.
-	  ELSE IF( INDEX(FILE_DATE,'10-Apr-2007') .NE. 0)THEN
+	  ELSE IF( INDEX(FILE_DATE,'10-Apr-2007') .NE. 0 .OR. INDEX(FILE_DATE,'25-Jan-2016') .NE. 0)THEN
 	    READ(LU_IN,REC=ST_REC)(P(I),I=1,NP)
 	    ST_REC=ST_REC+1
 	    READ(LU_IN,REC=ST_REC)(MU(I),I=1,NP)
@@ -238,6 +243,8 @@
 	  END DO
 	CLOSE(LU_IN)
 	WRITE(T_OUT,*)'Successfully read in IP_DATA file as MODEL A (default)'
+	WRITE(T_OUT,*)'Number of angles is',NP
+	WRITE(T_OUT,*)'Number of frequenct points is',NCF
 !
 !
 !
@@ -296,6 +303,18 @@
 	   END DO
 	   WRITE(T_OUT,*)'P computed internally'
 	 END IF
+!
+	IF(NP .LT. ND)THEN
+	  ALLOCATE (TMP_MU(NP))
+	  ALLOCATE (HQW_AT_RMAX(NP))
+	  CALL GAULEG(RZERO,RONE,TMP_MU,HQW_AT_RMAX,NP)
+	  PLANE_PARALLEL_MOD=.TRUE.
+	  WRITE(6,*)'Model assumed to be plae-parallel'
+	ELSE
+	  ALLOCATE (HQW_AT_RMAX(NP))
+	  CALL HWEIGHT(MU,HQW_AT_RMAX,NP)
+	  PLANE_PARALLEL_MOD=.FALSE.
+	END IF
 !
 	CALL GEN_IN(DISTANCE,'Distance to star (kpc)')
 	CALL GEN_IN(SLIT_WIDTH,'Width of spectrograph slit (arcsec)')
@@ -417,6 +436,29 @@
 ! and outside index I.
 !
 	ELSE IF(X(1:2) .EQ. 'SP')THEN
+!
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  ALLOCATE (XV(NCF))
+	  ALLOCATE (YV(NCF))
+!
+	  WRITE(6,*) HQW_AT_RMAX,R(ND)
+	  XV(1:NCF)=NU(1:NCF)
+	  YV(1:NCF)=0.0D0
+	  DO J=1,NP
+	    YV(1:NCF)=YV(1:NCF)+HQW_AT_RMAX(J)*IP(J,1:NCF)
+	  END DO
+          T1=DISTANCE*1.0D+03*PARSEC()
+	  T1=2.0D0*R(ND)*R(ND)*PI*1.0D+23*(1.0E+10/T1)**2
+	  YV(1:NCF)=YV(1:NCF)*T1
+!
+! NB: J and I have the same units, apart from per steradian.
+!
+	  CALL CNVRT_J(XV,YV,NCF,LOG_X,LOG_Y,X_UNIT,Y_PLT_OPT,
+	1         LAMC,XAXIS,YAXIS,L_FALSE)
+	  CALL CURVE(NCF,XV,YV)
+!
+	ELSE IF(X(1:3) .EQ. 'ISP')THEN
 	  CALL USR_OPTION(I,'P',' ','Impact parameter index cuttoff')
 	  IF(I .GT. NP)THEN
 	    WRITE(T_OUT,*)'Invalid depth; maximum value is',NP
@@ -687,7 +729,7 @@
 	  YAXIS='F(p)'
 	  CALL CURVE(NP-1,XV,ZV)
 !
-	ELSE IF(X(1:4) .EQ. 'INU2')THEN
+	ELSE IF(X(1:4) .EQ. 'INU2' .OR. X(1:5) .EQ. 'WINU2')THEN
 	  CALL USR_OPTION(T1,'lam_st',' ','Start wavelength in Ang')
 	  T1=0.299794D+04/T1
           I=GET_INDX_DP(T1,NU,NCF)
@@ -755,22 +797,33 @@
 	    YV(:)=0.0D0
 	    K=MIN(I,J); J=MAX(I,J); I=K
 	    IF(J .EQ. I)J=I+1
-	    DO K=I,J-1
-	      YV(1:NP-2)=YV(1:NP-2)+0.5D0*(IP(2:NP-1,K)+IP(2:NP-1,K+1))*
-	1                                 (NU(K)-NU(K+1))
-	    END DO
-	    T1=ABS(NU(I)-NU(J))
-	    YV(1:NP-2)=LOG10(YV(1:NP-2)/T1)
-	    IF(MULT_BY_PSQ)THEN
-	      DO I=1,NP-2
-	        YV(I)=YV(I)+2.0D0*LOG10(P(I+1))+20.0D0
+!
+	    IF(X(1:5) .EQ. 'WINU2')THEN
+	      WRITE(30,*)NP-1,J-I+2
+	      WRITE(30,'(1000ES14.6)')P(2:NP)
+	      WRITE(30,'(1000ES15.7)')XV(1:NP-1)
+	      WRITE(30,'(1000ES15.7)')ANG_TO_HZ/NU(I:J+1)
+	      DO K=I,J+1
+	        WRITE(30,'(500ES12.4)')IP(2:NP,K)
 	      END DO
-	      YAXIS='Log p\u2\dI\gn\u(ergs s\u-1\d Hz\u-1\d steradian\u-1\d)' 
 	    ELSE
-	      YAXIS='Log I\d\gn\u(ergs cm\u-2\d s\u-1\d Hz\u-1\d steradian\u-1\d)' 
+	      DO K=I,J-1
+	        YV(1:NP-2)=YV(1:NP-2)+0.5D0*(IP(2:NP-1,K)+IP(2:NP-1,K+1))*
+	1                                 (NU(K)-NU(K+1))
+	      END DO
+	      T1=ABS(NU(I)-NU(J))
+	      YV(1:NP-2)=LOG10(YV(1:NP-2)/T1)
+	      IF(MULT_BY_PSQ)THEN
+	        DO I=1,NP-2
+	          YV(I)=YV(I)+2.0D0*LOG10(P(I+1))+20.0D0
+	        END DO
+	        YAXIS='Log p\u2\dI\gn\u(ergs s\u-1\d Hz\u-1\d steradian\u-1\d)' 
+	      ELSE
+	        YAXIS='Log I\d\gn\u(ergs cm\u-2\d s\u-1\d Hz\u-1\d steradian\u-1\d)' 
+	      END IF
+	      XAXIS='\gm'
+	      CALL CURVE(NP-2,XV,YV)
 	    END IF
-	    XAXIS='\gm'
-	    CALL CURVE(NP-2,XV,YV)
 	  END IF
 !
 	ELSE IF(X(1:3) .EQ. 'IMU')THEN
@@ -797,8 +850,15 @@
 	  ELSE
 	    XV(1:NP)=MU(1:NP)
 	  END IF
-	  CALL CURVE(NP,XV,YV)
+	  T1=MAXVAL(YV(1:NP))
 	  YAXIS='I(ergs cm\u-2\d s\u-1\d Hz\u-1\d steradian\u-1\d)' 
+	  IF(T1 .LT. 1.0D-03 .OR. T1 .GT. 1.0D+04)THEN
+	    J=-LOG10(T1)
+	    YV(1:NP)=YV(1:NP)*(10**J)
+	    WRITE(TMP_STR,*)J; TMP_STR=ADJUSTL(TMP_STR)
+	    YAXIS=TRIM(YAXIS)//' x 10\u'//TRIM(TMP_STR)//'\d'
+	  END IF
+	  CALL CURVE(NP,XV,YV)
 
 	ELSE IF(X(1:3) .EQ. 'INU')THEN
 	  CALL USR_OPTION(T1,'Lambda',' ','Wavelength in Ang')
@@ -1198,11 +1258,14 @@
 	    WRITE(6,*)' TIT  LX  LY  XU '
 	    WRITE(6,*)' CF:   Plot cummulative spectrum as a function of impact parameter'
 	    WRITE(6,*)' IP:   Plot spectrum at a given impact parameter'
+	    WRITE(6,*)' IMU:  Plot intensity as a function of MU for a given frequency'
 	    WRITE(6,*)' SP:   Plot spectrum inside and outside impact parameter p'
 	    WRITE(6,*)' INU:  Plot I(p) for a given frequency'
 	    WRITE(6,*)' INU2: Plot I(p) for a given frequency band'
 	    WRITE(6,*)' IF2:  Plot normalize Flux originating inside p for a given frequency band'
 	    WRITE(6,*)' '
+	    WRITE(6,*)' GR:   Enter polot packgae to plot passed data'
+	    WRITE(6,*)' GRL:  As for GR but no labels passed'
 	    WRITE(6,*)' '
 	    GOTO 1
 	  END IF
@@ -1225,6 +1288,11 @@
 700	  CONTINUE
 	  CLOSE(UNIT=LU_IN)
 !
+	ELSE IF(X(1:3) .EQ. 'WRP') THEN
+	  WRITE(6,'(3X,A,11X,A,13X,A,11X,A)')'LS','P(LS)','MU(LS)','HQW(LS)'
+	  DO LS=1,NP
+	    WRITE(6,'(I5,ES16.8,1X,2F18.12)')LS,P(LS),MU(LS),HQW_AT_RMAX(LS)
+	  END DO
 	ELSE IF(X(1:2) .EQ. 'EX') THEN
 	  STOP
 	ELSE IF(X(1:3) .EQ. 'BOX') THEN

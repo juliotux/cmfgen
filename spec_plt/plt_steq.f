@@ -8,6 +8,8 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered 02-Jul-2014 - Bug fix -- last iteration was read was not being counted as an 
+!                        iteration even though it was successfully read in.
 ! Created 14-Jan-2014
 !
 	TYPE STEQ_DATA
@@ -114,10 +116,11 @@ C
 	        K=INDEX(STRING,'#')+1
 	        READ(STRING(K:),*,END=5000)(ST(IT)%SOL(I,J),J=L,MIN(L+9,ND))
 	      END DO
-	      READ(12,'(A)',ERR=5000,END=5000)STRING
+	      READ(12,'(A)',ERR=5000,END=6000)STRING
 	    END DO
 	    NIT=IT
 	  END DO
+6000	NIT=NIT+1		!We add one as we reach this point when trying to read end of file
 5000	CONTINUE
 	CLOSE(UNIT=12)
 	WRITE(6,*)' '

@@ -3,6 +3,9 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered : 01-Sep-2016 : Added variabe MINIMUM_ISO_POP (not required)
+!                            TIME_SEQ_NO changed from integer to real.
+! Altered : 15-Feb-2015 : Added INSTANTANEOUS_ENERGY_DEPOSITION option (12-Jan-2015 on OSPREY[cur_cmf_gam])
 ! Altered : 02/07-Nov-2011 : Changed location of COMP_GREY_LST_IT so that set for all model.
 ! Altered : 05-Apr-2011 : Changed the way REVISE_R_GRID is handled. Variable controlling
 !                           R grid revision now read in by routine do the R-grid revision.
@@ -160,6 +163,9 @@ C
 	    CALL RD_STORE_DBLE(VINF1,'VINF',L_TRUE,'Terminal velocity (km/s)')
 	    SN_MODEL=.TRUE.
 	    SN_HYDRO_MODEL=.TRUE.
+	  ELSE IF(VELTYPE .EQ. 12)THEN
+	    CALL RD_STORE_DBLE(VCORE,'VCORE',L_TRUE,'Initial velocity (km/s)')
+	    CALL RD_STORE_DBLE(V_BETA1,'BETA1',L_TRUE,'Power of velocity Law')
 	  ELSE
 	    WRITE(LUER,*)'Velocity law ',VELTYPE, ' not implemented',
 	1                ' in this version of CMFGEN'
@@ -179,13 +185,27 @@ C
 	    CALL RD_STORE_DBLE(RMDOT,'MDOT',L_TRUE,'Mass Loss rate (Msun/yr) ')
 	  END IF
 	  CALL RD_STORE_DBLE(LUM,'LSTAR',L_TRUE,'Stellar luminosity (Lsun)')
+!
+! TEFF and LOGG only need to be present if DO_HYDRO is TRUE. Values will still be read
+! in when available if DO_HYDRO is FALSE. 
+!
+	  TEFF=0.0D0; LOGG=0.0D0
 	  IF(DO_HYDRO)THEN
-	    CALL RD_STORE_DBLE(TEFF,'TEFF',L_TRUE,'Effective temperature (10^4 K)')
-	    CALL RD_STORE_DBLE(LOGG,'LOGG',L_TRUE,'Log surface gravity (cgs units)')
-	    CALL RD_STORE_DBLE(V_BETA1,'BETA',L_TRUE,'Beta exponent for velocity law')
+	    CALL RD_STORE_DBLE(TEFF,'TEFF',DO_HYDRO,'Effective temperature (10^4 K)')
+	    CALL RD_STORE_DBLE(LOGG,'LOGG',DO_HYDRO,'Log surface gravity (cgs units)')
+	    CALL RD_STORE_DBLE(V_BETA1,'BETA',DO_HYDRO,'Beta exponent for velocity law')
 	    PRESSURE_VTURB=0.0D0
-	    CALL RD_STORE_DBLE(PRESSURE_VTURB,'P_VTURB',L_FALSE,'Beta exponent for velocity law')
+	    CALL RD_STORE_DBLE(PRESSURE_VTURB,'P_VTURB',L_FALSE,'Ipressure trubulent velocity')
 	  END IF
+	  IF(TEFF .NE. 0.0D0 .AND. .NOT. DO_HYDRO)THEN
+	    WRITE(LUER,'(A)')' Possible Error in VADAT file.'
+	    WRITE(LUER,'(A)')' You have set TEFF in VADAT but DO_HYDRO is false.'
+            WRITE(LUER,'(A)')' TEFF will not be VALID unless hydro-iterations are performed.'
+            WRITE(LUER,'(A)')' Remove TEFF if you are not going to do a hdyro iteration'
+            WRITE(LUER,'(A)')' In this case TEFF is set by L, R and Mdot'
+	    STOP
+	  END IF
+
 	  CALL RD_STORE_DBLE(STARS_MASS,'MASS',L_TRUE,'Stellar mass (Msun)')
 C
 C All clumping parameters are read in, even when CLUMPING is switched off.
@@ -221,7 +241,7 @@ C
 	  PURE_HUBBLE_FLOW=.FALSE.
 	  COMP_GREY_LST_IT=.TRUE.
 	  N_RG_PAR=0
-	  TIME_SEQ_NO=0
+	  TIME_SEQ_NO=0.0D0
 	  IF(SN_MODEL)THEN
 !
 	    JGREY_WITH_V_TERMS=.TRUE.
@@ -230,8 +250,7 @@ C
 	    DO_CO_MOV_DDT=.FALSE.
 	    CALL RD_STORE_LOG(DO_CO_MOV_DDT,'DO_DDT',L_FALSE,
 	1            'Include comoving derivative in SE equations?')
-	    TIME_SEQ_NO=1
-	    CALL RD_STORE_INT(TIME_SEQ_NO,'TS_NO',DO_CO_MOV_DDT,
+	    CALL RD_STORE_DBLE(TIME_SEQ_NO,'TS_NO',DO_CO_MOV_DDT,
 	1            'Time sequence number: 1 for inital model')
 	    CALL RD_STORE_DBLE(SN_AGE_DAYS,'SN_AGE',DO_CO_MOV_DDT,'Age of SN in days')
 	    CALL RD_STORE_LOG(PURE_HUBBLE_FLOW,'PURE_HUB',L_TRUE,
@@ -276,6 +295,8 @@ C
 	       CALL RD_STORE_DBLE(DEC_NRG_SCL_FAC_BEG,'DECNRG_SCLFAC_BEG',ADD_DEC_NRG_SLOWLY,
 	1            'Initial Scale factor for adding decay energy')
             END IF
+	    MINIMUM_ISO_POP=1.0D-20
+	    CALL RD_STORE_DBLE(MINIMUM_ISO_POP,'MIN_ISO_POP',L_FALSE,'Minimum population for ant ISOTOPE')
 !
 	    CALL RD_STORE_LOG(COMP_GREY_LST_IT,'COMP_GREY_LST_IT',L_FALSE,'Compute grey solution on last iteration?')
 !
@@ -283,6 +304,9 @@ C
 	1           'Method to get T with non-GRID option (USE_T_IN or USE_HYDRO)')
 	    CALL RD_STORE_NCHAR(GAMRAY_TRANS,'GAMRAY_TRANS',ITEN,L_TRUE,
 	1           'NONLOCAL or LOCAL gamma-ray enegry transport')
+	    INSTANTANEOUS_ENERGY_DEPOSITION=.FALSE.
+	    CALL RD_STORE_LOG(INSTANTANEOUS_ENERGY_DEPOSITION,'INS_DEP',L_FALSE,'Instantaneous gamma-ray energy deposition?')
+!
 	    N_IB_INS=2
 	    N_OB_INS=3
 	    RMAX_ON_RCORE=-1.0D0		!Implies use default.
@@ -429,7 +453,11 @@ C
 	  CALL RD_STORE_DBLE(ES_VAR_FAC,'ES_FAC',L_TRUE,
 	1            'Fractional proximity of RJ and RJ_ES for coherent'//
 	1            ' variation')
-C
+!
+	  LTE_MODEL=.FALSE.
+	  CALL RD_STORE_LOG(LTE_MODEL,'LTE_MOD',L_FALSE,
+	1            'Force populations to LTE and iterate T only?')
+!
 	  CALL RD_STORE_NCHAR(METHOD,'METHOD',ISIX,L_TRUE,
 	1         'Which method for continuum tau'//
 	1         ' loglog, loglin, linear or zero ?')
@@ -440,6 +468,8 @@ C
 	  CALL RD_STORE_NCHAR(N_TYPE,'N_TYPE',ISIX,L_TRUE,
 	1         'Method for to handle N for MOM_J_CMF -- '//
 	1         'N_ON_J, MIXED, or G_ONLY')
+	  H_CHK_OPTION='NONE'
+	  CALL RD_STORE_CHAR(H_CHK_OPTION,'CHK_H',L_FALSE,'NONE, AV_VAL, or MAX_VAL')
 	  CALL RD_STORE_NCHAR(FG_SOL_OPTIONS,'FG_OPT',ITEN,L_TRUE,
 	1         'Solution options for FG_J_CMF: DIFF/INS and INT/INS')
 	  CALL RD_STORE_DBLE(DELV_FRAC_FG,'VFRAC_FG',L_TRUE,
@@ -567,12 +597,16 @@ C
 	  CALL RD_STORE_LOG(SOB_FREQ_IN_OBS,'SOB_FREQ_IN_OBS',L_TRUE,
 	1        ' Allow for SOB & CMF lines in defining observers'//
 	1        ' frequencies?')
+!
 	  VERBOSE_OUTPUT=.FALSE.
 	  CALL RD_STORE_LOG(VERBOSE_OUTPUT,'VERBOSE_OUT',L_FALSE,
 	1        'Switch on enhanced diagnostic output')
 	  CALL SET_VERBOSE_INFO(VERBOSE_OUTPUT)
 	  WRITE_RATES=.FALSE.
 	  CALL RD_STORE_LOG(WRITE_RATES,'WRITE_RATES',L_FALSE,'Write out NETRATE, TOTRATE, etc')
+	  WRITE_JH=.FALSE.
+	  IF(SN_MODEL)WRITE_JH=.TRUE.
+	  CALL RD_STORE_LOG(WRITE_JH,'WRITE_JH',L_FALSE,'Write out JH_AT_CURRENT_TIME')
 !
 	  WRITE(LUSCR,'()')
 	  CALL RD_STORE_NCHAR(GLOBAL_LINE_SWITCH,'GLOBAL_LINE',ISIX,L_TRUE,
@@ -625,6 +659,8 @@ C
 !
 	  CALL RD_STORE_LOG(INCL_CHG_EXCH,'INC_CHG',L_TRUE,'Include charge exchange reactions?')
 	  CALL RD_STORE_LOG(INCL_TWO_PHOT,'INC_TWO',L_TRUE,'Include two photon transitions?')
+	  TWO_PHOTON_METHOD='USE_RAD'
+	  CALL RD_STORE_CHAR(TWO_PHOTON_METHOD,'TWO_METH',L_FALSE,'USE_RAD, LTE, NOSTIM or OLD_DEFAULT')
 	  INCL_PENNING_ION=.FALSE.
 	  CALL RD_STORE_LOG(INCL_PENNING_ION,'INC_PEN',SN_MODEL,'Include Penning ionization?')
 !
@@ -699,6 +735,15 @@ C
 	  CALL RD_STORE_DBLE(SLOW_XRAY_SCL_FAC,'XSCL_FAC',ADD_XRAYS_SLOWLY,
 	1           'Rate to increase X-ray filling factor')
 !
+	  SCALE_XRAY_LUM=.FALSE.
+	  ALLOWED_XRAY_FLUX_ERROR=0.1D0 
+	  CALL RD_STORE_LOG(SCALE_XRAY_LUM,'SCL_XLUM',L_FALSE,
+	1           'Scale X-ray emissivities to get a specified X-ray luminosiity')
+	  CALL RD_STORE_DBLE(DESIRED_XRAY_LUM,'XRAY_LUM',SCALE_XRAY_LUM,
+	1           'X-ray luminosity in units of LSTAR')
+	  CALL RD_STORE_DBLE(ALLOWED_XRAY_FLUX_ERROR,'XRAY_ERR',L_FALSE,
+	1           'Fractional error allowed in observed X-ray luminosity')
+!
 	  DELV_XRAY=0.5D0*VSMOOTH_XRAYS
 	  CALL RD_STORE_DBLE(DELV_XRAY,'V_XRAY',L_FALSE,
 	1            'Max. vel. sep. (km/s) between evaluations of '//
@@ -735,6 +780,10 @@ C
 	1        'Tau above which T is set exactly to T(spherical)')
 	  CALL RD_STORE_LOG(ITERATE_INIT_T,'IT_ON_T',L_TRUE,
 	1        'Improve initial T estimate by iteration ?')
+	  INTERP_T_ON_R_GRID=.TRUE.
+	  IF(DC_INTERP_METHOD .EQ. 'R')INTERP_T_ON_R_GRID=.FALSE.
+	  CALL RD_STORE_LOG(INTERP_T_ON_R_GRID,'T_ON_R',L_FALSE,
+	1       'Interpolate T on R grid - default is SPH tau grid')
 	  CALL RD_STORE_DBLE(GREY_PAR,'GREY_TAU',L_TRUE,
 	1        'SpecifysTau above which T is set to TGREY in iterative process')
 !
@@ -930,9 +979,12 @@ C
 	  CALL RD_STORE_LOG(INCL_DJDT_TERMS,'INCL_DJDT',L_FALSE,'DJDt terms in transfer equaton for SN models?')
 	  IF(INCL_DJDT_TERMS)THEN
 	    USE_DJDT_RTE=.TRUE.
+	    USE_Dr4JDT=.TRUE.
+	    CALL RD_STORE_LOG(USE_Dr4JDT,'USE_DR4JDT',L_FALSE,'Difference Dr4JDt')
 	  ELSE
 	    JGREY_WITH_V_TERMS=.FALSE.
 	    USE_DJDT_RTE=.FALSE.
+	    USE_Dr4JDT=.FALSE.
 	    CALL RD_STORE_LOG(USE_DJDT_RTE,'USE_DJDT_RTE',L_FALSE,
 	1    'Use solver which has DJDt terms in transfer equaton for SN models?')
 	  END IF

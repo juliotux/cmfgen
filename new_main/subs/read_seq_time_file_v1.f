@@ -136,7 +136,7 @@
 !
 	IF(FIRST)THEN
 	  WRITE(LUWARN,'(A)')
-	  WRITE(LUWARN,'(/,X,A)')'Reading old populations in READ_SEQ_TIME_FILE_V1'
+	  WRITE(LUWARN,'(/,1X,A)')'Reading old populations in READ_SEQ_TIME_FILE_V1'
 	  WRITE(LUWARN,'(A)')
 	END IF
 	ALLOCATE (TMP_DXzV(ND))

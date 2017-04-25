@@ -13,6 +13,8 @@
 	USE MOD_CMFGEN
 	IMPLICIT NONE
 !
+! Altered : 01-Sep-2016 : TIME_SEQ_NO changed from integer to real. In this version TIME_SEQ_NO is not
+!                             used.
 ! Altered : 22-Nov-2011 : Changed to V5 -- added POPS to call. Old population of unavailable
 !                             species set to current population.
 ! Altered : 21-Mar-2007 : READ_TIME_MODEL_V1 
@@ -24,15 +26,14 @@
 	INTEGER ND
 	INTEGER NT
 	INTEGER LU
-	INTEGER TIME_SEQ_NO
 	LOGICAL DO_ADVECT
 	LOGICAL DO_RAD_DECAYS
 	LOGICAL NORMALIZE_POPS
 !
 	REAL*8 POPS(NT,ND)
-!
 	REAL*8 OLD_R(ND)
 	REAL*8 OLD_POPS(NT,ND)
+	REAL*8 TIME_SEQ_NO
 !
 ! Local arrays, vectors, and variables.
 !
@@ -76,12 +77,8 @@
 	IF(IOS .EQ. 0)ALLOCATE (LOG_TMP_V(ND_OLD),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (TMP_POPS(NT,ND_OLD),STAT=IOS)
 !
-! Get model from the last time step. TIME_SEQ_NO refers to the CURRENT 
-! time model. Therefore we must subtract 1.
+! Get model from the last time step. 
 !
-!	IREC_RD=TIME_SEQ_NO-1
-!	CALL  READ_TIME_MODEL_V1(TMP_R,TMP_V,TMP_SIGMA,TMP_POPS,
-!	1             IREC_RD,RVSIG_WRITTEN,NT,ND,LU)
         CALL READ_SEQ_TIME_FILE_V1(TMP_R,TMP_V,TMP_SIGMA,TMP_POP_ATOM,
 	1            TMP_DENSITY,TMP_POPS,
 	1            OLD_ION_STAGE_PRES,OLD_SN_AGE,ND_OLD,NT,LU)

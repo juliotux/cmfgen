@@ -16,16 +16,22 @@ OBJ = $(LIB)(mod_curve_data.o)\
       $(LIB)(change_color.o)\
       $(LIB)(change_pen.o)\
       $(LIB)(curve.o)\
-      $(LIB)(do_vec_op.o)\
+      $(LIB)(cut_points_from_plot.o)\
+      $(LIB)(define_more_pens.o)\
+      $(LIB)(do_fill.o)\
+      $(LIB)(do_many_ew.o)\
       $(LIB)(do_mult_gf.o)\
+      $(LIB)(do_vec_op.o)\
       $(LIB)(draw_right_y_axis.o)\
       $(LIB)(ed_gaus_fit.o)\
+      $(LIB)(ew_group.o)\
       $(LIB)(find_lines.o)\
       $(LIB)(fntick.o)\
       $(LIB)(gaus_romb.o)\
       $(LIB)(gaus_fit_er.o)\
       $(LIB)(get_gramon_min_max.o)\
       $(LIB)(get_pgi_file_info.o)\
+      $(LIB)(get_titles.o)\
       $(LIB)(gramon_pgplot.o)\
       $(LIB)(hist_adj.o)\
       $(LIB)(justify_convert_v2.o)\
@@ -33,12 +39,16 @@ OBJ = $(LIB)(mod_curve_data.o)\
       $(LIB)(mon_num.o)\
       $(LIB)(monbord_v3.o)\
       $(LIB)(moninside.o)\
+      $(LIB)(put_text.o)\
       $(LIB)(simp_ew.o)\
+      $(LIB)(strip_slash_p.o)\
+      $(LIB)(shrink_vectors.o)\
       $(LIB)(spacing.o)\
       $(LIB)(vectorpen.o)\
       $(LIB)(gaus_fit_data.o)\
       $(LIB)(do_gaus_fit.o)\
       $(LIB)(wr_gaus_fit.o)\
+      $(LIB)(write_line_lambdas.o)\
       $(LIB)(gaus_fit_func.o)
 
 all : $(LIB)

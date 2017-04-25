@@ -75,6 +75,7 @@
 	INTEGER, ALLOCATABLE :: J_INDX(:)
 	INTEGER, ALLOCATABLE :: H_INDX(:)
 !
+	LOGICAL VERBOSE
 	LOGICAL FIRST_TIME
 	DATA FIRST_TIME/.TRUE./
 	DATA VDOP_FRAC_SAVE/-10001.1D0/    !Absurd value
@@ -186,7 +187,8 @@
 	END IF
 	IF(FIRST_TIME)THEN
           OPEN(UNIT=47,FILE='MOM_J_ERRORS',STATUS='UNKNOWN')
-        ELSE IF(INIT)THEN
+          CALL GET_VERBOSE_INFO(VERBOSE)
+	ELSE IF(INIT)THEN
 	  REWIND(47)
 	END IF
 !
@@ -644,7 +646,7 @@
 !
 ! Check that no negative mean intensities have been computed.
 !
-	IF(MINVAL(XM(1:ND)) .LE. 0.0D0)THEN
+	IF(MINVAL(XM(1:ND)) .LE. 0.0D0 .AND. VERBOSE)THEN
 	  WRITE(47,'(/,A,E16.8)')'Freq=',FREQ
 	  TA(1:ND)=XM(1:ND)/R(1:ND)/R(1:ND)
 	  CALL WRITE_VEC(TA,ND,'XM Vec',47)
@@ -658,6 +660,10 @@
 !
 	DO I=1,ND
 	  IF(XM(I) .LT. 0.0D0)THEN
+	    IF(.NOT. VERBOSE)THEN
+	      WRITE(47,'(I5,ES16.8,12ES13.4)')I,FREQ,XM(I),ETA(I),CHI(I),ESEC(I),K_ON_J(I),
+	1                         NMID_ON_J(I),NMID_ON_HMID(I),XM(MAX(1,I-2):MIN(I+2,ND))
+	    END IF
 	    XM(I)=ABS(XM(I))/10.0D0
 	    RECORDED_ERROR=.FALSE.
 	    J=1
@@ -687,6 +693,18 @@
 	1                  EPS(I)*(XM(I)+XM(I+1)) )
 	  END DO
 	END IF
+!
+! Make sure H satisfies the basic requirement that it is less than J.
+!
+!	DO I=1,ND-1
+!	  T1=(RSQJNU(I)+RSQJNU(I+1))/2.0D0
+!	  T1=MAX(RSQJNU(I),RSQJNU(I+1))
+!	  IF(RSQHNU(I) .GT. T1)THEN
+!	    RSQHNU(I)=0.99D0*T1
+!	  ELSE IF(RSQHNU(I) .LT. -T1)THEN
+!	    RSQHNU(I)=-0.99D0*T1
+!	  END IF
+!	END DO
 !
 ! Regrid derived J and RSQH values onto small grid. We devide RSQJ by R^2 so that
 ! we return J.

@@ -148,6 +148,7 @@
 	1         ID_POINTER(J,K),LEV_CNT(J,K),G_SUM(J,K)
 	    END DO
 	  ELSE
+	    WRITE(LUOUT,'(A)')' '
 	    DO K=1,4
 	      WRITE(LUOUT,'(40X,2I4,3X,A,T60,2I6,F7.1)')J,K,TRIM(SPEC_ID_CHG_RD(J,K)),
 	1         ID_POINTER(J,K),LEV_CNT(J,K),G_SUM(J,K)

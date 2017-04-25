@@ -238,7 +238,7 @@ C Find the first line that is to be included as a blanketed line.
 C
 	LN_INDX=1
 	DO WHILE(LN_INDX .LE. N_LINES .AND. 
-	1          TRANS_TYPE(LN_INDX)(1:3) .NE. 'BLA')
+	1          TRANS_TYPE(MIN(LN_INDX,N_LINES))(1:3) .NE. 'BLA')
 	  LN_INDX=LN_INDX+1
 	END DO
 C
@@ -423,7 +423,7 @@ C
 C Find the next line that is to be included as a blanketed line.
 C
 	    DO WHILE(LN_INDX .LE. N_LINES .AND. 
-	1          TRANS_TYPE(LN_INDX)(1:3) .NE. 'BLA')
+	1          TRANS_TYPE(MIN(LN_INDX,N_LINES))(1:3) .NE. 'BLA')
 	       LN_INDX=LN_INDX+1
 	    END DO
 C	 

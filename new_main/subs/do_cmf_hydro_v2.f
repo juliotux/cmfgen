@@ -15,6 +15,9 @@
 	USE UPDATE_KEYWORD_INTERFACE
 	IMPLICIT NONE
 !
+! Altered 05-Jun-2015 - Fixed bug; GAM_LIM_STORE was not being set to GAM_LIM when it was read
+!                           in from the HDYRO_DEFAULTS file.
+!                       Now save old RVSIG_COL file as RVSIG_COL_IT_#.
 ! Altered 30-Jul-2011 - Added VC_ON_SS as parameter
 ! Altered 17-Jun-2011 - Added check to make sure dVdR is not negative at the connection point.
 !                         When -ve, we lower GAM_LIM.
@@ -102,6 +105,7 @@
 	INTEGER NUM_OBND_PARAMS
 	CHARACTER(LEN=16) OUT_BND_OPT
 	CHARACTER(LEN=80) STRING
+	CHARACTER(LEN=20) HYDRO_OPT
 !
 ! Wind parameters:
 !
@@ -125,6 +129,7 @@
 	REAL*8 RBOUND
 	REAL*8 TAU_MAX
 	REAL*8 OLD_TAU_MAX
+	REAL*8 BOLD,BNEW
 	REAL*8 T1,T2,T3
 	REAL*8 GAM_LIM_STORE
 	REAL*8 VC_ON_SS
@@ -141,6 +146,7 @@
 	LOGICAL USE_OLD_VEL
 	LOGICAL L_TEMP
 	LOGICAL FILE_OPEN
+	LOGICAL FILE_PRES
 	LOGICAL VERBOSE_OUTPUT
 	LOGICAL UPDATE_GREY_SCL
 !
@@ -162,6 +168,7 @@
 	INTEGER  NO_HYDRO_ITS
 	INTEGER  NO_ITS_DONE
 	INTEGER  ITERATION_COUNTER
+	INTEGER  VEL_LAW
 !
 	INTEGER  LU
 	INTEGER  LUV
@@ -184,6 +191,7 @@
 	PI=ACOS(-1.0D0)
 	STRT_HYDRO_ITS=20
 	FREQ_HYDRO_ITS=8
+	HYDRO_OPT='DEFAULT'
 !
 	CALL STORE_OLD_GRID(MU_ATOM,MOD_ND)
 !
@@ -194,6 +202,7 @@
 	MDOT=MOD_MDOT
 	RMAX=MOD_RMAX/OLD_R(OLD_ND)
 	VTURB=MOD_VTURB
+	VEL_LAW=ITWO
 !
 	VC_ON_SS=0.75D0
 	TAU_REF=2.0D0/3.0D0
@@ -252,9 +261,11 @@
 	CALL RD_STORE_DBLE(RMAX,'MAX_R',L_FALSE,'Maximum radius in terms of Connection radius')
 	CALL RD_STORE_LOG(RESET_REF_RADIUS,'RES_REF',L_FALSE,'Reset reference radius if using old velocity law')
 	CALL RD_STORE_DBLE(GAM_LIM,'GAM_LIM',L_FALSE,'Limiting Eddington factor')
+	GAM_LIM_STORE=GAM_LIM
 	CALL RD_STORE_DBLE(VC_ON_SS,'VC_ON_SS',L_FALSE,'Connection velocity on sound speed')
 	CALL RD_STORE_LOG(UPDATE_GREY_SCL,'UP_GREY_SCL',L_FALSE,'Update GREY_SCL_FAC_IN')
 	CALL RD_STORE_DBLE(TAU_REF,'TAU_REF',L_FALSE,'Reference radius for g and Teff')
+	CALL RD_STORE_INT(VEL_LAW,'VEL_LAW',L_FALSE,'Velocity law for wind region (2 or 3)')
 	BETA2=BETA
 	CALL RD_STORE_DBLE(BETA2,'BETA2',L_FALSE,'Second exponent for velocity law')
 !
@@ -271,6 +282,10 @@
 	  STRING='OB_P'//ADJUSTL(STRING)
 	  CALL RD_STORE_DBLE(OBND_PARS(I),TRIM(STRING),L_TRUE,'Paremeters for outer boundary condition')
 	END DO
+	CALL RD_STORE_CHAR(HYDRO_OPT,'HYDRO_OPT',L_FALSE,'FIXED_R or FIXED_V_FLUX or DEFAULT')
+	IF(HYDRO_OPT .EQ. 'FIXED_V_FLUX')THEN
+	  CALL RD_STORE_DBLE(OLD_TEFF,'OLD_TEFF',L_TRUE,'Effective temperatre of input model')
+	END IF
 	CALL CLEAN_RD_STORE()
 !
         CLOSE(UNIT=LUIN)
@@ -292,8 +307,58 @@
 	END IF
 	CALL GET_LU(LU)				!For files open/shut immediately
 !
-	REFERENCE_RADIUS=1.0D-18*SQRT(MOD_LUM*LUM_SUN()/TEFF**4/STEFAN_BC/4.0D0/PI)
+! In TORSCL_V3, TA is TAU, TB is dTAU, and TC is used fro dCHIdR. 
+!
 	WRITE(6,'(/,A)')' Updating hydrostatic structure of the model'
+	IF(HYDRO_OPT .EQ. 'FIXED_R_REF')THEN
+	  WRITE(6,'(A)')' Using FIXED_R_REF option in DO_CMF_HYDRO_V2'
+	  CHI_ROSS(1:MOD_ND)=OLD_CLUMP_FAC(1:MOD_ND)*OLD_ROSS_MEAN(1:MOD_ND)
+	  I=7			!Use CHI(1) and CHI(I) to computed exponent.
+	  CALL TORSCL_V3(TA,CHI_ROSS,OLD_R,TB,TC,MOD_ND,'LOGMON','PCOMP',I,L_FALSE)
+	  DO I=1,MOD_ND
+	    IF(TA(I) .GT. TAU_REF)THEN
+	      T1=(TAU_REF-TA(I-1))/(TA(I)-TA(I-1))
+	      REFERENCE_RADIUS=T1*OLD_R(I)+(1.0D0-T1)*OLD_R(I-1)
+	      EXIT
+	    END IF
+	  END DO
+!
+	  T1=REFERENCE_RADIUS*TEFF*TEFF
+	  MOD_LUM=4.0D+36*PI*STEFAN_BC*T1*T1/LUM_SUN()
+	  CALL UPDATE_KEYWORD(MOD_LUM,'[LSTAR]','VADAT',L_TRUE,L_TRUE,LUIN)
+	  CALL UPDATE_KEYWORD('DEFAULT','[HYDRO_OPT]','HYDRO_DEFAULTS',L_TRUE,L_TRUE,LUIN)
+	  WRITE(6,'(A)')' DO_CMF_HYDRO_V2 has adjusted LSTAR in VADAT'
+!
+	ELSE IF(HYDRO_OPT .EQ. 'FIXED_V_FLUX')THEN
+	  WRITE(6,'(A)')' Using FIXED_V_FLUX option in DO_CMF_HYDRO_V2'
+	  I=7	!Use CHI(1) and CHI(I) to computed exponent.
+	  CHI_ROSS(1:MOD_ND)=OLD_CLUMP_FAC(1:MOD_ND)*OLD_ROSS_MEAN(1:MOD_ND)
+	  CALL TORSCL_V3(TA,CHI_ROSS,OLD_R,TB,TC,MOD_ND,'LOGMON','PCOMP',I,L_FALSE)
+	  DO I=1,MOD_ND
+	    IF(TA(I) .GT. TAU_REF)THEN
+	      T1=(TAU_REF-TA(I-1))/(TA(I)-TA(I-1))
+	      REFERENCE_RADIUS=T1*OLD_R(I)+(1.0D0-T1)*OLD_R(I-1)
+	      EXIT
+	    END IF
+	  END DO
+          BOLD=1.0D0/(EXP(1.4388/0.55D0/OLD_TEFF)-1.0D0)
+          BNEW=1.0D0/(EXP(1.4388/0.55D0/TEFF)-1.0D0)
+	  REFERENCE_RADIUS=REFERENCE_RADIUS*SQRT(BOLD/BNEW)
+	  T1=REFERENCE_RADIUS*TEFF*TEFF
+	  MOD_LUM=4.0D+36*PI*STEFAN_BC*T1*T1/LUM_SUN()
+	  CALL UPDATE_KEYWORD(MOD_LUM,'[LSTAR]','VADAT',L_TRUE,L_TRUE,LUIN)
+	  CALL UPDATE_KEYWORD('DEFAULT','[HYDRO_OPT]','HYDRO_DEFAULTS',L_TRUE,L_FALSE,LUIN)
+	  CALL UPDATE_KEYWORD(TEFF,'[OLD_TEFF]','HYDRO_DEFAULTS',L_FALSE,L_TRUE,LUIN)
+	  WRITE(6,'(A)')' DO_CMF_HYDRO_V2 has adjusted LSTAR in VADAT'
+!
+	ELSE IF(HYDRO_OPT .EQ. 'DEFAULT')THEN
+	  WRITE(6,'(A)')' Reference radius: based on effective temperature and luminosity of star'
+	  REFERENCE_RADIUS=1.0D-18*SQRT(MOD_LUM*LUM_SUN()/TEFF**4/STEFAN_BC/4.0D0/PI)
+	ELSE
+	  WRITE(6,'(A)')' Error in do_cmf_hydro_v3.f: invlaid HYDRO_OPT option'
+	  WRITE(6,'(2A)')' HYDRO_OPT=',TRIM(HYDRO_OPT)
+	  STOP
+	END IF
 	WRITE(6,*)'Reference radius is',REFERENCE_RADIUS
 !
 !
@@ -366,17 +431,19 @@
 	  T1=1.0D-06*BOLTZMANN_CONSTANT()/MU_ATOM/ATOMIC_MASS_UNIT()
 	  DO I=1,MOD_ND
 	    ED_ON_NA_EST=OLD_ED(I)/OLD_POP_ATOM(I)
+	    MOD_SOUND_SPEED=SQRT(T1*(1.0D0+ED_ON_NA_EST)*OLD_T(I)+0.5*VTURB*VTURB)
 	    SOUND_SPEED=SQRT(T1*(1.0D0+ED_ON_NA_EST)*OLD_T(I))
-	    IF(OLD_V(I) .LT. VC_ON_SS*SOUND_SPEED)THEN
+	    IF(OLD_V(I) .LT. VC_ON_SS*MOD_SOUND_SPEED)THEN
 	      CONNECTION_VEL=OLD_V(I)
 	      CONNECTION_RADIUS=OLD_R(I)
 	      CONNECTION_INDX=I
 	      RMAX=RMAX*CONNECTION_RADIUS
-	      WRITE(6,*)'Connection velocity is',CONNECTION_VEL
-	      WRITE(6,*)'  Connection radius is',CONNECTION_RADIUS
-	      WRITE(6,*)'     Maximum radius is',RMAX
-	      WRITE(6,*)'   Connection INDEX is',CONNECTION_INDX
-	      WRITE(6,*)'        Sound speed is',SOUND_SPEED
+	      WRITE(6,*)'  Connection velocity is',CONNECTION_VEL
+	      WRITE(6,*)'    Connection radius is',CONNECTION_RADIUS
+	      WRITE(6,*)'       Maximum radius is',RMAX
+	      WRITE(6,*)'     Connection INDEX is',CONNECTION_INDX
+	      WRITE(6,*)'          Sound speed is',SOUND_SPEED
+	      WRITE(6,*)' Modified sound speed is',MOD_SOUND_SPEED
 	      EXIT
 	    END IF
 	  END DO
@@ -396,6 +463,9 @@
 	  WRITE(LU_ERR,*)'An invalid Eddington parameter has been computed in DO_CMF_HYDRO_V2'
 	  WRITE(LU_ERR,*)'Check the validity of Teff and Log G'
 	  WRITE(LU_ERR,*)'The computed (maximum) Eddington parameter is ',GAM_EDD*MAX_ED_ON_NA
+	  WRITE(LU_ERR,*)'                            Teff(K)/1.0+04 is',TEFF
+	  WRITE(LU_ERR,*)'                         LOG_G (cgs units) is',LOGG
+	  WRITE(LU_ERR,*)'                                MAX(Ne/Na) is',MAX_ED_ON_NA
 	  STOP
 	END IF
 !
@@ -456,7 +526,7 @@
 	        END IF
 	      END DO
 	      CALL WIND_VEL_LAW_V2(R,V,SIGMA,VINF,BETA,BETA2,RMAX,
-	1          CONNECTION_RADIUS,CONNECTION_VEL,T2,ITWO,J,ND_MAX)
+	1          CONNECTION_RADIUS,CONNECTION_VEL,T2,VEL_LAW,J,ND_MAX)
 	      DO I=1,J
 	        POP_ATOM(I)=MDOT/MU_ATOM/R(I)/R(I)/V(I)
 	      END DO
@@ -572,7 +642,7 @@
 ! Set estimates at current location. Then integrate hydrostatic
 ! equation using 4th order Runge-Kutta.
 !
-	    IF(VERBOSE_OUTPUT)WRITE(LUV,'(5X,A,5X)')'  dPdR','dTAUdR','  T_EST','   dPn',' dTAUn'
+	    IF(VERBOSE_OUTPUT)WRITE(LUV,'(5(5X,A,5X))')'  dPdR','dTAUdR','  T_EST','   dPn',' dTAUn'
 100	    P_EST=P(I-1)
 	    TAU_EST=TAU(I-1)
 	    T_EST=T(I-1)
@@ -829,6 +899,27 @@
 	END DO
 !
 !
+!
+! Saves the current RVSIG_FILE for recovery puposes. Except for the first
+! iteration, this could be recovered from RVSIG_COL. For portability, we
+! use only regular fortran commands.
+!
+	INQUIRE(FILE='RVSIG_COL',EXIST=FILE_PRES)
+	IF(FILE_PRES)THEN
+	  STRING=' '
+	  WRITE(STRING,'(I4.4)')MAIN_COUNTER
+	  STRING='RVSIG_COL_IT_'//TRIM(STRING)
+   	  OPEN(UNIT=LUIN,FILE='RVSIG_COL',STATUS='OLD',ACTION='READ')
+	  OPEN(UNIT=LU,FILE=TRIM(STRING),STATUS='UNKNOWN',ACTION='WRITE')
+	  DO WHILE(1 .EQ. 1)
+	    READ(LUIN,'(A)',IOSTAT=IOS)STRING
+	    WRITE(LU,'(A)')TRIM(STRING)
+	    IF(IOS .NE. 0)EXIT
+	  END DO
+	  CLOSE(LUIN)
+	  CLOSE(LU)
+	END IF
+!
 ! Output revised hydrostatic structure. This can be used to restart the current
 ! model from scratch.
 !

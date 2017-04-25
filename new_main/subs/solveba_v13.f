@@ -3,8 +3,10 @@
 	1              LAM_SCALE_OPT,CHANGE_LIM,MAX_dT_COR,T_MIN,
 	1              BA_COMPUTED,WR_BA_INV,WR_PRT_INV,LAMBDA_IT,
 	1              MAIN_COUNTER,SET_POPS_D2_EQ_D1)
+	USE CONTROL_VARIABLE_MOD, ONLY: LTE_MODEL
 	IMPLICIT NONE
 !
+! Altered 17-Feb-2016 : Added LTE_MODEL option.
 ! Created 14-Feb-2014 : Changed to V13 -- added MAX_dT_COR to call.
 ! Created 26-Mar-2013 : Changed to V11 and added POP_ATOM to call.
 ! Altered 12-MAr-2013 : We can now set the populations at depth 2 equal to those at depth 1 for 
@@ -390,6 +392,11 @@
 	IF(SET_POPS_D2_EQ_D1 .AND. .NOT. LAMBDA_IT)THEN
 	  POPS(:,2)=POPS(:,1)*POP_ATOM(2)/POP_ATOM(1)
 	END IF
+!
+! This adjust populations to their LTE values. This is only done if LTE_MODEL
+! is set to TRUE, which is ascertained in SET_POPS_TO_LTE.
+!
+	IF(LTE_MODEL)CALL SET_POPS_TO_PURE_LTE(POPS,NT,ND)
 !
 	RETURN
 	END

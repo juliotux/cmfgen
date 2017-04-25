@@ -37,6 +37,8 @@
 	USE VAR_RAD_MOD
 	IMPLICIT NONE
 !
+! Altered 04-Apr-2014 : Bug fix -- needed to move computation of V(r) before the
+!                         computation of VTURB_VEC.
 ! Incorporated 02-Jan-2013: Chagend to allow depth dependent line profiles.
 ! Altered 20-Oct-2010 : Commented out statements accessing DIFFW.
 !                         No longer call CALL SET_VAR_RAD_MOD_V2
@@ -472,6 +474,7 @@
 ! point to the input data record (Note : Single Record)
 !
 	CALL RD_CONTROL_VARIABLES(LUIN,LUSCR,LUER,NUM_BNDS)
+	TWO_PHOTON_METHOD='LTE'
 !
 ! RMDOT is the density at R=10dex10 cm and V=1km/s (atomic mass units)
 !
@@ -581,11 +584,11 @@
 	        T2=GF_CUT
 	      END IF
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_OSCDAT'
-	      CALL GENOSC_V8( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F,
+	      CALL GENOSC_V9( ATM(ID)%AXzV_F, ATM(ID)%EDGEXzV_F, ATM(ID)%GXzV_F,ATM(ID)%XzVLEVNAME_F,
 	1                 ATM(ID)%ARAD,ATM(ID)%GAM2,ATM(ID)%GAM4,ATM(ID)%OBSERVED_LEVEL,
 	1                 T1, ATM(ID)%ZXzV,
 	1                 ATM(ID)%XzV_OSCDATE, ATM(ID)%NXzV_F,I,
-	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,
+	1                 'SET_ZERO',T2,GF_LEV_CUT,MIN_NUM_TRANS,L_FALSE,L_FALSE,
 	1                 LUIN,LUSCR,TMP_STRING)
 	      TMP_STRING=TRIM(ION_ID(ID))//'_F_TO_S'
 	      CALL RD_F_TO_S_IDS( ATM(ID)%F_TO_S_XzV, ATM(ID)%INT_SEQ_XzV,
@@ -711,6 +714,15 @@
 	1         AT_MASS(SPECIES_LNK(ID))
 	END DO
 !
+! These don't effect the LTE opacities but are needed in some places
+! (for consitenct with CMFGEN).
+!
+	DO I=1,ND
+	  R(ND-I+1)=1.0D0+(I-1)*0.01D0
+	  V(I)=1.0D0
+	  SIGMA(I)=0.0D0
+	END DO
+!
 ! 
 !
 ! Compute profile frequencies such that for the adopted doppler
@@ -771,11 +783,6 @@
 ! clumped. At the sime time, we compute the vectors which give the density,
 ! the atom density, and the species density at each depth.
 !
-	DO I=1,ND
-	  R(ND-I+1)=1.0D0+(I-1)*0.01D0
-	  V(I)=1.0D0
-	  SIGMA(I)=0.0D0
-	END DO
 	CALL SET_ABUND_CLUMP(MEAN_ATOMIC_WEIGHT,ABUND_SUM,LUER,ND)
 !
 ! 
@@ -906,12 +913,12 @@
 !
 	DO ID=1,NUM_IONS-1
 	  ID_SAV=ID
-	  CALL SET_TWO_PHOT_V2(ION_ID(ID), ID_SAV,
-	1       ATM(ID)%XzVLTE,     ATM(ID)%NXzV,
-	1       ATM(ID)%XzVLTE_F,   ATM(ID)%XzVLEVNAME_F,
-	1       ATM(ID)%EDGEXzV_F,  ATM(ID)%GXzV_F,
-	1       ATM(ID)%F_TO_S_XzV, ATM(ID)%NXzV_F, ND,
-	1       ATM(ID)%ZXzV,       ATM(ID)%EQXzV,  ATM(ID)%XzV_PRES)
+	  CALL SET_TWO_PHOT_V3(ION_ID(ID), ID_SAV,
+	1       ATM(ID)%XzVLTE,          ATM(ID)%NXzV,
+	1       ATM(ID)%XzVLTE_F_ON_S,   ATM(ID)%XzVLEVNAME_F,
+	1       ATM(ID)%EDGEXzV_F,       ATM(ID)%GXzV_F,
+	1       ATM(ID)%F_TO_S_XzV,      ATM(ID)%NXzV_F, ND,
+	1       ATM(ID)%ZXzV,            ATM(ID)%EQXzV,  ATM(ID)%XzV_PRES)
 	END DO
 !
 ! 

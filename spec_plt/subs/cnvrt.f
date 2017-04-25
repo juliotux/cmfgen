@@ -47,6 +47,13 @@ C
 	    END DO
 	    Y_LAB='F\d\gl\u(ergs\d \ucm\u-2 \ds\u-1 \d\A\u-1\d)' 
 	    IF(LOG_Y)Y_LAB='Log F\d\gl\u(ergs\d \ucm\u-2 \ds\u-1 \d\A\u-1\d)'
+	  ELSE IF(Y_PLT_OPT .EQ. 'LAM_FLAM')THEN
+	    T1=1.0E-08		  	!1.0E-23*1.0E+15
+	    DO I=1,NBB
+	      YV(I)=T1*XV(I)*YV(I)
+	    END DO
+	    Y_LAB='\glF\d\gl\u(ergs\d \ucm\u-2 \ds\u-1\d)'
+	    IF(LOG_Y)Y_LAB='Log \glF\d\gl\u(ergs\d \ucm\u-2 \ds\u-1\d)'
 	  ELSE IF(Y_PLT_OPT .EQ. 'FNU')THEN
 	    Y_LAB='F\d\gn\u(Jy)'
 	    IF(LOG_Y)Y_LAB='Log F\d\gn\u(Jy)'

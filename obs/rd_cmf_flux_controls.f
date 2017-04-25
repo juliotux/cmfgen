@@ -170,6 +170,8 @@
 	1        ' Allow for SOB & CMF lines in defining observers'//
 	1        ' frequencies?')
 !
+	  COMPUTE_J=.TRUE.
+	  CALL RD_STORE_LOG(COMPUTE_J,'COMP_J',L_FALSE,'Compute the radiation field')
 	  CALL RD_STORE_LOG(WRITE_ETA_AND_CHI,'WR_ETA',L_TRUE,'Output ETA and CHI? ')
 	  CALL RD_STORE_LOG(WRITE_FLUX,'WR_FLUX',L_TRUE, 'Output Flux as a function of depth? ')
 	  CALL RD_STORE_LOG(WRITE_CMF_FORCE,'WR_CMF_FORCE',L_TRUE,
@@ -224,11 +226,31 @@
 	  END IF
 !
 	  CALL RD_STORE_LOG(INCL_TWO_PHOT,'INC_TWO',L_TRUE,'Include two photon transitions?')
+	  TWO_PHOTON_METHOD='USE_RAD'
+          CALL RD_STORE_CHAR(TWO_PHOTON_METHOD,'TWO_METH',L_FALSE,'USE_RAD, LTE, NOSTIM or OLD_DEFAULT')
 	  CALL RD_STORE_LOG(INCL_RAY_SCAT,'INC_RAY',L_TRUE,'Include Rayeligh scattering?')
+!
 	  CALL RD_STORE_LOG(XRAYS,'INC_XRAYS',L_TRUE,'Include X-ray emission')
-	  CALL RD_STORE_DBLE(FILL_FAC_XRAYS,'FIL_FAC',L_TRUE,'Filling factor for X-ray emission')
-	  CALL RD_STORE_DBLE(T_SHOCK,'T_SHOCK',L_TRUE,'Shock T for X-ray emission')
-	  CALL RD_STORE_DBLE(V_SHOCK,'V_SHOCK',L_TRUE,'Cut off velocity for X-ray emission')
+	  CALL RD_STORE_LOG(FF_XRAYS,'FF_XRAYS',XRAYS,'Use free-free processes to compute X-ray emission')
+	  CALL RD_STORE_LOG(XRAY_SMOOTH_WIND,'X_SM_WIND',XRAYS,'Ignore clumping when computing X-ray emission')
+!
+	  VSMOOTH_XRAYS=3000.0D0
+	  CALL RD_STORE_DBLE(VSMOOTH_XRAYS,'VS_XRAYS',XRAYS,'X-ray smoothing width for SOB/CMF options')
+!
+	  FILL_FAC_XRAYS_1=0.D0
+	  FILL_FAC_XRAYS_2=0.D0
+	  CALL RD_STORE_DBLE(FILL_FAC_XRAYS_1,'FIL_FAC_1',XRAYS,
+	1           'Filling factor for X-ray emission [1]')
+	  CALL RD_STORE_DBLE(T_SHOCK_1,'T_SHOCK_1',XRAYS,
+	1           'Shock T for X-ray emission [1]')
+	  CALL RD_STORE_DBLE(V_SHOCK_1,'V_SHOCK_1',XRAYS,
+	1           'Cut off velocity for X-ray emission [1]')
+	  CALL RD_STORE_DBLE(FILL_FAC_XRAYS_2,'FIL_FAC_2',XRAYS,
+	1           'Filling factor for X-ray emission [2]')
+	  CALL RD_STORE_DBLE(T_SHOCK_2,'T_SHOCK_2',XRAYS,
+	1           'Shock T for X-ray emission [2]')
+	  CALL RD_STORE_DBLE(V_SHOCK_2,'V_SHOCK_2',XRAYS,
+	1           'Cut off velocity for X-ray emission [2]')
 !
 ! If we add _SPEC, SOB or BLANK is the default option. In this case we need only
 ! specify the species we wish to change from the default.
@@ -355,10 +377,13 @@
 	  CALL RD_STORE_LOG(INCL_DJDT_TERMS,'INCL_DJDT',L_FALSE,'DJDt terms in transfer equaton for SN models?')
 	  IF(INCL_DJDT_TERMS)THEN
 	    USE_DJDT_RTE=.TRUE.
+	    USE_Dr4JDT=.TRUE.
+	    CALL RD_STORE_LOG(USE_Dr4JDT,'USE_DR4JDT',L_FALSE,'Difference Dr4JDt')
 	  ELSE
-	   USE_DJDT_RTE=.FALSE.
-	   CALL RD_STORE_LOG(USE_DJDT_RTE,'USE_DJDT_RTE',L_FALSE,
-	1    'Use solver which has DJDt terms in transfer equaton for SN models?')
+	    USE_DJDT_RTE=.FALSE.
+	    USE_Dr4JDT=.FALSE.
+	    CALL RD_STORE_LOG(USE_DJDT_RTE,'USE_DJDT_RTE',L_FALSE,
+	1     'Use solver which has DJDt terms in transfer equaton for SN models?')
 	  END IF
 	  DJDT_RELAX_PARAM=1.0D0
 	  CALL RD_STORE_DBLE(DJDT_RELAX_PARAM,'DJDT_RELAX',L_FALSE,

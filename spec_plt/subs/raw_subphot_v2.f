@@ -25,6 +25,8 @@
 	USE HYD_BF_PHOT_DATA
 	IMPLICIT NONE
 !
+! Altered 07-Oct-2015 : Bug fixed with cross-section TYPE=7.
+! Altered 17-Jun-2014 : Bug fixed with cross-section TYPE=5 -- LMIN was being used when not set.
 ! Altered 17-Sep-2010 : Altered implementation of Verner ground-state fits
 !
 	INTEGER NCF
@@ -128,6 +130,7 @@
 	  LST=NINT( CROSS_A(LMIN+1) )
 	  LEND=NINT( CROSS_A(LMIN+2) )
 	  WRITE(30,'(A,T30,A,F8.3,2X,I3,2X,F3.0,3ES12.5)')TRIM(LEVEL_NAME),'NEF,N,ZION',NEF,N,ZION,EDGE,GS_EDGE,EXC_FREQ
+	  FLUSH(UNIT=30)
 !
 	  DO ML=1,NCF
 	    U=FREQ(ML)/EDGE
@@ -159,6 +162,8 @@
 ! HYD_N_DATA contains the Bound-free gaunt factor.
 !
 	  N=CROSS_A(2)
+	  WRITE(30,'(A,T30,A,F8.3,2X,I3,2X,F3.0,3ES12.5)')TRIM(LEVEL_NAME),'NEF,N,ZION',NEF,N,ZION,EDGE,GS_EDGE,EXC_FREQ
+	  FLUSH(UNIT=30)
 	  DO ML=1,NCF
 	    U=FREQ(ML)/EDGE
 	    X=LOG10(U)
@@ -209,7 +214,7 @@
 	    X=DLOG10(X)
 	    T1=10**(  CROSS_A(1)+X*( CROSS_A(2) + X*(CROSS_A(3) +
 	1               X*CROSS_A(4)) ) + LG10_CONV_FAC  )
-	    IF(U .GT. CROSS_A(5))T1=T1*(CROSS_A(LMIN+5)/U)**2
+	    IF(U .GT. CROSS_A(5))T1=T1*(CROSS_A(5)/U)**2
 	    PHOT(ML)=T1
 	  END DO
 !
@@ -243,7 +248,8 @@
 	ELSE IF(CROSS_TYPE .EQ. 7 .AND. CROSS_A(1) .NE. 0)THEN
 	    LMIN=1
 	    DO ML=1,NCF
-	      RU=EDGE/(FREQ(ML)+CROSS_A(LMIN+3))
+!	      RU=EDGE/(FREQ(ML)+CROSS_A(LMIN+3))
+	      RU=(EDGE+CROSS_A(LMIN+3))/FREQ(ML)
 	      IF(RU .LE. 1.0D0)THEN
 	        PHOT(ML)=CONV_FAC*CROSS_A(LMIN)*( CROSS_A(LMIN+1) +
 	1               (1.0D0-CROSS_A(LMIN+1))*RU )*( RU**CROSS_A(LMIN+2) )

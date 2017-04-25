@@ -30,7 +30,7 @@
 !
       REAL*8 AA,ASQ,BSQ,FRQ,WAVE
       REAL*8 CON,OBA,WSQ,CCKAB,BETP1,BETW1
-      REAL*8 RYD,TCON
+      REAL*8 RYD
       REAL*8 GAM01,GAM02
       REAL*8 EE,SRE,CUE
       REAL*8 F0,TT,SRT
@@ -56,8 +56,6 @@
 !
 ! Set up the constant terms for evaluation of S(BET,GAM) and DONV
 !
-      TCON=WAVE*SQRT(2.0E0*CBOLTZ/(AMASS*AMU))/VLIGHT
-!
       AA=IL
       ASQ=IL*IL
       BSQ=IU*IU
@@ -71,8 +69,6 @@
       BETW1=6.951E-9*WSQ*ZZ/BSQ
       GAM01=3.78E-5*(BSQ-3.0E0*AA)*BSQ*OBA/ZZ
       GAM02=4.0E6*ZZ/BSQ
-C
-C      TCON=WAVE*SQRT(2.0E0*CBOLTZ/(AMASS*AMU))/VLIGHT
 C
 C The loops over electron density, and temperature have been removed.
 C
@@ -94,6 +90,7 @@ C
 C
 C Doppler width (A) (old expression was TCON*SRT). 10^10 arrises as we need
 C to convert VDOP from km/s to cm/s.
+C      TCON=WAVE*SQRT(2.0E0*CBOLTZ/(AMASS*AMU))/VLIGHT
 C
       DOP=WAVE*SQRT( 2.0E0*CBOLTZ*TT/(AMASS*AMU) + 
 	1               1.0D+10*VDOP*VDOP )/VLIGHT

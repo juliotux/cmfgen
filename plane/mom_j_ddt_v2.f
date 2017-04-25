@@ -137,6 +137,9 @@
 	USE MOD_RAY_MOM_STORE
 	IMPLICIT NONE
 !
+! Altered 17-Feb-2015 : Check that |r^2.H| < r^2.J
+!                         Modified error output to MOM_J_ERRORS
+!                         [OSPREY/cur_cmf_gam: 24-Jan-2015]
 ! Altered 31-Jan-2010 : Cleaned (removed write statements).
 !                         For ZERO_FLUX option we add an additional term containing
 !                         J computed by the ray-ray solution to improve stability.
@@ -177,6 +180,7 @@
 	REAL*8 MOM_ERR_ON_FREQ
 	COMMON /MOM_J_CMF_ERR/MOM_ERR_ON_FREQ(N_ERR_MAX),MOM_ERR_CNT
 	LOGICAL RECORDED_ERROR
+	LOGICAL, PARAMETER :: VERBOSE=.FALSE.
 !
 ! Boundary conditions.
 !
@@ -815,28 +819,36 @@
 ! Check that no negative mean intensities have been computed.
 !
 	IF(MINVAL(XM(1:ND)) .LE. 0.0D0)THEN
-	   WRITE(47,*)'Freq=',FREQ
-	   TA(1:ND)=XM(1:ND)/R(1:ND)/R(1:ND)
-	   CALL WRITE_VEC(TA,ND,'XM Vec',47)
-	   CALL WRITE_VEC(F,ND,'F Vec',47)
-	   CALL WRITE_VEC(ETA,ND,'ETA Vec',47)
-	   CALL WRITE_VEC(ESEC,ND,'ESEC Vec',47)
-	   CALL WRITE_VEC(CHI,ND,'CHI Vec',47)
+	  IF(VERBOSE)THEN
+	    WRITE(47,*)'Freq=',FREQ
+	    TA(1:ND)=XM(1:ND)/R(1:ND)/R(1:ND)
+	    CALL WRITE_VEC(TA,ND,'XM Vec',47)
+	    CALL WRITE_VEC(F,ND,'F Vec',47)
+	    CALL WRITE_VEC(ETA,ND,'ETA Vec',47)
+	    CALL WRITE_VEC(ESEC,ND,'ESEC Vec',47)
+	    CALL WRITE_VEC(CHI,ND,'CHI Vec',47)
+	  ELSE
+	    DO I=1,ND
+	     IF(XM(I) .LE. 0.0D0)THEN
+	       WRITE(47,'(I5,ES16.8,10ES13.4)')I,FREQ,XM(I),ETA(I),CHI(I),ESEC(I),F(I),XM(MAX(1,I-2):MIN(I+2,ND))
+	     END IF
+	    END DO
+	  END IF
 	END IF
 !
+	RECORDED_ERROR=.FALSE.
 	DO I=1,ND
 	  IF(XM(I) .LT. 0.0D0)THEN
 	    XM(I)=ABS(XM(I))/10.0D0
-	    RECORDED_ERROR=.FALSE.
-	    J=1
-	    DO WHILE (J .LE. MOM_ERR_CNT .AND. .NOT. RECORDED_ERROR)
-	      IF(MOM_ERR_ON_FREQ(J) .EQ. FREQ)RECORDED_ERROR=.TRUE.
-	      J=J+1
-	    END DO
-	    IF(.NOT. RECORDED_ERROR .AND. MOM_ERR_CNT .LT. N_ERR_MAX)THEN
-	      MOM_ERR_CNT=MOM_ERR_CNT+1
-	      MOM_ERR_ON_FREQ(MOM_ERR_CNT)=FREQ
-	    END IF	
+	    IF(.NOT. RECORDED_ERROR)THEN
+	      IF(MOM_ERR_CNT .GT. N_ERR_MAX)THEN
+	        MOM_ERR_CNT=MOM_ERR_CNT+1
+	      ELSE IF(MOM_ERR_ON_FREQ(MOM_ERR_CNT) .NE. FREQ)THEN
+	        MOM_ERR_CNT=MOM_ERR_CNT+1
+	        IF(MOM_ERR_CNT .LT. N_ERR_MAX)MOM_ERR_ON_FREQ(MOM_ERR_CNT)=FREQ
+	      END IF
+	      RECORDED_ERROR=.TRUE.
+	    END IF
 	  END IF
 	END DO
 !
@@ -846,7 +858,17 @@
 	DO I=1,ND-1
 	  RSQHNU(I)=HU(I)*XM(I+1)-HL(I)*XM(I)+HS(I)*RSQHNU_PREV(I)+HT(I)*RSQHNU_OLDT(I)
 	END DO
-	I=ND-1
+!
+! Make sure H satisfies the basic requirement that it is less than J.
+!
+	DO I=1,ND-1
+	  T1=(XM(I)+XM(I+1))/2.0D0
+	  IF(RSQHNU(I) .GT. T1)THEN
+	    RSQHNU(I)=0.99D0*T1
+	  ELSE IF(RSQHNU(I) .LT. -T1)THEN
+	    RSQHNU(I)=-0.99D0*T1
+	  END IF
+	END DO
 !
 	CALL OUT_JH(RSQJNU,RSQHNU,RSQH_AT_IB,HONJ_OUTBC,FREQ,NCF,R,V,ND,INIT,OPTION)
 !

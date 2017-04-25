@@ -91,7 +91,7 @@
 	  LU_ER=ERROR_LU()
 	  LU_WARN=WARNING_LU()
 	  CALL GET_LU(LU_IN,'GET_JH_AT_PREV_TIME_STEP')
-	  WRITE(LU_WARN,'(/,X,A,I5)')'Logical unit for JH input is',LU_IN
+	  WRITE(LU_WARN,'(/,1X,A,I5)')'Logical unit for JH input is',LU_IN
           CALL READ_DIRECT_INFO_V3(I,REC_LENGTH,FILE_DATE,'JH_AT_OLD_TIME',LU_IN,IOS)
           IF(IOS .NE. 0)THEN
             WRITE(LU_ER,*)'Error opening/reading JH_AT_OLD_TIME_INFO file: check format'
@@ -171,6 +171,8 @@
 	    WRITE(LU_ER,*)'Velocities at inner boundary are not identical'
 	    WRITE(LU_ER,*)'Old velocity at depth is',OLD_V(ND_OLD)
 	    WRITE(LU_ER,*)'New velocity at depth is',V(ND)
+	    WRITE(LU_ER,*)'Make sure you also updated JH_AT_OLD_TIME_INFO when you stated the model'
+	    WRITE(LU_ER,*)'This will cause an error if ND has changed between successive models'
 	    STOP
 	  END IF
 !

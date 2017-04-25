@@ -10,6 +10,7 @@
 	1              LST_ITERATION,BAND_FLUX,N_FLUXMEAN_BANDS,LU_OUT,ND)
 	IMPLICIT NONE
 !
+! Altered 01-Jan-2015 : Turbulent pressure term added, and also output when non-zero.
 ! Altered 26-Jan-2014 : Changed ouput to TYPE_ATM and increased its length.
 ! Altered 06-Jan-2014 : Changed to V5 (inserted LOGG, ROSS_MEAN_OPAC and CLUMP_FAC in call).
 ! Altered 31-Mar-2010 : Changed from V3 to V4: Inserted LST_ITERATION in call.
@@ -76,6 +77,7 @@
 !
 	REAL*8 VdVdR
 	REAL*8 dPdR_ON_ROH
+	REAL*8 dPTURBdR_ON_ROH
 	REAL*8 g_TOT
 	REAL*8 g_ELEC
 	REAL*8 g_GRAV
@@ -85,6 +87,7 @@
 !
 	REAL*8 GRAV_CON
 	REAL*8 dP_CON
+	REAL*8 PTURB_CON
 	REAL*8 RAD_CON
 	REAL*8 T1
 	REAL*8 RPHOT
@@ -117,6 +120,7 @@
 !
 	dP_CON=1.0D-06*BOLTZMANN_CONSTANT()/MEAN_ATOMIC_WEIGHT/
 	1               ATOMIC_MASS_UNIT()
+	PTURB_CON=1.0D+10*0.5D0*PRESSURE_VTURB*PRESSURE_VTURB
 !
 	GRAV_CON=1.0D-20*GRAVITATIONAL_CONSTANT()*STARS_MASS*MASS_SUN()
 !                               
@@ -140,12 +144,22 @@
 !                                              
 ! Output file header.
 !
-	WRITE(LU_OUT,'(1X,6X,A,6X, 8X,A,3X, 2X,A, 5(5X,A,1X), 4X,A,2X,A)')
-	1 'R','V','% Error','   VdVdR',
-	1                   'dPdR/ROH',
-	1                   '   g_TOT',
-	1                   '   g_RAD',
-	1                    '  g_ELEC','Gamma','Depth'
+	IF(PRESSURE_VTURB .EQ. 0.0D0)THEN
+	  WRITE(LU_OUT,'(1X,6X,A,6X, 8X,A,3X, 2X,A, 5(4X,A,1X), 4X,A,2X,A)')
+	1     'R','V','% Error','    VdVdR',
+	1                       ' dPdR/ROH',
+	1                       '    g_TOT',
+	1                       '    g_RAD',
+	1                       '   g_ELEC','Gamma','Depth'
+	ELSE
+	  WRITE(LU_OUT,'(1X,6X,A,6X, 8X,A,3X, 2X,A, 6(4X,A,1X), 4X,A,2X,A)')
+	1     'R','V','% Error','    VdVdR',
+	1                       ' dPdR/ROH',
+	1                       'dTPdR/ROH',
+	1                       '    g_TOT',
+	1                       '    g_RAD',
+	1                       '   g_ELEC','Gamma','Depth'
+	END IF
 ! 
 	DO I=1,ND
 	  MOD_PRESSURE(I)=(POP_ATOM(I)+ED(I))*T(I)
@@ -155,6 +169,7 @@
 	DO I=1,ND
 	  VdVdR=V(I)*V(I)*(SIGMA(I)+1.0D0)/R(I)
 	  dPdR_ON_ROH=dP_CON*COEF(I,3)/POP_ATOM(I)
+	  dPTURBdR_ON_ROH=PTURB_CON*1.0D-10*(-2.0D0/R(I)-(SIGMA(I)+1.0D0)/R(I))
 !
 ! Gravitational force per unit mass (in cgs units) and radiation pressure forces.
 !
@@ -164,13 +179,15 @@
 	    g_elec=RAD_CON*LUM_STAR(ND)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(ND)/R(ND)
 	  ELSE
 	    g_grav=GRAV_CON/R(I)/R(I)
-	    g_rad=RAD_CON*LUM_STAR(I)*FLUX_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
-	    g_elec=RAD_CON*LUM_STAR(I)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
+	    g_rad=RAD_CON*LUM_STAR(ND)*FLUX_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
+	    g_elec=RAD_CON*LUM_STAR(ND)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
+!	    g_rad=RAD_CON*LUM_STAR(I)*FLUX_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
+!	    g_elec=RAD_CON*LUM_STAR(I)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
 	  END IF
 !
 	  g_TOT= g_RAD-g_GRAV
-	  ERROR=200.0D0*(VdVdR+dPdR_ON_ROH-g_TOT)/
-	1        ( ABS(VdVdR)+ ABS(dPdR_ON_ROH)+ ABS(g_TOT) )
+	  ERROR=200.0D0*(VdVdR+dPdR_ON_ROH+dPTURBdR_ON_ROH-g_TOT)/
+	1        ( ABS(VdVdR)+ ABS(dPdR_ON_ROH)+ ABS(dPTURBdR_ON_ROH)+ ABS(g_TOT) )
 !
 	  IF(V(I) .LT. 5.0D0)THEN
 	    ERROR_SUM=ERROR_SUM+ERROR
@@ -178,15 +195,26 @@
 	    ERROR_MAX=MAX(ERROR_MAX,ABS(ERROR))
 	    ERROR_CNT=ERROR_CNT+1
 	  END IF
-!                  
-	  IF(R(I) .GT. 9.99D+04)THEN
-	    FMT='(1X,ES12.6,ES13.4,F9.2,5(ES14.4),F9.2,I7)'
-	  ELSE
-	    FMT='(1X,F12.6,ES13.4,F9.2,5(ES14.4),F9.2,I7)'
-	  END IF                    
-	  WRITE(LU_OUT,FMT)
+!
+	  IF(PRESSURE_VTURB .EQ. 0.0D0)THEN
+	    IF(R(I) .GT. 9.99D+04)THEN
+	      FMT='(1X,ES12.6,ES13.4,F9.2,5(ES14.4),F9.2,I7)'
+	    ELSE
+	      FMT='(1X,F12.6,ES13.4,F9.2,5(ES14.4),F9.2,I7)'
+	    END IF
+	    WRITE(LU_OUT,FMT)
 	1             R(I),V(I),ERROR,VdVdR,dPdR_ON_ROH,
 	1             g_TOT,g_RAD,g_ELEC,g_RAD/g_GRAV,I
+	  ELSE                  
+	    IF(R(I) .GT. 9.99D+04)THEN
+	      FMT='(1X,ES12.6,ES13.4,F9.2,6(ES14.4),F9.2,I7)'
+	    ELSE
+	      FMT='(1X,F12.6,ES13.4,F9.2,6(ES14.4),F9.2,I7)'
+	    END IF
+	    WRITE(LU_OUT,FMT)
+	1             R(I),V(I),ERROR,VdVdR,dPdR_ON_ROH,dPTURBdR_ON_ROH,
+	1             g_TOT,g_RAD,g_ELEC,g_RAD/g_GRAV,I
+	  END IF                    
 !
 	END DO
 !
@@ -195,12 +223,12 @@
 !
 	WRITE(LU_OUT,'(1X,A)')' '
 	WRITE(LU_OUT,'(1X,A,A)')'Momentum equation is:',
-	1                    ' VdV/dr = - dPdR/ROH - g + g_RAD'
+	1                    ' VdV/dr = - dPdR/ROH - dTPdR/ROH - g + g_RAD'
 	WRITE(LU_OUT,'(1X,A,A)')'        or          :',
-	1                    ' VdV/dr = - dPdR/ROH + g_tot'
+	1                    ' VdV/dr = - dPdR/ROH - dTPdR/ROH + g_tot'
 	WRITE(LU_OUT,'(1X,A)')' '
-	WRITE(LU_OUT,'(1X,A,A)')'Error is 200.0D0*(VdVdR+dPdR_ON_ROH-g_TOT)/',
-	1        '( ABS(VdVdR)+ ABS(dPdR_ON_ROH)+ ABS(g_TOT) )'
+	WRITE(LU_OUT,'(1X,A,A)')'Error is 200.0D0*(VdVdR+dPdR_ON_ROH+dTPdR/ROH-g_TOT)/',
+	1        '( ABS(VdVdR)+ ABS(dPdR_ON_ROH)+ ABS(dTPdR/ROH)+ ABS(g_TOT) )'
 !
 	WRITE(LU_OUT,'(1X,A)')' '
 	WRITE(LU_OUT,'(1X,A)')'Gamma = g_rad/g [g=g_GRAV] '

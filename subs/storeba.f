@@ -56,6 +56,8 @@ C
 C Output to BAPNT file that write of BA and STEQ was successful.
 C
 	ENTRY INIT_BA_PNT(LU,NT,NS,NL,COMPUTE_BA,DESC)
+!
+	  LUER=ERROR_LU()		!Must be defined for this entry point.
 	  LU1=LU+1
           INQUIRE(UNIT=LU1,OPENED=FILE_OPEN)
 	  IF(FILE_OPEN)THEN

@@ -3,13 +3,16 @@
 ! in a CMFGEN input files. An example is an update of
 ! XFI1_BEG etc which change as the iteration procedes.
 !
+! Altered 10-Jun-2015: PRIVATE made default for UPDATE_KEYWORD_INTERFACE
+! Altered 10-Jun-2015: Subroutine cause gracefull stop if KEYWORD file cannot be opened.
+! Altered 09-May-2014: LUER was not set before being used in several locations.
 ! Created 23-Nov-2007
 !
 	MODULE UPDATE_KEYWORD_INTERFACE
-	INTEGER, PARAMETER :: MAX_RECS=800
-	INTEGER, SAVE :: NUM_RECS=0
-	CHARACTER(LEN=80), ALLOCATABLE :: STORE(:)
-	CHARACTER(LEN=20) TMP_STR
+	INTEGER, PRIVATE, PARAMETER :: MAX_RECS=800
+	INTEGER, PRIVATE, SAVE :: NUM_RECS=0
+	CHARACTER(LEN=80), PRIVATE, ALLOCATABLE :: STORE(:)
+	CHARACTER(LEN=20) PRIVATE, TMP_STR
 	INTERFACE UPDATE_KEYWORD
           MODULE PROCEDURE UPDATE_KEYWORD_DP,
 	1                  UPDATE_KEYWORD_LOG,
@@ -61,6 +64,7 @@
 	  END IF
 	END DO
 	IF(K .EQ. 0)THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Error in UPDATE_KEYWORD'
 	  WRITE(LUER,*)TRIM(KEY_WORD),' not found in file ',TRIM(DATA_FILE)
 	  STOP
@@ -96,6 +100,7 @@
 	END DO
 !
 	IF(K .EQ. 0)THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Error in UPDATE_KEYWORD'
 	  WRITE(LUER,*)TRIM(KEY_WORD),' not found in file ',TRIM(DATA_FILE)
 	  STOP
@@ -137,6 +142,7 @@
 	END DO
 !
 	IF(K .EQ. 0)THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Error in UPDATE_KEYWORD'
 	  WRITE(LUER,*)TRIM(KEY_WORD),' not found in file ',TRIM(DATA_FILE)
 	  STOP
@@ -176,6 +182,7 @@
 	END DO
 !
 	IF(K .EQ. 0)THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Error in UPDATE_KEYWORD'
 	  WRITE(LUER,*)TRIM(KEY_WORD),' not found in file ',TRIM(DATA_FILE)
 	  STOP
@@ -213,17 +220,23 @@
 	LOGICAL RD_FILE
 	INTEGER LU,LUER,ERROR_LU
 	EXTERNAL ERROR_LU
-	INTEGER I
+	INTEGER I,IOS
 !
 	IF(RD_FILE)THEN
 	  LUER=ERROR_LU()
 	  ALLOCATE (STORE(MAX_RECS))
-	  OPEN(UNIT=LU,FILE=TRIM(DATA_FILE),ACTION='READ')
+	  OPEN(UNIT=LU,FILE=TRIM(DATA_FILE),ACTION='READ',IOSTAT=IOS)
+	    IF(IOS .NE. 0)THEN
+	      WRITE(LUER,*)'Error opening ',TRIM(DATA_FILE),' in RD_KEY_WRD_FILE'
+	      WRITE(LUER,*)'IOS=',IOS
+	      STOP
+	    END IF
 	    DO I=1,MAX_RECS
 	       READ(LU,'(A)',END=100)STORE(I)
 	       NUM_RECS=I
 	    END DO
 	    READ(LU,'(A)',END=100)TMP_STR
+	    LUER=ERROR_LU()
 	    WRITE(LUER,*)'Insufficient storage in UPDATE_KEYWORD'
 	    WRITE(LUER,*)'Keyword data file is:',TRIM(DATA_FILE)
 	    STOP

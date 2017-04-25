@@ -3,6 +3,11 @@
 	USE NUC_ISO_MOD
 	IMPLICIT NONE
 !
+! Altered 23-Jan-2015 : Code checks for Date record -- for bookeeping.
+! Altered 06-Jan-2015 : Code can read in the kinetic energy of the positrons.
+!                       It assumes that the kinetic energy appears after the total decay energy.
+!                       Old format file can still be read.
+!                       
 ! Altered 15-Jul-2010 : Error check that NUM_ISOTOPES and NUM_DEACY_PATHS are compatible
 !                         with the maximum values set in NUC_ISO_MOD inserted.
 !
@@ -21,6 +26,7 @@
 	INTEGER LUER,ERROR_LU
 	EXTERNAL ERROR_LU,ELECTRON_VOLT
 	LOGICAL UNRECOGNIZED_ISO
+	LOGICAL KINETIC_ENERGY_AVAILABLE
 	LOGICAL VERBOSE
 	LOGICAL INCL_RAD_DECAYS
 !
@@ -39,11 +45,25 @@
 	LUER=ERROR_LU()
 	NUM_DECAY_PATHS=0
 	NUM_ISOTOPES=0
+	IF(INDEX(STRING,'06-Jan-2015') .NE. 0)THEN
+	  STRING='22-Sep-2006'
+	  KINETIC_ENERGY_AVAILABLE=.TRUE.
+	ELSE
+	  KINETIC_ENERGY_AVAILABLE=.FALSE.
+	  WRITE(6,*)' '
+	  WRITE(6,*)'Warning -- NUC_DECAY_DATA has the old format'
+	  WRITE(6,*)'This may affect results if usig ABS_TRANS option for gamma-ray transport'
+	  WRITE(6,*)' '
+	END IF
+!
 	IF(INDEX(STRING,'22-Sep-2006') .NE. 0)THEN
 	  DO WHILE(NUM_DECAY_PATHS .EQ. 0)
 	    READ(LU,'(A)')STRING
-	    IF(INDEX(STRING,'Number of species') .NE. 0)THEN
-	    ELSE IF(INDEX(STRING,'Total number of isotopes') .NE. 0)THEN
+	    IF(INDEX(STRING,'!Date') .NE. 0)THEN
+	       STRING=ADJUSTL(STRING); J=INDEX(STRING,'!Date')
+	       WRITE(LUER,*)'Date associated with nuclear data file is',TRIM(STRING(1:J-1))
+	    ELSE IF(INDEX(STRING,'Number of species') .NE. 0)THEN
+	    ELSE IF(INDEX(STRING,'!Total number of isotopes') .NE. 0)THEN
 	      READ(STRING,*)NUM_ISOTOPES
 	      IF(NUM_ISOTOPES .GT. MAX_NUM_ISOTOPES)THEN
 	        WRITE(LUER,*)'Error in RD_NUCLEAR_DECAY_DATA - MAX_NUM_ISOTOPES in NUC_IS_MOD too small'
@@ -51,8 +71,8 @@
 	        WRITE(LUER,*)'Maximum number of isotopes set in NUC_ISO_MOD is:',MAX_NUM_ISOTOPES
 	        STOP
 	      END IF
-	    ELSE IF(INDEX(STRING,'Maximum number of isotopes/species') .NE. 0)THEN
-	    ELSE IF(INDEX(STRING,'Number of reactions') .NE. 0)THEN
+	    ELSE IF(INDEX(STRING,'!Maximum number of isotopes/species') .NE. 0)THEN
+	    ELSE IF(INDEX(STRING,'!Number of reactions') .NE. 0)THEN
 	      READ(STRING,*)NUM_DECAY_PATHS
 	      IF(NUM_DECAY_PATHS.GT. MAX_NUM_DECAY_PATHS)THEN
 	        WRITE(LUER,*)'Error in RD_NUCLEAR_DECAY_DATA - MAX_NUM_DECAY_PATHS in NUC_IS_MOD too small'
@@ -166,6 +186,16 @@
 	  STRING=ADJUSTL(STRING); L=INDEX(STRING,' ') 
 	  READ(STRING,*)NUC(IN)%ENERGY_PER_DECAY
 	  NUC(IN)%ENERGY_PER_DECAY=1.0D+06*ELECTRON_VOLT()*NUC(IN)%ENERGY_PER_DECAY	!now in ergs
+!
+	  IF(KINETIC_ENERGY_AVAILABLE)THEN
+	    STRING=STRING(L+1:) 
+	    STRING=ADJUSTL(STRING); L=INDEX(STRING,' ') 
+	    READ(STRING,*)NUC(IN)%KINETIC_PER_DECAY
+	    NUC(IN)%KINETIC_PER_DECAY=1.0D+06*ELECTRON_VOLT()*NUC(IN)%KINETIC_PER_DECAY	!now in ergs
+	  ELSE
+	    NUC(IN)%KINETIC_PER_DECAY=0.0D0
+	  END IF
+!
 	  STRING=STRING(L+1:) 
 	  STRING=ADJUSTL(STRING)
 	  NUC(IN)%SEQUENCE=STRING(1:1)
@@ -247,6 +277,7 @@
 	END DO
 !
 	ALLOCATE (RADIOACTIVE_DECAY_ENERGY(ND));   RADIOACTIVE_DECAY_ENERGY=0.0D0
+	ALLOCATE (KINETIC_DECAY_ENERGY(ND));       KINETIC_DECAY_ENERGY=0.0D0
 !
 	RETURN
 	END

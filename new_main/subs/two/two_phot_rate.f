@@ -7,6 +7,7 @@
 	USE TWO_PHOT_MOD
 	IMPLICIT NONE
 !
+! Altered 19-Aug-2015: Additional options installed to hand 2-photon opacity (cur_hmi, 8-Jul-2015).
 ! Created 26-Jun-1998
 !
 	INTEGER NT,ND
@@ -62,14 +63,25 @@
 ! of Hz.
 !
 	    DOWN_CONST=0.5D-15*AY/FREQ_TWO(J)
-	    UP_CONST=DOWN_CONST*G_UP_TWO(J)/G_LOW_TWO(J)/ALPHA_A
-	    DO L=1,ND
-	      DOWN_RATE_TWO(L,J)=DOWN_RATE_TWO(L,J) +
-	1        DOWN_CONST*FS_RAT_LOW(L,J)*(1.0D0+RJ(L)/ALPHA_A)*FQW
-	      T1=EXP(-HDKT*FREQ_B/T(L))
-	      UP_RATE_TWO(L,J)=UP_RATE_TWO(L,J) +
-	1        UP_CONST*FS_RAT_UP(L,J)*T1*RJ(L)*FQW
-	    END DO
+	    UP_CONST=DOWN_CONST*G_UP_TWO(J)/G_LOW_TWO(J)
+	    IF(TWO_METHOD .EQ. 'OLD_DEFAULT')THEN
+	      UP_CONST=UP_CONST/ALPHA_A
+	      DO L=1,ND
+	        DOWN_RATE_TWO(L,J)=DOWN_RATE_TWO(L,J) +
+	1          DOWN_CONST*FS_RAT_UP(L,J)*(1.0D0+RJ(L)/ALPHA_A)*FQW
+	        T1=EXP(-HDKT*FREQ_B/T(L))
+	        UP_RATE_TWO(L,J)=UP_RATE_TWO(L,J) +
+	1          UP_CONST*FS_RAT_LOW(L,J)*T1*RJ(L)*FQW
+	      END DO
+	    ELSE
+	      DO L=1,ND
+	        T1=RJ(L)/ALPHA_A
+	        DOWN_RATE_TWO(L,J)=DOWN_RATE_TWO(L,J) +
+	1          DOWN_CONST*FS_RAT_UP(L,J)*(1.0D0+T1+PHOT_OC_TWO(L,J)+T1*PHOT_OC_TWO(L,J))*FQW
+	        UP_RATE_TWO(L,J)=UP_RATE_TWO(L,J) +
+	1          UP_CONST*FS_RAT_LOW(L,J)*T1*PHOT_OC_TWO(L,J)*FQW
+	      END DO
+	    END IF
 	  END IF
 	END DO
 !

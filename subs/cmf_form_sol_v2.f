@@ -106,6 +106,9 @@ C
 	USE CMF_FORM_MOD_V2
 	IMPLICIT NONE
 C
+C Altered 11-Nov-2014 : Compute SIGMA directly from interpolation of ln V in ln R. ALlows
+C                          SIGMA to be < -1 (which does not cause a problem provide V is very
+C                          small.
 C Altered 20-Feb-2006 : SOLUTION_METHOD placed in module file. It was not being
 C                         saved between calls.
 C Altered 03-Feb-2006 : Adjust regriding treatment. Extra points are inserted
@@ -259,7 +262,6 @@ C
 !
 	REAL*8 LOG_R(ND)
 	REAL*8 LOG_V(ND)
-	REAL*8 LOG_SIGMA(ND)
 	REAL*8 LOG_CHI(ND)
 	REAL*8 LOG_ETA(ND)
 C
@@ -417,10 +419,8 @@ C in the INITIALIZATION section we save space by using CHI_COEF for V
 C and ETA_COEF for SIGMA.
 C
 	  LOG_V(1:ND)=LOG(V(1:ND))
-	  LOG_SIGMA(1:ND)=LOG( (SIGMA(1:ND)+1.0D0) )
 	  LOG_R(1:ND)=LOG(R(1:ND))
 	  CALL MON_INT_FUNS_V2(CHI_COEF,LOG_V,LOG_R,ND)
-	  CALL MON_INT_FUNS_V2(ETA_COEF,LOG_SIGMA,LOG_R,ND)
 C
 C Define parameters for extrapolating the velocity law.
 C
@@ -568,16 +568,17 @@ C
 	      END DO
 	      INDX(I)=L
 	    END DO
-C
+!
+! NB: SIGMA = dlnV/dlnR-1. The fitting coefficients V were defined in the ln V - ln R plane,
+! hence we automatically get dlnV/dlnR.
+!
 	    DO I=I_START,NI
 	      L=INDX(I)
 	      T1=LOG(R_RAY(I,LS)/R(L))
 	      V_RAY(I)=EXP(
 	1         ((CHI_COEF(L,1)*T1+CHI_COEF(L,2))*T1+
 	1         CHI_COEF(L,3))*T1+CHI_COEF(L,4) )
-	      SIGMA_RAY(I)=EXP(
-	1         ((ETA_COEF(L,1)*T1+ETA_COEF(L,2))*T1+
-	1         ETA_COEF(L,3))*T1+ETA_COEF(L,4) )-1.0D0
+	      SIGMA_RAY(I)=CHI_COEF(L,3)+T1*(2.0D0*CHI_COEF(L,2)+3.0D0*T1*CHI_COEF(L,1))-1.0D0
 	    END DO
 C
 C Compute GAMMA. This section is straight from the subroutine GAMMA, except
@@ -1082,8 +1083,8 @@ C
 	1        -    dS(I)*A4(I) )
 	      END DO
 !
-	      I_P_PREV(:,LS)=I_P(1:NI)
-	      I_M_PREV(:,LS)=I_M(1:NI)
+	      I_P_PREV(1:NI,LS)=I_P(1:NI)
+	      I_M_PREV(1:NI,LS)=I_M(1:NI)
 !
 	      IPLUS_P(LS)=I_P(1)
 	   END IF			!End Integral method

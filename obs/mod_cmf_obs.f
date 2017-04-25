@@ -6,6 +6,9 @@
 !
 	MODULE MOD_CMF_OBS
 !
+! Altered: 19-Aug-2015 : Added MI, Max number of ions increased to 21
+! Altered: 18-May-2015 : Changed GAM2, GAM4 to C4 and C6 (quadratic and Van der Waals 
+!                           interacton constants).
 ! Altered 17-Dec-2011:  Added LOG_XzVLTE_F, LOG_XzVLTE, and XzVLTE_F_ON_S to MODEL_ATOM_DATA
 !
 ! Number of atomic species (e.g. H, C, N is 3 species).
@@ -16,7 +19,7 @@
 ! has to be 2 or higher (as I and II). A setting of 10 implies that we can treat
 ! full atoms for ION_IX.
 !
-	INTEGER, PARAMETER :: MAX_IONS_PER_SPECIES=20
+	INTEGER, PARAMETER :: MAX_IONS_PER_SPECIES=21
 	INTEGER, PARAMETER :: MAX_NUM_IONS=NUM_SPECIES*MAX_IONS_PER_SPECIES
 !
 ! Maximum number of photoionization routes for each species.
@@ -86,8 +89,8 @@
 	  REAL*8, ALLOCATABLE :: EDGEXzV_F(:)		!Ionization energy to g.s. (10^15 Hz)
 	  REAL*8, ALLOCATABLE :: GXzV_F(:)		!Level statistical weights in full atom
 	  REAL*8, ALLOCATABLE :: ARAD(:)		!Inverse radiative lifetime of level
-	  REAL*8, ALLOCATABLE :: GAM2(:)		!Collisional profile parameter.
-	  REAL*8, ALLOCATABLE :: GAM4(:)		!Collisional profile parameter.
+	  REAL*8, ALLOCATABLE :: C4(:)  		!Collisional profile parameter.
+	  REAL*8, ALLOCATABLE :: C6(:)	 		!Collisional profile parameter.
 !
 	  REAL*8, ALLOCATABLE :: DXzV(:)		!Ion population for super level
 	  REAL*8, ALLOCATABLE :: XzV(:,:)		!Level population in SL atom
@@ -153,7 +156,7 @@
 !
 ! Indicates generic ionization names.
 !
-	DATA GEN_ION_ID /'I','2','III','IV','V',
+	DATA GEN_ION_ID /'MI','I','2','III','IV','V',
 	1                'SIX','SEV','VIII','IX','X','XI','XII',
 	1                'XIII','XIV','XV','XSIX','XSEV','X8','X9','XX'/
 !

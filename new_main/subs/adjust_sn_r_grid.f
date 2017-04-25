@@ -6,6 +6,8 @@
 	1           IB_RAT,OB_RAT,DTAU2_ON_DTAU1,N_IB_INS,N_OB_INS,ND,NS)
 	IMPLICIT NONE
 !
+! Altered: 12-Jun-2017 -- Introduce dTAU_COMP so as to check change in dTAU.
+! Altered: 27-Jan-2015 -- Do initial loop up to 3 times. Also improved diagnostic output.
 ! Altered: 21-Mar-2014 -- Bug fix -- LOG_OLD_T was being computed over ND instead of NS. 
 ! Altered: 07-Jan-2014 -- Changes to call, and extensive improvements made.
 ! Altered: 16-Jul-2013
@@ -40,7 +42,7 @@
 	INTEGER N_OB_INS
 !
 	REAL*8 dTAU			!d(LOG(TAU))
-	REAL*8 dTAU_OLD
+	REAL*8 dTAU_COMP
 	REAL*8 dLOGR
 	REAL*8 dLOGT
 	REAL*8 LOG_TAU_MIN
@@ -60,8 +62,8 @@
 	LOGICAL CHECK_T
 !
 	WRITE(6,'(A)')
-	WRITE(6,'(A)')'Entering ADJUST_SN_R_GRID to define R grid'
-	WRITE(6,'(A)')'See R_GRID_SELECTION for computational information'
+	WRITE(6,'(A)')' Entering ADJUST_SN_R_GRID to define R grid'
+	WRITE(6,'(A)')' See R_GRID_SELECTION for computational information'
 	WRITE(6,'(A)')
 !
 	LOG_OLD_TAU=LOG(OLD_TAU)
@@ -89,7 +91,7 @@
 	J=ND-1-N_OB_INS-N_IB_INS
 	dTAU=(LOG_OLD_TAU(NS)-LOG_OLD_TAU(1))/J
 !
-! Estimate average dR spacing, first making a estimate of the correction for the outer boundary.
+! Estimate average dR spacing, first making an estimate of the correction for the outer boundary.
 !
 	LOG_TAU_MIN=LOG_OLD_TAU(1)
 	LOG_R_MAX=LOG_OLD_R(1)
@@ -99,7 +101,7 @@
 ! We do the loop twice so that we can get a close agreement between ND_TMP
 ! (number of depth points with default spacing) and ND (desird grid size).
 !
-	DO ICNT=1,2
+	DO ICNT=1,3
 !
 	  IF(ICNT .NE. 1)THEN
 	    T1=DFLOAT(ND_TMP-1)/DFLOAT(ND-N_IB_INS-N_OB_INS-1)
@@ -108,9 +110,11 @@
 	    dLOGT=dLOGT*T1
 	  END IF
 !
+	  WRITE(LU,'(/,A)')' '
+	  WRITE(LU,'(A,I3)')     ' Iteration count                 is:',ICNT
 	  WRITE(LU,'(A,ES12.4)') ' Average spacing in Ln(tau)      is:',dTAU
 	  WRITE(LU,'(A,ES12.4)') ' Average spacing in Ln(R)        is:',dLOGR
-	  WRITE(LU,'(A,ES12.4)') ' Maximum spacing in Ln(T)        is:',dLOGT
+	  IF(CHECK_T)WRITE(LU,'(A,ES12.4)') ' Maximum spacing in Ln(T)        is:',dLOGT
 	  WRITE(LU,'(A,ES12.4)') ' Outer boudary step ratio        is:',OB_RAT_LOC
 	  WRITE(LU,'(A,I3)')     ' Number of points inserted at IB is:',N_IB_INS
 	  WRITE(LU,'(A,I3)')     ' Number of points inserted at OB is:',N_OB_INS
@@ -145,8 +149,12 @@
 !    (2) The change in dTAU from the prvious step is too large.
 ! We compute both a new R and TAU grid, although the TAU grid is primarily used for output.
 !
+! We now check that the step in dTAU is not much larger than the previous step size in dTAU.
+!
 	    NEXT_R=LOG_R(I-1)-dLOGR
-	    TAU_END=LOG_TAU(I-1)+dTAU
+	    dTAU_COMP=dTAU
+	    IF(I .GT. 4)dTAU_COMP=MIN( dTAU,1.3D0*(LOG_TAU(I-1)-lOG_TAU(I-2)))
+	    TAU_END=LOG_TAU(I-1)+dTAU_COMP
 	    J=1
 	    DO WHILE(LOG_OLD_R(J+1) .GT. NEXT_R)
 	      J=J+1
@@ -154,7 +162,7 @@
 	    T1=(NEXT_R-LOG_OLD_R(J))/(LOG_OLD_R(J+1)-LOG_OLD_R(J))
 	    T2=T1*LOG_OLD_TAU(J+1)+(1.0D0-T1)*LOG_OLD_TAU(J)
 	    T2=T2-LOG_TAU(I-1)
-	    IF(T2 .GT. dTAU)THEN
+	    IF(T2 .GT. dTAU_COMP)THEN
 	        J=1
 	      DO WHILE(LOG_OLD_TAU(J+1) .LT. TAU_END)
 	        J=J+1
@@ -183,51 +191,58 @@
 	        DO WHILE(LOG_OLD_R(J+1) .GT. LOG_R(I))
 	          J=J+1
 	        END DO
-	        WRITE(6,'(I5,4ES16.6)')I,LOG_OLD_R(J+1),LOG_R(I),LOG_OLD_R(J)
-	        WRITE(6,'(I5,4ES16.8)')I,LOG_R(I),LOG_TAU(I),LOG_T(I),ABS(LOG_T(I)-LOG_T(I-1))
 	        T1=(LOG_R(I)-LOG_OLD_R(J))/(LOG_OLD_R(J+1)-LOG_OLD_R(J))
 	        LOG_TAU(I)=T1*LOG_OLD_TAU(J+1)+(1.0D0-T1)*LOG_OLD_TAU(J)
 	        LOG_T(I)=T1*LOG_OLD_T(J+1)+(1.0D0-T1)*LOG_OLD_T(J)
 	      END DO
+	    ELSE
+	      T1=(LOG_R(I)-LOG_OLD_R(J))/(LOG_OLD_R(J+1)-LOG_OLD_R(J))
+	      LOG_T(I)=T1*LOG_OLD_T(J+1)+(1.0D0-T1)*LOG_OLD_T(J)
 	    END IF
 !
 ! Check whether close enough to inner bondary.
 !
+	    IF(LOG_R(I)-dLOGR .LE. LOG_OLD_R(NS))EXIT
 	    IF(LOG_R(I)-1.5D0*(LOG_R(I-1)-LOG_R(I)) .LT. LOG_OLD_R(NS))EXIT
 	    IF(LOG_TAU(I)+1.5D0*(LOG_TAU(I-1)-LOG_TAU(I)) .GT. LOG_OLD_TAU(NS))EXIT
 	  END DO
-	  WRITE(6,'(A,I4,4X,A,I4)')'Grid it=',ICNT,'ND=',I+1
 	  ND_TMP=I+1
+	  J=ND-N_IB_INS-N_OB_INS
+	  WRITE(6,'(A,I1,2(4X,A,I4))')' Iteration=',ICNT,'ND required=',J,'ND=',ND_TMP
+!
+! Define grid accurately at the inner boundary.
+!
+	  LOG_R(ND_TMP)=LOG_OLD_R(NS)
+	  LOG_TAU(ND_TMP)=LOG_OLD_TAU(NS)
+!
+	  IF(ICNT .EQ. 1)THEN
+	    WRITE(LU,'(A)')' '
+	    WRITE(LU,'(A)')' First pass at creating new grid. As this grid will generally have too many '
+	    WRITE(LU,'(A)')' grid points, we will use interpolaiton to create a smaller grid.'
+	    WRITE(LU,'(A)')' Note: All logs are natural.'
+	  END IF
+!
+	  WRITE(LU,'(A)')' '
+	  WRITE(LU,'(A,17X,A,9X,A,8X,A,11X,A,10X,A,7X,A,6X,A,3X,A)')
+	1           ' Depth','R','Ln(R)','dLn(R)','Tau','dTAU','Ln(Tau)','dLn(Tau)','dTAU[I/I-1]'
+	  TAU(1:ND_TMP)=EXP(LOG_TAU(1:ND_TMP))
+	  DO I=1,ND_TMP-1
+	    IF(I .NE. 1)T1=(TAU(I+1)-TAU(I))/MAX(TAU(I)-TAU(I-1),1.0D-10)
+	    WRITE(LU,'(I6,ES18.8,9ES14.4)')I,EXP(LOG_R(I)),LOG_R(I),LOG_R(I+1)-LOG_R(I),
+	1              TAU(I),TAU(I+1)-TAU(I),LOG_TAU(I),LOG_TAU(I+1)-LOG_TAU(I),T1,EXP(LOG_T(I+1)-LOG_T(I))
+	  END DO
+	  I=ND_TMP
+	  WRITE(LU,'(I6,ES18.8,8ES14.4)')I,EXP(LOG_R(I)),LOG_R(I),0.0D0,TAU(I),0.0D0,LOG_TAU(I),0.0D0
 !
 	  IF(ND_TMP .EQ. ND-N_IB_INS-N_OB_INS)EXIT
 	END DO
 !
-! Define grid accurately at the inner boundary.
-!
-	ND_TMP=I+1
-	LOG_R(ND_TMP)=LOG_OLD_R(NS)
-	LOG_TAU(ND_TMP)=LOG_OLD_TAU(NS)
-!
-	WRITE(LU,'(A)')' '
-	WRITE(LU,'(A)')' First pass at creating new grid. As this grid will generally have too many '
-	WRITE(LU,'(A)')' grid points, we will use interpolaiton to create a smaller grid.'
-	WRITE(LU,'(A)')' Note: All logs are natural.'
-	WRITE(LU,'(A)')' '
-	WRITE(LU,'(A,17X,A,9X,A,8X,A,11X,A,10X,A,7X,A,6X,A,3X,A)')
-	1           ' Depth','R','Ln(R)','dLn(R)','Tau','dTAU','Ln(Tau)','dLn(Tau)','dTAU[I/I-1]'
-	TAU(1:ND_TMP)=EXP(LOG_TAU(1:ND_TMP))
-	DO I=1,ND_TMP-1
-	  IF(I .NE. 1)T1=(TAU(I+1)-TAU(I))/(TAU(I)-TAU(I-1))
-	  WRITE(LU,'(I6,ES18.8,7ES14.4)')I,EXP(LOG_R(I)),LOG_R(I),LOG_R(I+1)-LOG_R(I),
-	1              TAU(I),TAU(I+1)-TAU(I),LOG_TAU(I),LOG_TAU(I+1)-LOG_TAU(I),T1
-	END DO
-	I=ND_TMP
-	WRITE(LU,'(I6,ES18.8,7ES14.4)')I,EXP(LOG_R(I)),LOG_R(I),0.0D0,TAU(I),0.0D0,LOG_TAU(I),0.0D0
 !
 ! We now rescale the grid to have the correct number of grid points.
 ! We use R as a temporary vector for LOG R, and then LOG TAU.
 !
 	J=ND-N_IB_INS-N_OB_INS
+	WRITE(6,*)' '
 	WRITE(6,*)'Number of depth points in initial grid',ND_TMP
 	WRITE(6,*)'Number of points required (corrected for boundary insertions)',J
 	IF(ND_TMP .NE. J)THEN
@@ -272,7 +287,6 @@
 	  DO J=1,N_IB_INS
 	    T1=T1-T3
 	    T3=T3*IB_RAT
-	    WRITE(6,*)LOG_OLD_TAU(NS),T1
 	    LOG_TAU(ND_TMP+N_IB_INS-J)=LOG(T1)
 	  END DO
 !
@@ -283,7 +297,6 @@
 	    T1=T1-T3
 	    T3=T3*IB_RAT
 	    LOG_R(ND_TMP+N_IB_INS-J)=LOG(T1)
-	    WRITE(6,*)LOG_OLD_R(NS),T1
 	  END DO
 	  ND_TMP=ND_TMP+N_IB_INS
 	END IF
@@ -291,10 +304,6 @@
 	LOG_TAU(ND_TMP)=LOG_OLD_TAU(NS)
 !
 ! Add finer grid at outer boundary.
-!
-	WRITE(6,*)LOG_R(1),LOG_OLD_R(1)
-	WRITE(6,*)LOG_TAU(1),LOG_OLD_TAU(1)
-!
 ! Shift grid to allow for insertion of extra ponts
 !
 ! We use K to allow for the possibility that we don't need a very find
@@ -346,7 +355,7 @@
 	1           ' Depth','R','Ln(R)','dLn(R)','Tau','dTau','Ln(Tau)','dLn(Tau)','dTAU[I/I-1]'
 	T1=0.0D0
 	DO I=1,ND-1
-	  IF(I .NE. 1)T1=(TAU(I+1)-TAU(I))/(TAU(I)-TAU(I-1))
+	  IF(I .NE. 1)T1=(TAU(I+1)-TAU(I))/MAX(TAU(I)-TAU(I-1),1.0D-10)
 	  WRITE(LU,'(I6,ES18.8,7ES14.4)')I,R(I),LOG_R(I),LOG_R(I+1)-LOG_R(I),
 	1              TAU(I),TAU(I+1)-TAU(I),LOG_TAU(I),LOG_TAU(I+1)-LOG_TAU(I),T1
 	END DO

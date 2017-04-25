@@ -35,6 +35,11 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered : 17-Oct-2016 : H_CHK_OPTION added to moment routines.
+!                            Moment routines are: MOM_J_CMF_V11.F, MOM_J_DDT_V4.F, and MOM_JREL_V8.F.
+! Altered : 17-Feb-2015 : r^2.J and r^2.H now ouput on last iteration when using USE_LAM_ES option.
+! Altered : 14-Dec-2014 : RSQHNU etc now set to one when not computing J. This avoids issues with
+!                             possible NaNs.
 ! Altered : 16-Dec-2013 : CMF_FORM_SOL_V2 (non EXT option) no longer called when ND > 199.
 !                             CMF_FORM_SOL_V2 is not parallelized and slows down large clumped models.
 ! Altered : 16-Feb-2006 : CMF_FORM_SOL_V2 used for last iteration when MAXCH<100, and
@@ -145,6 +150,7 @@
 	IF(CONT_VEL .AND. USE_FIXED_J)THEN
 	  CALL RD_CONT_J(FL,FREQ_INDX,FIRST_FREQ,LST_ITERATION,
 	1          ACCURATE,LUER,LU_EDD,ACCESS_F,ND,NP)
+	  RSQHNU=1.0D0; HFLUX_AT_OB=0.001D0; HFLUX_AT_IB=0.0D0
 !
 	ELSE IF(.NOT. CONT_VEL .AND. THIS_FREQ_EXT)THEN
 C
@@ -169,10 +175,11 @@ C
 	    END DO
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJEXT(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of mean intensity'
+	    IF(ABS(T1/FL-1.0D0) .GT. 1.0D-10)THEN
+	      WRITE(LUER,*)'Error - incorrect reading of EDDFACTOR in COMP_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete EDDFACTOR'
 	      STOP                
 	    END IF
 	  END IF
@@ -294,11 +301,11 @@ C
 	    END IF
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJEXT(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
-	1                  ' the mean intensity'
+	    IF(ABS(T1/FL-1.0D0) .GT. 1.0D-10)THEN
+	      WRITE(LUER,*)'Error - incorrect reading of EDDFACTOR in COMP_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete EDDFACTOR'
 	      STOP
 	    END IF
 	  END IF
@@ -307,11 +314,11 @@ C If we are using incoherent electron scattering, RJEXT_ES must be available.
 C
 	  IF(.NOT. COHERENT_ES)THEN
 	    READ(LU_ES,REC=ACCESS_F)(RJEXT_ES(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
-	1                ' the mean intensity'
+	    IF(ABS(T1/FL-1.0D0) .GT. 1.0D-10)THEN
+	      WRITE(LUER,*)'Error - incorrect reading of ES_J_CONV in COMO_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete ES_J_CONV'
 	      STOP
 	    END IF
 	  END IF
@@ -333,10 +340,11 @@ C
 C NB Using TA for ETA, TC for JNU_VEC, and TB for HNU_VEC
 C
 	     CALL TUNE(IONE,'FG_J_CMF_ACC')
-	     CALL FG_J_CMF_V12(TA,CHIEXT,ESECEXT,
+	     CALL FG_J_CMF_V13(TA,CHIEXT,ESECEXT,
 	1            VEXT,SIGMAEXT,REXT,PEXT,TC,FEDD,
 	1            AQWEXT,HQWEXT,KQWEXT,NQWEXT,HMIDQWEXT,NMIDQWEXT,
-	1            INBC,HBC_CMF(1),IPLUS,FL,dLOG_NU,DIF,DBB,IC,
+	1            INBC,HBC_CMF(1),IPLUS,FL,dLOG_NU,
+	1            INNER_BND_METH,DBB,IC,
 	1            VDOP_VEC_EXT,DELV_FRAC_FG,REXT_FAC,
 	1            METHOD,FG_SOL_OPTIONS,THK_CONT,
 	1            FIRST_FREQ,NEW_FREQ,NCEXT,NPEXT,NDEXT)
@@ -350,10 +358,10 @@ C
 	1            ESECEXT(1:NDEXT)*RJEXT_ES(1:NDEXT)
 	     END IF
 	     CALL TUNE(IONE,'MOM_J_CMF_ACC')
-	     CALL MOM_J_CMF_V8(TA,CHIEXT,ESECEXT,VEXT,SIGMAEXT,REXT,
+	     CALL MOM_J_CMF_V11(TA,CHIEXT,ESECEXT,VEXT,SIGMAEXT,REXT,
 	1  	       RJEXT,RSQHNU,VDOP_VEC_EXT,DELV_FRAC_MOM,
-	1              FL,dLOG_NU,DIF,DBB,IC,
-	1              N_TYPE,METHOD,COHERENT_ES,OUT_BC_TYPE,
+	1              FL,dLOG_NU,INNER_BND_METH,DBB,IC,IB_STAB_FACTOR,
+	1              N_TYPE,H_CHK_OPTION,METHOD,COHERENT_ES,OUT_BC_TYPE,
 	1              FIRST_FREQ,NEW_FREQ,NCEXT,NPEXT,NDEXT)
 	     CALL TUNE(ITWO,'MOM_J_CMF_ACC')
              IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJEXT(NDEXT)
@@ -557,11 +565,11 @@ C
 	    END IF
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJ(I),I=1,ND),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
-	1                  ' the mean intensity'
+	    IF(ABS(T1/FL-1.0D0) .GT. 1.0D-10)THEN
+	      WRITE(LUER,*)'Error - incorrect reading of EDDFACTOR in COMP_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete EDDFACTOR'
 	      STOP
 	    END IF
 	  END IF
@@ -571,10 +579,10 @@ C
 	  IF(.NOT. COHERENT_ES)THEN
 	    READ(LU_ES,REC=ACCESS_F)(RJ_ES(I),I=1,ND),T1
 	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
-	1                ' the mean intensity'
+	      WRITE(LUER,*)'Error - incorrect reading of ES_J_CONV in COMP_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete ES_J_CONV'
 	      STOP
 	    END IF
 	  END IF
@@ -620,10 +628,11 @@ C
 	1                  METHOD,FIRST_FREQ,NEW_FREQ,NC,NP,ND)
 !
 	     ELSE 
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling FG_J_CMF_V12 in COMP_J_BLANK'
-	       CALL FG_J_CMF_V12(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling FG_J_CMF_V13 in COMP_J_BLANK'
+	       CALL FG_J_CMF_V13(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
 	1                  TC,FEDD,AQW,HQW,KQW,NQW,HMIDQW,NMIDQW,
-	1                  INBC,HBC_CMF(1),IPLUS,FL,dLOG_NU,DIF,DBB,IC,
+	1                  INBC,HBC_CMF(1),IPLUS,FL,dLOG_NU,
+	1                  INNER_BND_METH,DBB,IC,
 	1                  VDOP_VEC,DELV_FRAC_FG,REXT_FAC,
 	1                  METHOD,FG_SOL_OPTIONS,THK_CONT,
 	1                  FIRST_FREQ,NEW_FREQ,NC,NP,ND)
@@ -658,20 +667,20 @@ C
 	       HFLUX_AT_OB=HBC_CMF(1)*RJ(1)-HBC_CMF(2)
 	       IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
 	     ELSE IF(USE_DJDT_RTE)THEN
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
-	       CALL MOM_J_DDT_V2(TA,CHI_CLUMP,CHI_SCAT_CLUMP,
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_J_DDT_V4'
+	       CALL MOM_J_DDT_V4(TA,CHI_CLUMP,CHI_SCAT_CLUMP,
 	1              V,R,FEDD,RJ,RSQHNU,DJDt_TERM,
 	1              HFLUX_AT_IB,HFLUX_AT_OB,
 	1              VDOP_VEC,DELV_FRAC_MOM,FL,dLOG_NU,DBB,
-	1              INNER_BND_METH,OUTER_BND_METH,
+	1              H_CHK_OPTION,INNER_BND_METH,OUTER_BND_METH,
 	1              METHOD,COHERENT_ES,FIRST_FREQ,NEW_FREQ,
-	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
+	1              INCL_DJDT_TERMS,USE_DR4JDT,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
 	     ELSE IF(USE_J_REL)THEN
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_JREL_V7'
-	       CALL MOM_JREL_V7(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_JREL_V8'
+	       CALL MOM_JREL_V8(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
 	1             RJ,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,
 	1             VDOP_VEC,DELV_FRAC_MOM,
-	1             FL,dLOG_NU,DBB,IB_STAB_FACTOR,
+	1             FL,dLOG_NU,DBB,H_CHK_OPTION,IB_STAB_FACTOR,
 	1             INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,COHERENT_ES,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,ND)
@@ -685,18 +694,36 @@ C
 	       END IF
 	     ELSE IF(USE_LAM_ES)THEN
 	       RJ(1:ND)=TC(1:ND)
-	       IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
-               HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
+	       IF(.NOT. USE_FORMAL_REL)THEN
+	         IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
+                 HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
+	       END IF
 	       CALL GET_RSQH_REL(RSQHNU,R,V,FL,ND)
+	       IF(LST_ITERATION)THEN
+	         DO I=1,ND
+	           TA(I)=RJ(I)*R(I)*R(I)
+	         END DO 
+	         T1=HFLUX_AT_IB*R(ND)*R(ND)
+	         T2=HFLUX_AT_OB/RJ(1)
+	         CALL OUT_JH(TA,RSQHNU,T1,T2,FL,NCF,R,V,ND,FIRST_FREQ,'NORMAL')
+	       END IF
 	     ELSE
-	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_J_CMF_V8'
-	       CALL MOM_J_CMF_V8(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
+	       IF(FIRST_FREQ .AND. J_IT_COUNTER .EQ. 0)WRITE(LUER,*)'Calling MOM_J_CMF_V11'
+	       CALL MOM_J_CMF_V11(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,
 	1              RJ,RSQHNU,VDOP_VEC,DELV_FRAC_MOM,
-	1              FL,dLOG_NU,DIF,DBB,IC,
-	1              N_TYPE,METHOD,COHERENT_ES,OUT_BC_TYPE,
+	1              FL,dLOG_NU,INNER_BND_METH,DBB,IC,IB_STAB_FACTOR,
+	1              N_TYPE,H_CHK_OPTION,METHOD,COHERENT_ES,OUT_BC_TYPE,
 	1              FIRST_FREQ,NEW_FREQ,NC,NP,ND)
 	       IF(.NOT. DIF)HFLUX_AT_IB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
                HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
+	       IF(LST_ITERATION .AND. WRITE_JH)THEN
+	         DO I=1,ND
+	           TA(I)=RJ(I)*R(I)*R(I)
+	         END DO
+	         T1=HFLUX_AT_IB*R(ND)*R(ND)
+	         T2=HFLUX_AT_OB/RJ(1)
+	         CALL OUT_JH(TA,RSQHNU,T1,T2,FL,NCF,R,V,ND,FIRST_FREQ,'NORMAL')
+	       END IF
 	     END IF
 	     CALL TUNE(ITWO,'MOM_J_CMF')
 C
@@ -860,9 +887,10 @@ C
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJ(I),I=1,ND),T1
 	    IF(T1 .NE. FL)THEN        
-	      WRITE(LUER,'(/,A)')' Error - incorrect reading of Mean Intensity' 
+	      WRITE(LUER,'(/,A)')' Error - incorrect reading of EDDFACTOR in COMP_J_BLANK'
 	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
+	      WRITE(LUER,*)'You may need to delete EDDFACTOR'
 	      STOP
 	    END IF
 	  END IF

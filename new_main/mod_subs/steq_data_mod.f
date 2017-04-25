@@ -5,6 +5,8 @@
 !		  (iii) Basic atmospheric structure.
 !
       MODULE STEQ_DATA_MOD
+!
+!Altered 19-Aug-2015: BA_MAX_IONS_PER_SPECIES increaed to 21 (cur_hmi, 12-Jun-2015)
 !                            
 ! Number of atomic species (e.g. H, C, N is 3 species).
 !
@@ -14,7 +16,7 @@
 ! has to be 2 or higher (as I and II). A setting of 10 implies that we can treat
 ! full atoms for ION_IX.
 !
-	INTEGER, PARAMETER :: BA_MAX_IONS_PER_SPECIES=20
+	INTEGER, PARAMETER :: BA_MAX_IONS_PER_SPECIES=21
 	INTEGER, PARAMETER :: BA_MAX_NUM_IONS=BA_NUM_SPECIES*BA_MAX_IONS_PER_SPECIES
 !
 ! Maximum number of photoionization routes for each species.

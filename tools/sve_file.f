@@ -965,6 +965,8 @@ c altered 27/01/04  DJH  Installed FILE_SHOULD_EXIT variable so that routine
 c                        does not create a sve file when using the .option.
 c                        Designed to prevent the creation of empty .sve files.
 c 
+c altered 08/06/15  DJH  .box file no longer created if it does not exist.
+c
 c+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c
       use mod_sve_file
@@ -1004,6 +1006,7 @@ c
         o_start=2
         ending=".box"
         unit=unit_box
+        file_should_exist=.true.
       elseif(s.ge.1)then
         o_start=s+4
         o_end=o_start+index(answer(o_start:),' ')-2

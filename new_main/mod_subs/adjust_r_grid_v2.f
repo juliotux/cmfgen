@@ -162,6 +162,7 @@
 	I2=ND-(NX+I1+3)
 	T1=(TAU_OLD(ND)-FG_MAX)
 	IF(I2 .LE. 0)THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Error in REVISE_R_GRID_V2'
 	  WRITE(LUER,*)'Maximum TAU set is likely too high for model'
 	  WRITE(LUER,*)'Change value in VADAT file'

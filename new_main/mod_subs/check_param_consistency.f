@@ -57,12 +57,16 @@
 	    WRITE(LUER,*)'DO_CO_MOV_DDT should also be set to TRUE.'
 	    IF(STOP_IF_BAD_PARAM)STOP
 	  END IF
-	  IF(USE_DJDT_RTE .AND. (TIME_SEQ_NO .EQ. 1) )THEN
-	    WRITE(LUER,*)'Error: inconsistency in control parameters in VADAT'
-	    WRITE(LUER,*)'SN model has TS_NO=1 implying initial model'
-	    WRITE(LUER,*)TRIM(ER_LAB),'USE_JREL=TRUE and USE_DJDT_RTE=FALSE for an initial model'
+!
+! AS TIME_SEQ_NO is not actually used, this check is not necessary.
+!
+!	  IF(USE_DJDT_RTE .AND. (TIME_SEQ_NO .EQ. 1) )THEN
+!	    WRITE(LUER,*)'Error: inconsistency in control parameters in VADAT'
+!	    WRITE(LUER,*)'SN model has TS_NO=1 implying initial model'
+!	    WRITE(LUER,*)TRIM(ER_LAB),'USE_JREL=TRUE and USE_DJDT_RTE=FALSE for an initial model'
 !	    STOP
-	  END IF
+!	  END IF
+!
 	  IF(USE_J_REL .AND. USE_DJDT_RTE)THEN
 	    WRITE(LUER,*)'Error in control parameters in VADAT'
 	    WRITE(LUER,*)TRIM(ER_LAB),'Error: USE_JREL or USE_DJDT_RTE cannot be true at the same time.'

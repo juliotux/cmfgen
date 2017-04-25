@@ -9,6 +9,10 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered: 18-Oct-2017  Fixed estimate of cooling time.
+! Altered: 01-Mar-2016  Option to omit advection terms when not included in the model [25-Feb-2016].
+! Altered: 17-Feb-2015  Improved estimate of cooling time by including ATOM_DENSITY.
+! Altered:              Estimate of cooling time outout to GENCOOL_SORT
 ! Altered: 12-Mar-2014: Added read/ouput of non-thermal cooling.
 ! Altered: 17-Nov-2009: Now read in charge exchange cooling.
 !                         Slight format change.
@@ -26,6 +30,11 @@
 !
 	REAL*8, ALLOCATABLE :: BOUND(:)
 	REAL*8, ALLOCATABLE :: SUM(:)
+	REAL*8, ALLOCATABLE :: TOTAL_RATE(:)
+	REAL*8, ALLOCATABLE :: ED(:)
+	REAL*8, ALLOCATABLE :: ATOM_DENSITY(:)
+	REAL*8, ALLOCATABLE :: T(:)
+	REAL*8, ALLOCATABLE :: COOLING_TIME(:)
 !
 	INTEGER ND
 	INTEGER NV
@@ -35,6 +44,7 @@
 	INTEGER IOS
 	REAL*8 T1
 	LOGICAL FILE_OPEN
+	LOGICAL ONLY_INCLUDED_TERMS
 	LOGICAL, PARAMETER :: L_FALSE=.FALSE.
 !
 	OPEN(UNIT=20,FILE='MODEL',STATUS='OLD',IOSTAT=IOS)
@@ -52,13 +62,21 @@
 	  INQUIRE(UNIT=20,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=20)
 !
+	ONLY_INCLUDED_TERMS=.TRUE.
+	CALL GEN_IN(ONLY_INCLUDED_TERMS,'Only output terms that are included?')
+!
 	IF(IOS .NE. 0)THEN
 	  WRITE(6,*)' Unable to open MODEL file to get # of depth points'
 	  CALL GEN_IN(ND,'Number of depth points')
 	END IF
 !
-	ALLOCATE (SUM(ND))
-	ALLOCATE (BOUND(ND))
+	ALLOCATE (SUM(ND)); SUM=0.0D0
+	ALLOCATE (BOUND(ND));  BOUND=0.0D0
+	ALLOCATE (TOTAL_RATE(ND)); TOTAL_RATE=0.0D0
+	ALLOCATE (COOLING_TIME(ND)); COOLING_TIME=0.0D0
+	ALLOCATE (ATOM_DENSITY(ND)); ATOM_DENSITY=0.0D0
+	ALLOCATE (ED(ND)); ED=0.0D0
+	ALLOCATE (T(ND)); T=0.0D0
 !
 	OPEN(UNIT=20,FILE='GENCOOL',STATUS='OLD',ACTION='READ')
 	OPEN(UNIT=21,FILE='GENCOOL_SUM',STATUS='UNKNOWN',ACTION='WRITE')
@@ -72,6 +90,8 @@
 	     READ(20,'(A)')TMP_STR
 	     READ(20,'(A)')STRING
 	     IF(J .EQ. 1)WRITE(21,'(A,T12,10I12)')'Depth',(K,K=ID,MIN(ID+9,ND))
+	     IF(J .EQ. 2)READ(STRING,*)(T(K),K=ID,MIN(ID+9,ND))
+	     IF(J .EQ. 3)READ(STRING,*)(ED(K),K=ID,MIN(ID+9,ND))
 	     WRITE(21,'(A)')TMP_STR(4:9)//'     '//TRIM(STRING)
 	     READ(20,'(A)')STRING
 	   END DO
@@ -84,43 +104,58 @@
 	        TMP_STR=ADJUSTL(TMP_STR)
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
+	        CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'COL ',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'Free-Free') .NE. 0)THEN
 	        TMP_STR=STRING
 	        TMP_STR=ADJUSTL(TMP_STR)
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
+	        CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'FF ',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'Non-thermal') .NE. 0)THEN
 	        TMP_STR=STRING
 	        TMP_STR=ADJUSTL(TMP_STR)
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
+	        CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'NT ',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'K-shell') .NE. 0)THEN
 	        TMP_STR=STRING
 	        TMP_STR=ADJUSTL(TMP_STR)
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
+	        CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	        WRITE(21,'(A,T12,A)')TMP_STR(1:K)//'XKS ',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'V term') .NE. 0)THEN
-	        TMP_STR=STRING
-	        TMP_STR=ADJUSTL(TMP_STR)
-	        K=INDEX(TMP_STR,' ')
-	        READ(20,'(A)')STRING
-	        WRITE(21,'(A)')' '
-	        WRITE(21,'(A,T12,A)')'AC.R(V).',TRIM(STRING)
+	        IF(ONLY_INCLUDED_TERMS .AND. INDEX(STRING,'Not Incl') .NE. 0)THEN
+	          READ(20,'(A)')STRING
+	        ELSE
+	          TMP_STR=STRING
+	          TMP_STR=ADJUSTL(TMP_STR)
+	          K=INDEX(TMP_STR,' ')
+	          READ(20,'(A)')STRING
+	          CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
+	          WRITE(21,'(A)')' '
+	          WRITE(21,'(A,T12,A)')'AC.R(V).',TRIM(STRING)
+	        END IF
 	      ELSE IF( INDEX(STRING,'dTdR term') .NE. 0)THEN
-	        TMP_STR=STRING
-	        TMP_STR=ADJUSTL(TMP_STR)
-	        K=INDEX(TMP_STR,' ')
-	        READ(20,'(A)')STRING
-	        WRITE(21,'(A,T12,A)')'AC.R(dT).',TRIM(STRING)
+	        IF(ONLY_INCLUDED_TERMS .AND. INDEX(STRING,'Not Incl') .NE. 0)THEN
+	          READ(20,'(A)')STRING
+	        ELSE
+	          TMP_STR=STRING
+	          TMP_STR=ADJUSTL(TMP_STR)
+	          K=INDEX(TMP_STR,' ')
+	          READ(20,'(A)')STRING
+	          CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
+	          WRITE(21,'(A,T12,A)')'AC.R(dT).',TRIM(STRING)
+	        END IF
 	      ELSE IF( INDEX(STRING,'decay') .NE. 0)THEN
 	        TMP_STR=STRING
 	        TMP_STR=ADJUSTL(TMP_STR)
 	        K=INDEX(TMP_STR,' ')
 	        READ(20,'(A)')STRING
+	        CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	        WRITE(21,'(A,T12,A)')'|R. decay|',TRIM(STRING)
 	      ELSE IF( INDEX(STRING,'Artificial') .NE. 0)THEN
 	        TMP_STR=STRING
@@ -158,6 +193,7 @@
 	            EXIT
 	          ELSE
 	            READ(STRING,*)(BOUND(K),K=ID,MIN(ID+9,ND))
+	            CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	            SUM=SUM+BOUND
 	          END IF
 	        END DO
@@ -173,6 +209,7 @@
 	            EXIT
 	          ELSE
 	            READ(STRING,*)(BOUND(K),K=ID,MIN(ID+9,ND))
+	            CALL SUM_RATES(TOTAL_RATE,STRING,ID,ND)
 	            SUM=SUM+BOUND
 	          END IF
 	        END DO
@@ -185,6 +222,23 @@
 	WRITE(6,'(A)')' Cooling data has been written to GENCOOL_SUM'
 	WRITE(6,'(A)')' Will now sort data to display most important terms'
 	WRITE(6,'(A)')' 12 records is a reasonable number to output '
+	WRITE(6,'(A)')' Cooling time is approximate and not valid at high densities'
+!
+! We have summed all rates without regard to sign. If in equilibrium, the cooling
+! rate must be half this rate. This will not work at high densities where the is
+! cancellation in heating/cooling rates for individual species/processes.
+!
+! For simplicty, we assume the energy per species is 1.5kT, and that the number
+! of electrons is the same as the number of ions when the atom density is unavailable.
+!
+	TOTAL_RATE=TOTAL_RATE*0.5D0
+	I=7
+	CALL RD_SING_VEC_RVTJ(ATOM_DENSITY,ND,'Atom Density','RVTJ',I,IOS)
+	IF(IOS .NE. 0)THEN
+	  COOLING_TIME=3.0D0*1.3806D-12*T*ED/TOTAL_RATE
+	ELSE
+	  COOLING_TIME=1.5D0*1.3806D-12*T*(ED+ATOM_DENSITY)/TOTAL_RATE
+	END IF
 !
 	OPEN(UNIT=20,FILE='GENCOOL_SUM',STATUS='UNKNOWN',ACTION='READ')
 	OPEN(UNIT=21,FILE='GENCOOL_SORT',STATUS='UNKNOWN',ACTION='WRITE')
@@ -223,6 +277,9 @@
 	  WRITE(21,'(A)')TRIM(STR_VEC(NV))
 	  WRITE(21,'(A)')TRIM(STR_VEC(NV-1))
 	  WRITE(21,'(A)')' '
+	  WRITE(21,'(A,10ES12.4)')'Cool time(s)',(COOLING_TIME(K),K=ID,MIN(ID+9,ND))
+	  
+	  WRITE(21,'(A)')' '
 	  DO K=1,MIN(NRECS,NV-N_INIT_RECS-2)
 	    WRITE(21,'(A)')TRIM(STR_VEC(INDX(K)+N_INIT_RECS))
 	  END DO
@@ -237,3 +294,22 @@
 !
 	STOP
 	END
+!
+!
+!
+	SUBROUTINE SUM_RATES(TOTAL_RATE,STRING,ID,ND)
+	INTEGER ID, ND
+	REAL*8 TOTAL_RATE(ND)
+	REAL*8 TEMP_VEC(ND)
+	CHARACTER(LEN=*) STRING
+!
+	INTEGER I
+!
+	READ(STRING,*)(TEMP_VEC(I),I=ID,MIN(ID+9,ND))
+	DO I=ID,MIN(ID+9,ND)
+	  TOTAL_RATE(I)=TOTAL_RATE(I)+ABS(TEMP_VEC(I))
+	END DO
+!
+	RETURN
+	END
+

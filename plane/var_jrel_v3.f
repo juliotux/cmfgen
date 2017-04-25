@@ -41,6 +41,8 @@
 	USE MOD_TRAP_DERIVATIVES
 	IMPLICIT NONE
 !
+! Altered 17-Feb-2015 : Check that |r^2.H| < r^2.J
+!                         [OSPREY/cur_cmf_gam: 24-Jan-2015]
 ! Altered 14-Feb-2-14: Changed to V3 -- Added INNER_BND_METH,OUTER_BND_METH to call. 
 !                         Removed DIF from call. 
 ! Altered 27-Dec-2008: 
@@ -76,7 +78,10 @@
 	CHARACTER(LEN=*) METHOD
 	CHARACTER(LEN=*) INNER_BND_METH
 	CHARACTER(LEN=*) OUTER_BND_METH
-	
+!
+! Record locations where J and H are fudged to avoid physical inconsistencies.
+!
+	LOGICAL JERR(ND),HERR(ND)
 !
 ! INIT is used to indicate that there is no coupling to the previous frequency.
 ! We are thus solving the normal continuum transfer equation (i.e. the absence
@@ -461,25 +466,6 @@
 	END DO
 	XM(ND)=XM(ND)
 !
-!	IF(INIT)THEN
-	IF(ABS(FREQ-49.8654D0) .LT. 0.001D0)THEN
-	  WRITE(172,*)'TA'
-	  WRITE(172,*)TA
-	  WRITE(172,*)'TB'
-	  WRITE(172,*)TB
-	  WRITE(172,*)'TC'
-	  WRITE(172,*)TC
-	  WRITE(172,*)'XM'
-	  WRITE(172,*)XM
-	  WRITE(172,*)'HL'
-	  WRITE(172,*)HL
-	  WRITE(172,*)'HU'
-	  WRITE(172,*)HU
-	  WRITE(172,*)'HS'
-	  WRITE(172,*)HS
-	  CLOSE(UNIT=172)
-	 END IF
-!
 ! Solve for the radiation field along ray for this frequency.
 !
 	TA_SAV=TA; TB_SAV=TB; TC_SAV=TC; XM_SAV=XM
@@ -498,9 +484,11 @@
 !
 ! Check that no negative mean intensities have been computed.
 !
+	JERR=.FALSE.
 	DO I=1,ND
 	  IF(XM(I) .LT. 0.0D0)THEN
 	    XM(I)=ABS(XM(I))/10.0D0
+	    JERR(I)=.TRUE.
 	  END IF
 	END DO
 !
@@ -512,8 +500,20 @@
 	1              (EPS_PREV_A(I)*JNU_PREV(I)  -EPS_A(I)*XM(I)) +
 	1              (EPS_PREV_B(I)*JNU_PREV(I+1)-EPS_B(I)*XM(I+1))
 	END DO
-!	WRITE(157,'(7ES16.6)')FREQ,XM(1),XM(1)*GAM_RSQ(1),GAM_RSQHNU(1),
-!	1                          XM(ND),XM(ND)*GAM_RSQ(ND),GAM_RSQHNU(ND-1)
+!
+! Make sure H satisfies that basic requirement that it is less than J.
+!
+	HERR=.FALSE.
+	DO I=1,ND-1
+	  T1=(XM(I)+XM(I+1))/2.0D0
+	  IF(GAM_RSQHNU(I) .GT. T1)THEN
+	    GAM_RSQHNU(I)=0.99D0*T1
+	    HERR(I)=.TRUE.
+	  ELSE IF(GAM_RSQHNU(I) .LT. -T1)THEN
+	    GAM_RSQHNU(I)=-0.99D0*T1
+	    HERR(I)=.TRUE.
+	  END IF
+	END DO
 !
 ! NB: A & C are d[dx/dr]/dx where x=gam.r^2.J
 !
@@ -628,7 +628,15 @@
 !
 	JNU_PREV(:)=JNU(:)
 	GAM_RSQHNU_PREV(:)=GAM_RSQHNU(:)
-
+!
+! Zero variation in J and H where we have fudged values to physically correct.
+!
+!	DO I=1,ND
+!	  IF(JERR(I))TX(I,:,:)=0.0D0
+!	END DO
+!	DO I=1,ND-1
+!	  IF(HERR(I))TVX(I,:,:)=0.0D0
+!	END DO
 !
 	RETURN
 	END

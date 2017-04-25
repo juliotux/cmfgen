@@ -237,6 +237,44 @@
 	    J=MAX(J,F_TO_S(I))
 	  END DO
 	  NS=J
+!
+	ELSE IF(SL_OPTION(1:5) .EQ. 'HALF_')THEN
+	  READ(SL_OPTION(6:),*)NS_LOW
+	  COUNT=NF
+	  OLD_F_TO_S(1:NF)=F_TO_S(1:NF)
+	  DO I=1,NF
+	    IF(F_TO_S(I) .LE. NS_LOW)THEN
+	    ELSE
+	      F_TO_S(I)=NS_LOW+(F_TO_S(I)+1-NS_LOW)/2
+	    END IF
+	  END DO
+!
+! Fix sequence number.
+!
+	  INT_SEQ=0
+!
+! Check consistency
+!
+	  NS=MAXVAL(F_TO_S)
+	  J=MINVAL(F_TO_S)
+	  IF(J .EQ. 0 .OR. NS .GT. NF)THEN
+	    WRITE(6,*)'Error in DO_SL_ADJUSTEMENT - invalid SL assignment for HALF option'
+	    WRITE(6,*)'NS=',NS,'NF=',NF
+	    IF(J .EQ. 0)WRITE(6,*)'Level not assigned:'
+	    STOP
+	  END IF
+	  OLD_F_TO_S=0
+	  DO J=1,NF
+	   OLD_F_TO_S(F_TO_S(J))=1
+	  END DO
+	  DO J=1,NS
+	    IF(OLD_F_TO_S(J) .EQ. 0)THEN
+	      WRITE(6,*)'Error in DO_SL_ADJUSTEMENT - invalid SL assignment for HALF option'
+	      WRITE(6,*)'There is no SL assignment for SL',J
+	      STOP
+	    END IF
+	  END DO
+!
 	ELSE
 	  WRITE(6,*)'Error in DO_SL_ADJUSTEMENT: SL_OPTION not recognized'
 	  WRITE(6,*)'SL_OPTION=',TRIM(SL_OPTION)

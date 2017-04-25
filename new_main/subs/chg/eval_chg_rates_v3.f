@@ -78,11 +78,13 @@
 	           ALPHA_REC=COEF_CHG(J,1)*(TVAL**COEF_CHG(J,2))
 	        ELSE IF(TYPE_CHG(J) .EQ. 2)THEN
 	           T1=COEF_CHG(J,3)*EXP(COEF_CHG(J,4)*TVAL)
-	           ALPHA_REC=COEF_CHG(J,1)*(TVAL**COEF_CHG(J,2))*
-	1             (1.0D0+T1)
+	           ALPHA_REC=COEF_CHG(J,1)*(TVAL**COEF_CHG(J,2))*(1.0D0+T1)
 	        ELSE IF(TYPE_CHG(J) .EQ. 3)THEN
 	           T1=EXP(COEF_CHG(J,3)*TVAL)
 	           ALPHA_REC=COEF_CHG(J,1)*(TVAL**COEF_CHG(J,2))*T1
+	        ELSE
+	           WRITE(6,'(/,1X,A)')'Error -- invalid charge exchange reaction TYPE in SET_CHG_EXCH_V4'
+	           STOP
 	        END IF
 !
 	        ALPHA_ION=ALPHA_REC*AI_AR_CHG(J,L)

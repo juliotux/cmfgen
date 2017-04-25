@@ -26,6 +26,7 @@
 	REAL*8 G_SUM(NLEV)
 	REAL*8 TMP_AUTO
 	REAL*8 DEFAULT_AUTO_RATE
+	REAL*8 T1
 !
 	INTEGER I,J,K
 	INTEGER NL
@@ -52,9 +53,10 @@
 !
 ! Find first autoionizing level.
 !
-	IBEG=0
+	IBEG=1
+	T1=1000.0D0*2.998D+10/1.0D+15
 	DO I=1,NLEV
-	  IF(FEDGE(I) .LT. 0)THEN
+	  IF(FEDGE(I) .LT. T1)THEN
 	    IBEG=I
 	    EXIT
 	  END IF
@@ -168,7 +170,7 @@
 	      END IF
 	    END DO
 	  END IF
-	END DO            !Number of levels read ina
+	END DO            !Number of levels read in.
 	CLOSE(LUIN)
 !
 	DO I=IBEG,NLEV
@@ -180,7 +182,7 @@
 	OPEN(LUIN,FILE='AUTO_CHK_'//FILE_NAME(1:J),STATUS='UNKNOWN')
 	  WRITE(LUIN,*)'Utilized autoionization rates associated with FILE',FILE_NAME
 	  DO I=IBEG,NLEV
-	    IF(AUTO(I) .LE. 1.0D-20)AUTO(I)=DEFAULT_AUTO_RATE
+	    IF(AUTO(I) .LE. 1.0D-20 .AND. FEDGE(I) .LT. 0.0D0)AUTO(I)=DEFAULT_AUTO_RATE
 	    WRITE(LUIN,'(1X,I4,3X,A,T35,ES12.4)')I,TRIM(LEVNAME(I)),AUTO(I)
 	  END DO 
 	CLOSE(LUIN)

@@ -22,6 +22,8 @@
 ! http://adsabs.harvard.edu/abs/1985A%26AS...60..425A
 ! Gives the cross section for direct ionisation.
 !
+! Note: The AR constants are in units of 1.0E-14 cm^2 eV^2.
+!
 	DO IT=1,NUM_THD
 	  IF(THD(IT)%PRES)THEN
 	    NEGATIVE_CROSS_SEC=.FALSE.

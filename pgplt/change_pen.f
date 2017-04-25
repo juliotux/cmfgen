@@ -6,7 +6,7 @@ C
 C Created September 1996 by Gregson Vaux
 C
       SUBROUTINE CHANGE_PEN(PENCOL,MAXPEN,NPLTS)
-      USE GEN_IN_INTERFACE
+      USE NEW_GEN_IN_INTERFACE
       IMPLICIT NONE
 C
       INTEGER MAXPEN,NPLTS
@@ -40,7 +40,7 @@ C
         J=PENCOL(I+1)
         WRITE(ICHAR,'(I2)')I
         MESSAGE='line#'//ICHAR//' pen#'
-        CALL GEN_IN(J,MESSAGE)
+        CALL NEW_GEN_IN(J,MESSAGE)
         PENCOL(I+1)=J
       END DO
       RETURN

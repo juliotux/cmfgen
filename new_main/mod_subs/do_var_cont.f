@@ -37,6 +37,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered 17-Oct-2016 : Variation routines changed to: VAR_MOM_J_CMF_V12.F, VAR_MOM_J_DDT_V4.F, and VAR_JREL_V4.F .
 ! Incorporated 02-Jan-2014: Changed to allow depth dependent profiles.
 ! Altered 01-Dec-2012 : Added loop variables to OMP calls.
 ! Altered 31-Jan-2010 : Changed to VAR_MOM_J_DDT_V2 from VAR_MOM_J_DDT_V1.
@@ -193,6 +194,10 @@
 	    IF(FIRST_FREQ)THEN
 	      TX(:,:,:)=0.0D0
 	      TVX(:,:,:)=0.0D0
+	      dJ_DIF_d_T(:)=0.0D0
+	      dJ_DIF_d_dTdR(:)=0.0D0
+	      dRSQH_DIF_d_T=0.0D0
+	      dRSQH_DIF_d_dTdR=0.0D0
 	      FL_OLD=FL
 	    ELSE
 	      RAT_TOO_BIG=.FALSE.
@@ -309,31 +314,33 @@
 	1           FIRST_FREQ,L_FALSE,dLOG_NU,DIF,dTdR,DBB,dDBBdT,IC,
 	1           DO_THIS_TX_MATRIX,METHOD,COHERENT_ES,ND,NM)
            ELSE IF(USE_J_REL)THEN
-             CALL VAR_JREL_V3(TA,CHI_CLUMP,CHI_SCAT_CLUMP,ES_COH_VEC,V,SIGMA,R,
+             CALL VAR_JREL_V4(TA,CHI_CLUMP,CHI_SCAT_CLUMP,ES_COH_VEC,V,SIGMA,R,
 	1                  TX,TVX,dJ_DIF_d_T,dJ_DIF_d_dTdR,
 	1                  dRSQH_DIF_d_T,dRSQH_DIF_d_dTdR,KI,WM,RHS_dHdCHI,
-	1                  FIRST_FREQ,FL,dLOG_NU,
+	1                  FIRST_FREQ,FL,dLOG_NU,H_CHK_OPTION,
 	1                  INNER_BND_METH,OUTER_BND_METH,IB_STAB_FACTOR,
 	1                  dTdR,DBB,dDBBdT,IC,
 	1                  INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,
 	1                  DO_THIS_TX_MATRIX,METHOD,ND,NM,NM_KI)
+	   ELSE IF (USE_LAM_ES)THEN
 	   ELSE IF(USE_DJDT_RTE)THEN
-	     CALL VAR_MOM_J_DDT_V2(TA,CHI_CLUMP,CHI_SCAT_CLUMP,ES_COH_VEC,V,R,
+	     CALL VAR_MOM_J_DDT_V4(TA,CHI_CLUMP,CHI_SCAT_CLUMP,ES_COH_VEC,V,R,
 	1           TX,TVX,dJ_DIF_d_T,dJ_DIF_d_dTdR,
 	1           dRSQH_DIF_d_T,dRSQH_DIF_d_dTdR,
 	1           KI,WM,RHS_dHdCHI,FEDD,
-	1           INCL_DJDT_TERMS,DJDT_RELAX_PARAM,FIRST_FREQ,FL,dLOG_NU,
+	1           INCL_DJDT_TERMS,USE_DR4JDT,DJDT_RELAX_PARAM,FIRST_FREQ,FL,dLOG_NU,
 	1           dTdR,DBB,dDBBdT,DO_THIS_TX_MATRIX,METHOD,
-	1           INNER_BND_METH,OUTER_BND_METH,
+	1           H_CHK_OPTION,INNER_BND_METH,OUTER_BND_METH,
 	1           ND,NM,NM_KI)
 	   ELSE
-	    CALL VAR_MOM_J_CMF_V9(TA,CHI_CLUMP,CHI_SCAT_CLUMP,
+	    CALL VAR_MOM_J_CMF_V12(TA,CHI_CLUMP,CHI_SCAT_CLUMP,
 	1           ES_COH_VEC,V,SIGMA,R,
 	1           TX,TVX,dJ_DIF_d_T,dJ_DIF_d_dTdR, 
 	1           dRSQH_DIF_d_T,dRSQH_DIF_d_dTdR, 
 	1           KI,WM,RHS_dHdCHI,
-	1           FIRST_FREQ,dLOG_NU,DIF,dTdR,DBB,dDBBdT,IC,FL,
-	1           OUT_BC_TYPE,DO_THIS_TX_MATRIX,
+	1           FIRST_FREQ,dLOG_NU,
+	1           INNER_BND_METH,dTdR,DBB,dDBBdT,IC,IB_STAB_FACTOR,
+	1           FL,H_CHK_OPTION,OUT_BC_TYPE,DO_THIS_TX_MATRIX,
 	1           METHOD,ND,NM,NM_KI)
 	   END IF
 	   CALL TUNE(2,'VAR_MOM_J')

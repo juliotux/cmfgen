@@ -84,6 +84,12 @@ if(-e $1/arnaud_rothenflug.dat)then
   echo " Copyed arnaud_rothenflug.dat"
 endif
 
+if(-e $1/IT_SPECIFIER)then
+  cp $1/IT_SPECIFIER  $2/
+  echo " "
+  echo " Copyed IT_SPECIFIER"
+endif
+
 if(-e $1/RDINR)then
     echo " "
     echo " Warning: RDINR exist in old directory"

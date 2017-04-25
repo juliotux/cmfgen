@@ -32,6 +32,7 @@ C
 	1                  NLF,NC,NP,ND,NSIM,METHOD)
 	IMPLICIT NONE
 C
+C Altered 26-Oct-2014 : We now write ABS(dmuV/dz) so as to handle non-monotonic velocity laws.
 C Altered 22-Aug-1997 : Adjusted to handle ND=NC+NP (i.e. NI=1 or 2 is
 C                         now handled --- based on FQCOMP_IBC).
 C Altered 28-Oct-1996 : Bug Fix: COS converted back to ACOS in TOR expression.
@@ -108,7 +109,7 @@ C
 	  AV(1:NI)=0.0D0
 	  CALL ZALONGP(R,Z,P(LS),NI)
 	  DO I=1,NI
-	    GAM(I)=GAMH(I)/(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
+	    GAM(I)=GAMH(I)/ABS(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
 	  END DO
 C
 C SOURCE(1) is the boundary continuum source function.

@@ -13,6 +13,8 @@
 	1                       ID,FILE_NAME)
 	IMPLICIT NONE
 !
+! Altered 04-Oct-2016 : Efectively we now only compute the threshold photoionzation cross sections
+!                         on the first entry (change was done in test routine earlier). 
 ! Altered 12-Oct-2012 : MAX_TRANS increased to 50,000
 ! Altered 23-Nov-2007 : MAX_TVALS adjusted upwards from 21 to 40 (20-Nov-2007).
 ! Altered 23-Feb-1999 : Access of collison table increased to improve speed
@@ -82,12 +84,13 @@
 	REAL*8 T1
 !
 	REAL*8, PARAMETER :: ZERO=0.0D0
-	REAL*8 PHOT_CROSS(NLEV)
+	REAL*8, SAVE, ALLOCATABLE :: PHOT_CROSS(:)
 	LOGICAL RET_EDGE_CROSS
 !
 ! Read in the atomic data. The data is not read in if the filename matches
 ! the filename of the previusly read data.
 !
+	CALL TUNE(1,'OMEGA_RD')
 	IF(LAST_RD_FILE .NE. FILE_NAME)THEN
 	  CALL GEN_OMEGA_RD_V2(OMEGA_TABLE,T_TABLE,
 	1                      ID_LOW,ID_UP,ID_INDX,
@@ -95,8 +98,9 @@
 	1                      LEVELNAME,STAT_WT,NLEV,FILE_NAME,
 	1                      NUM_TRANS,NUM_TVALS,
 	1                      MAX_TRANS,MAX_TVALS,MAX_TAB_SIZE)
-	  LAST_RD_FILE=FILE_NAME
 	END IF
+	CALL TUNE(2,'OMEGA_RD')
+	
 !
 ! 
 !
@@ -148,6 +152,7 @@
 ! For ZION=1 we use the expression given by Auer and Mihals,
 ! 1973, ApJ, 184, 151
 !
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(I,J,FL,X,IFAIL,EX_E1X,GBAR,dln_GBAR_dlnT,G1,G2)
 	DO I=1,NLEV
 	  DO J=I+1,NLEV
 	    IF(OMEGA(I,J) .EQ. 0.0D0 .AND. EIN_A(I,J) .NE. 0.0D0)THEN
@@ -207,13 +212,25 @@
 	PHOT_CONST=0.1D0*MIN(ZION,THREE)*3.23D0/8.63D-08
 	PHOT_ID=1
 	RET_EDGE_CROSS=.TRUE.
-	CALL SUB_PHOT_GEN(ID,PHOT_CROSS,ZERO,EDGE,NLEV,PHOT_ID,RET_EDGE_CROSS)
+	IF(LAST_RD_FILE .NE. FILE_NAME)THEN
+	  IF(ALLOCATED(PHOT_CROSS))THEN
+	    I=SIZE(PHOT_CROSS)
+	    IF(I .LT. NLEV)THEN
+	      DEALLOCATE(PHOT_CROSS)
+	      ALLOCATE(PHOT_CROSS(NLEV))
+	    END IF
+	  ELSE
+	    ALLOCATE(PHOT_CROSS(NLEV))
+	  END IF
+	  CALL SUB_PHOT_GEN(ID,PHOT_CROSS,ZERO,EDGE,NLEV,PHOT_ID,RET_EDGE_CROSS)
+	END IF
 	DO I=1,NLEV
 	  IF(OMEGA(I,I) .EQ. 0.0D0)THEN
 	    OMEGA(I,I)=PHOT_CONST*PHOT_CROSS(I)*STAT_WT(I)*TEMP/EDGE(I)
 	    dln_OMEGA_dlnT(I,I)=1.0D0
 	  END IF
 	END DO
+	LAST_RD_FILE=FILE_NAME
 !
 	RETURN
 	END

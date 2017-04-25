@@ -98,6 +98,7 @@
 	        END DO
 	      END DO
 !
+	      FLAG=.FALSE.
 	      DO NL=1,ATM(ID)%NXzV_F
 	        DO NUP=NL+1,ATM(ID)%NXzV_F
 	         T1=1000

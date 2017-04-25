@@ -9,6 +9,7 @@
 	1             ZION,ID,COL_FILE,OMEGA_COL,ED,T,ND)
 	IMPLICIT NONE
 !
+! Altered 04-Oct-2016 : SUBCOL_MULTI updated to V6.
 ! Altered 05-Apr-2011 : Updated from V4 
 !                          Most changes 02-Dec-10.
 !                          HNST replaced in call by HNST_F_ON_S.
@@ -47,8 +48,10 @@
 ! Local variables.
 !
 	REAL*8 H,TMP_ED
-	INTEGER I,J,IONE
-	PARAMETER (IONE=1)
+	INTEGER I,J
+	INTEGER, PARAMETER :: IONE=1
+	LOGICAL, PARAMETER :: L_FALSE=.FALSE.
+	LOGICAL, PARAMETER :: L_TRUE=.TRUE.
 !
 	REAL*8 OMEGA_F(N_F,N_F)
 	REAL*8 dln_OMEGA_F_dlnT(N_F,N_F)
@@ -59,15 +62,18 @@
 	DO I=1,ND			!Which depth
 !                            
 ! Compute collisional cross-sections (and their T derivatives)
+! The last line is COMPUTE_BA, FIXED_T, LST_ITERATION.
+! With the adopted settings we do not compute dln_OMEGA_F_dlNT.
 !
 	  COOL(I)=0.0D0
-	  CALL SUBCOL_MULTI_V5(OMEGA_F,dln_OMEGA_F_dlNT,
+	  CALL SUBCOL_MULTI_V6(OMEGA_F,dln_OMEGA_F_dlNT,
 	1          CNM,DCNM,
 	1          HN_S(1,I),HNST_S(1,I),dlnHNST_S_dlnT(1,I),N_S,
 	1          HN_F(1,I),HNST_F_ON_S(1,I),W_F(1,I),EDGE_F,
 	1          A_F,G_F,LEVNAME_F,N_F,
 	1          ZION,ID,COL_FILE,OMEGA_COL,
-	1          F_TO_S_MAP,COOL(I),T(I),TMP_ED,IONE)
+	1          F_TO_S_MAP,COOL(I),T(I),TMP_ED,IONE,
+	1          L_FALSE,L_TRUE,L_TRUE)
 !                        
 	  CPR(I)=0.0D0
 	  CRR(I)=0.0D0

@@ -26,6 +26,7 @@
 	USE MOD_LEV_DIS_BLK
 	IMPLICIT NONE
 !
+! Altered 23-Oct-2016 - Inckude PHOT_DIS_PARAMETER
 ! Altered 11-Nov-2011 - Only include FF variation when PHOT_ID=1. When this is true,
 !                         we now do it for ALL levels.
 ! Altered 05-Apr-2011 - Changed to V5.
@@ -299,21 +300,24 @@ C
 	          T1=7.782D0+XDIS(K)*DIS_CONST(I)
 	          T2=T1/(T1+YDIS(K)*DIS_CONST(I)*DIS_CONST(I))
 	          ALPHA=ALPHA*T2
+	          IF(T2 .LT. PHOT_DIS_PARAMETER)ALPHA=0.0D0
 	        END IF
-	        PCHI(GENLEV,K)=PCHI(GENLEV,K)+ALPHA
-	        TCHI1=ALPHA*EXP(LOG_HNST_S(L,K)+LOG_DI_RAT(K)-HDKT*NU/T(K))
-	        TCHI2=DT_TERM(K)+HDKT_ON_T(K)*(EDGE_F(I)-NU)/T(K)
-	        PCHI(EQION,K)=PCHI(EQION,K)-TCHI1/DI_S(ION_LEV,K)
-	        PCHI(NT-1,K)=PCHI(NT-1,K)-TCHI1/ED(K)
-	        PCHI(NT,K)=PCHI(NT,K) + TCHI1*TCHI2 - HN_S(L,K)*ALPHA*
+	        IF(ALPHA .GT. 0.0D0)THEN
+	          PCHI(GENLEV,K)=PCHI(GENLEV,K)+ALPHA
+	          TCHI1=ALPHA*EXP(LOG_HNST_S(L,K)+LOG_DI_RAT(K)-HDKT*NU/T(K))
+	          TCHI2=DT_TERM(K)+HDKT_ON_T(K)*(EDGE_F(I)-NU)/T(K)
+	          PCHI(EQION,K)=PCHI(EQION,K)-TCHI1/DI_S(ION_LEV,K)
+	          PCHI(NT-1,K)=PCHI(NT-1,K)-TCHI1/ED(K)
+	          PCHI(NT,K)=PCHI(NT,K) + TCHI1*TCHI2 - HN_S(L,K)*ALPHA*
 	1           (1.5D0+HDKT_ON_T(K)*EDGE_F(I)+dlnHNST_S_dlnT(L,K))/T(K)
 C
 C NB. The cross-section ALPHA is contained in TCHI1.
 C
-	        TETA3=TETA1*TCHI1
-	        PETA(EQION,K)=PETA(EQION,K)+TETA3/DI_S(ION_LEV,K)
-	        PETA(NT-1,K)=PETA(NT-1,K)+TETA3/ED(K)
-	        PETA(NT,K)=PETA(NT,K)-TETA3*TCHI2
+	          TETA3=TETA1*TCHI1
+	          PETA(EQION,K)=PETA(EQION,K)+TETA3/DI_S(ION_LEV,K)
+	          PETA(NT-1,K)=PETA(NT-1,K)+TETA3/ED(K)
+	          PETA(NT,K)=PETA(NT,K)-TETA3*TCHI2
+	        END IF
 	      END DO
 	    END IF
 	  END DO
@@ -331,27 +335,30 @@ C
 	    SUM_ION_NOT_IMP=0.0D0; SUM_T1_NOT_IMP=0.0D0;   SUM_T2_NOT_IMP=0.0D0
 	    DO I=1,N_F
 	      L=F_TO_S_MAPPING(I)
-	      IF(ALPHA_VEC(I) .GT. 0)THEN
+	      IF(ALPHA_VEC(I) .GT. 0.0D0)THEN
 	        ALPHA=ALPHA_VEC(I)*HNST_F_ON_S(I,K)
 	        IF(DIS_CONST(I) .GE. 0.0D0)THEN
 	          T1=7.782D0+XDIS(K)*DIS_CONST(I)
 	          T2=T1/(T1+YDIS(K)*DIS_CONST(I)*DIS_CONST(I))
 	          ALPHA=ALPHA*T2
+	          IF(T2 .LT. PHOT_DIS_PARAMETER)ALPHA=0.0D0
 	        END IF
 C
-	        VCHI_TMP(I,K)=ALPHA
-	        TCHI1=ALPHA*EXP(LOG_HNST_S(L,K)+LOG_DI_RAT(K)-HDKT*NU/T(K))
-	        TCHI2=DT_TERM(K)+HDKT_ON_T(K)*(EDGE_F(I)-NU)/T(K)
-	        IF(IMP_VAR(L+(EQHN-1)))THEN
-	          SUM_ION=SUM_ION+TCHI1
-	          SUM_T1=SUM_T1+TCHI1*TCHI2
-	          SUM_T2=SUM_T2+HN_S(L,K)*ALPHA*
+	        IF(ALPHA .GT. 0.0D0)THEN
+	          VCHI_TMP(I,K)=ALPHA
+	          TCHI1=ALPHA*EXP(LOG_HNST_S(L,K)+LOG_DI_RAT(K)-HDKT*NU/T(K))
+	          TCHI2=DT_TERM(K)+HDKT_ON_T(K)*(EDGE_F(I)-NU)/T(K)
+	          IF(IMP_VAR(L+(EQHN-1)))THEN
+	            SUM_ION=SUM_ION+TCHI1
+	            SUM_T1=SUM_T1+TCHI1*TCHI2
+	            SUM_T2=SUM_T2+HN_S(L,K)*ALPHA*
 	1             (1.5D0+HDKT_ON_T(K)*EDGE_F(I)+dlnHNST_S_dlnT(L,K))
-	        ELSE
-	          SUM_ION_NOT_IMP=SUM_ION_NOT_IMP+TCHI1
-	          SUM_T1_NOT_IMP=SUM_T1_NOT_IMP+TCHI1*TCHI2
-	          SUM_T2_NOT_IMP=SUM_T2_NOT_IMP+HN_S(L,K)*ALPHA*
-	1             (1.5D0+HDKT_ON_T(K)*EDGE_F(I)+dlnHNST_S_dlnT(L,K))
+	          ELSE
+	            SUM_ION_NOT_IMP=SUM_ION_NOT_IMP+TCHI1
+	            SUM_T1_NOT_IMP=SUM_T1_NOT_IMP+TCHI1*TCHI2
+	            SUM_T2_NOT_IMP=SUM_T2_NOT_IMP+HN_S(L,K)*ALPHA*
+	1               (1.5D0+HDKT_ON_T(K)*EDGE_F(I)+dlnHNST_S_dlnT(L,K))
+	          END IF
 	        END IF
 	      END IF
 	    END DO

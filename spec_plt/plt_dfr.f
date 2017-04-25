@@ -30,6 +30,7 @@
 	REAL*8, ALLOCATABLE :: TA(:)
 	REAL*8, ALLOCATABLE :: TB(:)
 	REAL*8, ALLOCATABLE :: TC(:)
+	REAL*8, ALLOCATABLE :: TAU_FLUX(:)
 	REAL*8, ALLOCATABLE :: TAU_ROSS(:)
 	REAL*8, ALLOCATABLE :: TAU_ES(:)
 !
@@ -99,6 +100,7 @@
 	REAL*8 PI
 	REAL*8 FREQ
 	REAL*8 T1,T2,T3
+	REAL*8 RPHOT,VPHOT
 	REAL*8 FRAC
 	REAL*8 LAMC
 	LOGICAL AIR_LAM
@@ -129,10 +131,10 @@
 	CHARACTER(LEN=120) DESCRIPTION
 	CHARACTER(LEN=20) TMP_STR
 !
-	REAL*8 SPEED_OF_LIGHT,FAC,LAM_VAC,PARSEC
+	REAL*8 SPEED_OF_LIGHT,FAC,LAM_VAC,PARSEC,LAMVACAIR
 	LOGICAL EQUAL
 	CHARACTER(LEN=30) UC
-	EXTERNAL SPEED_OF_LIGHT,EQUAL,FAC,UC,LAM_VAC,GET_INDX_DP,PARSEC
+	EXTERNAL SPEED_OF_LIGHT,EQUAL,FAC,UC,LAM_VAC,LAMVACAIR,GET_INDX_DP,PARSEC
 !
 ! 
 ! Set constants.
@@ -251,11 +253,16 @@
 	 ALLOCATE (TA(ND))
 	 ALLOCATE (TB(ND))
 	 ALLOCATE (TC(ND))
-	 ALLOCATE (TAU_ROSS(ND))
-	 ALLOCATE (TAU_ES(ND))
+	 ALLOCATE (TAU_ROSS(ND)); TAU_ROSS=0.0D0
+	 ALLOCATE (TAU_FLUX(ND)); TAU_FLUX=0.0D0
+	 ALLOCATE (TAU_ES(ND));   TAU_ES=0.0D0
 	 IF(ROSS_MEAN(ND) .NE. 0)THEN
 	   TA(1:ND)=ROSS_MEAN(1:ND)*CLUMP_FAC(1:ND)
 	   CALL TORSCL(TAU_ROSS,TA,R,TB,TC,ND,METHOD,TYPETM)
+	 END IF
+	 IF(FLUX_MEAN(ND) .NE. 0)THEN
+	   TA(1:ND)=FLUX_MEAN(1:ND)*CLUMP_FAC(1:ND)
+	   CALL TORSCL(TAU_FLUX,TA,R,TB,TC,ND,METHOD,TYPETM)
 	 END IF
 	 TA(1:ND)=6.65D-15*ED(1:ND)
 	 CALL TORSCL(TAU_ES,TA,R,TB,TC,ND,METHOD,TYPETM)
@@ -426,33 +433,96 @@
 	      DO I=2,ND
 	        TA(I)=TA(I-1)+dFR(I,ML)
 	        IF(TA(I) .GT. FRAC*ZV(ML))THEN
-	           T1=TA(I-1)/ZV(ML)
-	           T2=TA(I)/ZV(ML)
-	           T3=(FRAC-T1)/(T2-T1)
-	           IF(X(1:2) .EQ. 'OR')THEN
-	             YV(ML)=(T1*R(I)+(1.0D0-T1)*R(I-1))/R(ND)
-	           ELSE IF(X(1:2) .EQ. 'OD')THEN
-	             YV(ML)=(T1*I+(1.0D0-T1)*(I-1))
-	           ELSE
-	             YV(ML)=1.0D-03*(T1*V(I)+(1.0D0-T1)*V(I-1))
-	           END IF
-	           EXIT
-	         END IF
-	       END DO
-	     ELSE
-	       YV(ML)=0.0D0
-	     END IF
-	   END DO
-	   IF(X(1:2) .EQ. 'OR')THEN
-	     YAXIS='R/R(ND)'
-	   ELSE IF(X(1:2) .EQ. 'OD')THEN
-	     YAXIS='Depth index'
-	   ELSE
-	     YAXIS='V(Mm/s)'
-	   END IF
+	          T1=TA(I-1)/ZV(ML)
+	          T2=TA(I)/ZV(ML)
+	          T3=(FRAC-T1)/(T2-T1)
+	          IF(X(1:2) .EQ. 'OR')THEN
+	            YV(ML)=(T3*R(I)+(1.0D0-T3)*R(I-1))/R(ND)
+	          ELSE IF(X(1:2) .EQ. 'OD')THEN
+	            YV(ML)=(T3*I+(1.0D0-T3)*(I-1))
+	          ELSE
+	            YV(ML)=1.0D-03*(T3*V(I)+(1.0D0-T3)*V(I-1))
+	          END IF
+	          EXIT
+	        END IF
+	      END DO
+	    ELSE
+	      YV(ML)=0.0D0
+	    END IF
+	  END DO
+!
+	  IF(X(1:2) .EQ. 'OR')THEN
+	    YAXIS='R/R(ND)'
+	  ELSE IF(X(1:2) .EQ. 'OD')THEN
+	    YAXIS='Depth index'
+	  ELSE
+	    YAXIS='V(Mm/s)'
+	  END IF
+!
+	  T1=0.0D0; T2=0.0D0
+	  DO ML=2,NCF
+	    T1=T1+(ZV(ML+1)+ZV(ML))*(XV(ML)-XV(ML+1))
+	    T2=T2+(YV(ML+1)*ZV(ML+1)+YV(ML)*ZV(ML))*(XV(ML)-XV(ML+1))
+	  END DO
+!
+	  IF(X(1:2) .EQ. 'OR')THEN
+	    RPHOT=R(ND)*T2/T1
+	    DO I=2,ND
+	      IF(RPHOT .GE. R(I))EXIT
+	    END DO
+	    T3=(RPHOT-R(I-1))/(R(I)-R(I-1))
+	    VPHOT=V(I-1)+T3*(V(I)-V(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric  velocity is',VPHOT,' Mm/s'
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric   radius  is',RPHOT,' 10^10 cm'
+	    T1=TAU_FLUX(I-1)+T3*(TAU_FLUX(I)-TAU_FLUX(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric tau(flux) is',T1
+	    T1=TAU_ROSS(I-1)+T3*(TAU_ROSS(I)-TAU_ROSS(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric tau(Ross) is',T1
+	    T1=TAU_ES(I-1)+T3*(TAU_ES(I)-TAU_ES(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric   tau(es) is',T1
+	  ELSE IF(X(1:2) .EQ. 'OV')THEN
+	    VPHOT=T2/T1
+	    DO I=2,ND
+	      IF(VPHOT .GE. 0.001D0*V(I))EXIT
+	    END DO
+	    T3=(1000.0D0*VPHOT-V(I-1))/(V(I)-V(I-1))
+	    RPHOT=R(I-1)+T3*(R(I)-R(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric  velocity is',VPHOT,' Mm/s'
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric   radius  is',RPHOT,' 10^10 cm'
+	    T1=TAU_FLUX(I-1)+T3*(TAU_FLUX(I)-TAU_FLUX(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric tau(flux) is',T1
+	    T1=TAU_ROSS(I-1)+T3*(TAU_ROSS(I)-TAU_ROSS(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric tau(Ross) is',T1
+	    T1=TAU_ES(I-1)+T3*(TAU_ES(I)-TAU_ES(I-1))
+	    WRITE(6,'(A,ES14.4,2A)')' The flux weighted photospheric   tau(es) is',T1
+	  END IF
+!
 	  CALL CNVRT(XV,ZV,NCF,LOG_X,LOG_Y,X_UNIT,Y_PLT_OPT,
 	1         LAMC,XAXIS,YAXIS,L_TRUE)
 	  CALL CURVE(NCF,XV,YV)
+!
+	ELSE IF(X .EQ. 'WF2')THEN
+	  CALL USR_OPTION(T1,'lam_st',' ','Start wavelength in Ang')
+	  T1=0.299794D+04/T1
+          I=GET_INDX_DP(T1,NU,NCF)
+	  IF(NU(I)-T1 .GT. T1-NU(I+1))I=I+1
+!
+	  CALL USR_OPTION(T1,'lam_end',' ','End wavelength in Ang')
+	  T1=0.299794D+04/T1
+          J=GET_INDX_DP(T1,NU,NCF)
+	  IF(NU(J)-T1 .GT. T1-NU(J+1))J=J+1
+!
+	  WRITE(30,*)ND,J-I+2
+	  WRITE(30,'(1000ES14.6)')(R(L),L=1,ND)
+	  WRITE(30,'(1000ES15.7)')ANG_TO_HZ/NU(I:J+1)
+	  DO K=I,J+1
+	    TA(1:ND)=0.0D0
+	    DO ML=K-4,K+3
+	      TA(1:ND-1)=TA(1:ND-1)+(dFR(1:ND-1,ML)+dFR(1:ND-1,ML+1))*(NU(ML)-NU(ML+1))
+	    END DO
+	    TA(1:ND-1)=0.5D0*TA(1:ND-1)/(NU(K-4)-NU(K+4))
+	    WRITE(30,'(500ES12.4)')(TA(L),L=1,ND-1)
+	  END DO
 !
 	ELSE IF(X .EQ. 'DF2' .OR. X .EQ. 'DDF2')THEN
 	  CALL USR_OPTION(T1,'lam_st',' ','Start wavelength in Ang')
@@ -477,6 +547,8 @@
 	  END DO
 	  T1=ABS(NU(I)-NU(J))
 	  YV(1:ND)=YV(1:ND)/T1
+	  WRITE(6,*)'Start wavelength of interval is (AIR if > 2000A)',LAMVACAIR(NU(I))
+	  WRITE(6,*)'  End wavelength of interval is (AIR if > 2000A)',LAMVACAIR(NU(J))
 !
 	  FREQ=0.5D0*(NU(I)+NU(J))
 	  IF(Y_PLT_OPT .EQ. 'NU_FNU')THEN
@@ -692,15 +764,20 @@
 	  WRITE(6,*)' XLOGV:   Set X axis to Log V'
 	  WRITE(6,*)' XLOGR:   Set X axis to Log R/R*'
 	  WRITE(6,*)' SP:      Plot spectrum - sums dF(R) over all radii'
+	  WRITE(6,*)' '
 	  WRITE(6,*)' DF:      Plot dF(R) for a given frequency'
 	  WRITE(6,*)' DF2:     Plot dF(R) averaged over a given frequency band'
 	  WRITE(6,*)' DDF:     Plots dF/dX (X=default axis) for a given frequency band'
 	  WRITE(6,*)' DDF2:    Plots dF/dX (X=default axis) averaged over a given frequency band'
 	  WRITE(6,*)' IR:      Plot the contribution, as a funtion of lambda, at a given radius'
+	  WRITE(6,*)' RD_OBS:  Read on observed spectrum'
 	  WRITE(6,*)' OR:      Plot the radius, as a funtion of lambda, for a given fractional contribution'
 	  WRITE(6,*)' OV:      Plot the velocity, as a funtion of lambda, for a given fractional contribution'
 	  WRITE(6,*)' ON:      Plot the depth index, as a funtion of lambda, for a given fractional contribution'
 	  WRITE(6,*)' '
+	  WRITE(6,*)' GR:      Plot data already sent to plot package'
+	  WRITE(6,*)' GRNL:    Same as GR but labels are not sent.'
+	  WRITE(6,*)' EX:      Exit from program'
 	  WRITE(6,*)' '
 	  GOTO 1
 !

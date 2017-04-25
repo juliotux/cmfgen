@@ -48,6 +48,7 @@ mod_disp.o : mod_disp.f
 GEN =  $(LIB_DIR)libtools.a(gen_in.o)\
                $(LIB_DIR)libtools.a(usr_option.o)\
                $(LIB_DIR)libtools.a(usr_hidden.o)\
+               $(LIB_DIR)libtools.a(mod_color_pen_def.o)\
                $(LIB_DIR)libmod.a(mod_lev_dis_blk.o)\
                $(LIB_DIR)libtools.a(wr_string.o)
 
@@ -60,7 +61,7 @@ maingen.o : maingen.f mod_disp.o $(GEN) \
                PAR_OPACITIES.INC  XOPAC.INC PAR_XOPAC.INC
 	$(F90) -c  $(FD) maingen.f 
 
-pltphot_sub.o : pltphot_sub.f $(GEN)
+pltphot_sub.o : pltphot_sub.f mod_disp.o $(GEN)
 	$(F90) -c  $(FD) pltphot_sub.f 
 
 $(GEN):

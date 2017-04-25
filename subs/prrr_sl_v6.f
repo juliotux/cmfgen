@@ -15,6 +15,7 @@
 	1                     NU,NU_CONT,INIT_ARRAYS,ND)
 	IMPLICIT NONE
 !
+! Altered 23-Jun-2015 - Added H- free-free cooling.
 ! Altered 20-Oct-2011 - Now sum up all in ion levels for FF. Only do this when PHOT_ID=1
 ! Altered 05-Apr-2011 - Changed to V6.
 !                       LOG_DIST (rather than dwHNST_F) is passed in call.
@@ -125,9 +126,18 @@
 !
 ! Compute Free-Free cooling.
 !
+	IF(ZHYD .EQ. 0.0D0)THEN
+!
+! This is for H-. We use GFF_VAL as a temporary storage for the ground state
+! population of neutral hydrogen.
+!
+	  GFF_VAL(1:ND)=DI(1,1:ND)
+	  CALL DO_HMI_FF_COOL(FF,GFF_VAL,ED,T,BPHOT_CR,JPHOT_CR,NU_CONT,ND)
+	ELSE IF(ION_LEV .EQ. 1)THEN
+!
 ! Compute free-free gaunt factors. Replaces call to GFF in following DO loop.
 !
-	CALL GFF_VEC(GFF_VAL,NU_CONT,T,ZHYD,ND)
+	  CALL GFF_VEC(GFF_VAL,NU_CONT,T,ZHYD,ND)
 !
 ! The opacity is evaluated at NU_CONT. However, the stimulated emission term
 ! should be evaluated at NU, since we correct CHI and ETA for the change
@@ -135,7 +145,6 @@
 !
 ! The constant in T2 is 4PI x 1.0E-10.
 !
-	IF(ION_LEV .EQ. 1)THEN
 	  T2=1.256637061D-09*ZHYD*ZHYD*CHIFF/(NU_CONT**3)
 	  DO J=1,ND
 	    POP_SUM=SUM(DI(:,J))

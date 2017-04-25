@@ -1,6 +1,7 @@
 	MODULE MOD_STRK_LIST
 	IMPLICIT NONE
 !
+! Altered 06-MAy-2014 : Put explicit stop in if using Lemke HI profile in IR
 ! Altered 24-Aug-2009 : Bug fix: LUER not being initialized for one error message.
 ! Altered 11-may-2004 : Bug fix: LST_V_PROF_LIMIT was not being sorted.
 ! Altered 03-Jan-2001 : LST_TYPE length increased from 10 to 12.
@@ -182,6 +183,23 @@
 	CALL SORTINT(N_LST,LST_PID,VEC_INDX,INT_WRK)
 	CALL SORTCHAR(N_LST,LST_SPECIES,VEC_INDX,CHAR_WRK)
 	CALL SORTCHAR(N_LST,LST_TYPE,VEC_INDX,CHAR_WRK)
+!
+	DO J=1,N_LST
+	  IF(LST_WAVE(J) .GT. 1.3D+04 .AND. LST_TYPE(J) .EQ. 'LEMKE_HI' .AND. LST_NL(J) .EQ. 4)THEN
+	    LUER=ERROR_LU()
+	    WRITE(LUER,*)' '
+	    WRITE(LUER,'(1X,80A)')('*',L=1,70)
+	    WRITE(LUER,'(1X,80A)')('*',L=1,70)
+	    WRITE(LUER,*)' '
+	    WRITE(LUER,*)'Warning--- you should not use Lemke stark profiles for IR Bracket lines as they contain an error'
+	    WRITE(LUER,*)'See: Repolust et al 2005, A&A 440, 261 (page 4)'
+	    WRITE(LUER,*)' '
+	    WRITE(LUER,'(1X,80A)')('*',L=1,70)
+	    WRITE(LUER,'(1X,80A)')('*',L=1,70)
+	    WRITE(LUER,*)' '
+	    EXIT
+	  END IF
+	END DO
 !
 	DEALLOCATE (VEC_INDX)
 	DEALLOCATE (INT_WRK)

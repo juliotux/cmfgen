@@ -50,6 +50,7 @@
 !
 	CALL SIMQ(CMAT,RHS,NORD,K)
 	IF( K .NE. 0 )THEN
+	  LUER=ERROR_LU()
 	  WRITE(LUER,*)'Warning - Singular determinant in NGACCEL'
 	  RJ(1:ND)=PREVRJ(0,1:ND)
 	  RETURN

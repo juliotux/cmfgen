@@ -21,6 +21,8 @@
 	SUBROUTINE SPECIFY_IT_CYCLE(COMPUTE_BA,LAMBDA_ITERATION,FIXED_T)
 	IMPLICIT NONE
 !
+! Altered 06-Apr-2014: Modified for allow NONE for NORM, and FIX_T and FIX_BA
+!                        (common typo errors).
 ! Created 11-Mar-2014
 !
 	LOGICAL COMPUTE_BA
@@ -61,7 +63,15 @@
 	IT_OPTION=STORE(1)(1:L-1)
 	CALL SET_CASE_UP(IT_OPTION,IZERO,IZERO)
 !
-	IF(IT_OPTION(1:4) .EQ. 'NORM')THEN
+! We allow for the use of FIX_T and FIX_BA instead of FIXT and FIXBA.
+! We will also treat NORM and NONE as equivalent.
+!
+	DO WHILE(INDEX(IT_OPTION,'FIX_') .NE. 0)
+	  L=INDEX(IT_OPTION,'FIX_')
+	  IT_OPTION(L+3:)=IT_OPTION(L+4:)
+	END DO
+!
+	IF(IT_OPTION(1:4) .EQ. 'NORM' .OR.  IT_OPTION(1:4) .EQ. 'NONE')THEN
 	  CLOSE(LU_IN)
 	  RETURN
 	ELSE IF(IT_OPTION(1:3) .EQ. 'LAM')THEN

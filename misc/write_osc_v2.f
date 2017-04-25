@@ -162,6 +162,8 @@ C
 	  LNGTH=MAX( LEN_TRIM(CIVLEV(I)),LNGTH )
 	END DO
 	FMTGAP=2*(LNGTH-1)
+	WRITE(6,*)NMAX,BND_LEV
+	WRITE(6,*)NMAX,LNGTH
 !
 	HEAD1='      g        E(cm^-1)    10^15 Hz     eV       Lam(A)'
 	HEAD2='       ID      ARAD       GAM2        GAM4'
@@ -190,7 +192,7 @@ C
 	WRITE(LU,'(A,T50,''!Format date'')')'17-Oct-2000'
 	WRITE(LU,'(A,T50,''!Date'')')TRIM(CIVOSC_DATE)
 !
-	WRITE(FMT_STR,'(I6)')NCIV
+	WRITE(FMT_STR,'(I6)')NMAX
 	DO WHILE(FMT_STR(1:1) .EQ. ' ')
 	  FMT_STR(1:)=FMT_STR(2:)
 	END DO
@@ -215,7 +217,7 @@ C
 	WRITE(LU,'(A,T50,A)')TRIM(FMT_STR),'!Number of transitions'
 !
 	WRITE(LU,'(A)')' '
-	DO I=1,NCIV
+	DO I=1,NMAX
 	  J=I
 	  IF(.NOT. KNOWN_LEVEL_ENERGY(I))J=-I
 	  WRITE(LU,120)CIVLEV(I)(1:LNGTH),GCIV(I)

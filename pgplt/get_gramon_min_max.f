@@ -1,23 +1,26 @@
 !
-! Get aaaaabsica and ordinate maxima and minim for plotting.
+! Get absica and ordinate maxima and minima for plotting.
 !
 	SUBROUTINE GET_GRAMON_MIN_MAX(XMIN,XMAX,YMIN,YMAX,TYPE_CURVE,T_OUT)
 	USE MOD_CURVE_DATA
+	IMPLICIT NONE
 !
+! Altered 24-Feb-2016: Bug fix - no longer use plot 1 to set initial
+!                           values of XMIN and XMAX. 
 ! Altered 12-Jan-2014: Installed check to see if LG option.
 ! Created 06-Sep-2005
 !
 	REAL*4 XMIN,XMAX,YMIN,YMAX
 	INTEGER T_OUT
-	CHARACTER*1 TYPE_CURVE(MAX_PLTS)
+	CHARACTER(LEN=*) TYPE_CURVE(MAX_PLTS)
 !
-	REAL T1
+	REAL*4 T1,T2
 	INTEGER IP
 !
 ! Look for absica limits
 !
-	XMIN=CD(1)%XVEC(1)
-	XMAX=CD(1)%XVEC(1)
+	XMIN=0.5D0*HUGE(XMIN)
+	XMAX=-XMIN
 	DO IP=1,NPLTS
 	  IF(TYPE_CURVE(IP) .NE. 'I')THEN
 	    T1=MINVAl(CD(IP)%XVEC)
@@ -29,8 +32,8 @@
 !
 ! Look for ordinate limits
 !
-	YMIN=CD(1)%DATA(1)
-	YMAX=CD(1)%DATA(1)
+	YMIN=0.5D0*HUGE(YMIN)
+	YMAX=-YMIN
 	DO IP=1,NPLTS
 	  IF(TYPE_CURVE(IP) .EQ. 'LG')THEN
 	    T1=MAXVAL(CD(IP)%DATA)
@@ -53,8 +56,8 @@
 	  YMAX=1.0
 	  WRITE(T_OUT,*)'Y limits are zero - setting default values'
 	ELSE IF(ABS(YMAX-YMIN)/MAX(ABS(YMAX),ABS(YMIN)) .LT. 1.0D-08)THEN
-	  YMIN=0.0
-	  YMAX=1.0
+	  YMIN=0.9*YMIN
+	  YMAX=1.1*YMAX
 	  WRITE(T_OUT,*)'Invalid Y limits - setting default values'
 	END IF
 	IF(XMAX .EQ. 0 .AND. XMIN .EQ. 0)THEN
@@ -62,8 +65,8 @@
 	  XMAX=1.0
 	  WRITE(T_OUT,*)'X limits are zero - setting default values'
 	ELSE IF(ABS(XMAX-XMIN)/MAX(ABS(XMAX),ABS(XMIN)) .LT. 1.0D-08)THEN
-	  XMIN=0.0
-	  XMAX=1.0
+	  XMIN=0.9*XMIN
+	  XMAX=1.1*XMAX
 	  WRITE(T_OUT,*)'Invalid X limits - setting default values'
 	END IF
 !

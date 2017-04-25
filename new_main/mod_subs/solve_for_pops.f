@@ -11,6 +11,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered:   01-Apr-2015 : Changed ESTAU call to ESTAU_V2 to take clumping to account.
 ! Altered:   21-Jan-2014 : Changed to CALL SOLVEBA_V12 - now pass MAIN_COUNTER.
 ! Aleterd:   31-Dec-2013 : No longer set COMPUTE_BA=T when T_MIN_BA_EXTRAP is true. We may need to
 !                            change this.
@@ -83,9 +84,9 @@
 	  MOD_FIXED_T=.TRUE.
 	  MOD_FIX_T_D_ST=1
 	  MOD_FIX_T_D_END=ND
-	  CALL ESTAU(TA,R,ED,TB,ND)
+	  CALL ESTAU_V2(TA,R,ED,CLUMP_FAC,TB,ND)
 	ELSE IF(VARFIXT .AND. CON_SCL_T .NE. 0.0D0)THEN
-	  CALL ESTAU(TA,R,ED,TB,ND)
+	  CALL ESTAU_V2(TA,R,ED,CLUMP_FAC,TB,ND)
 	  MOD_FIXED_T=.TRUE.
 	  MOD_FIX_T_D_ST=1
 	  DO I=1,ND
@@ -93,6 +94,13 @@
 	      MOD_FIX_T_D_END=I
 	    END IF
 	  END DO
+	  IF(MOD_FIX_T_D_END .LT. 5)MOD_FIX_T_D_END=5  	!avoid inconsistency at outer boundary.
+	  WRITE(LUER,*)' '
+	  WRITE(LUER,'(A,ES14.4)')' Electron scattering optical depth at outer boundary'//
+	1                        ' in SOLVE_FOR_POPS is',TA(1)
+	  WRITE(LUER,'(A,I3,A,I3)')' T will be held fixed over the following depths',
+	1                           MOD_FIX_T_D_ST,' to ',MOD_FIX_T_D_END
+	  WRITE(LUER,*)' '
 	END IF
 ! 
 !
@@ -203,7 +211,7 @@
 !
 	IF(.NOT. LAMBDA_ITERATION)THEN
 	  CON_SCL_T=0.0D0
-	  CALL ESTAU(TA,R,ED,TB,ND)
+	  CALL ESTAU_V2(TA,R,ED,CLUMP_FAC,TB,ND)
 	  DO I=1,ND
 	    DO J=1,NT
 	      IF( (SOL(J,I) .GT. 0.8D0 .OR.

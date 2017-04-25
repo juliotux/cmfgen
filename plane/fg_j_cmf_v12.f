@@ -141,8 +141,8 @@
 	INTEGER NRAY_MAX
 	INTEGER IDMIN,IDMAX
 !
-	CHARACTER*10 OLD_SOLUTION_OPTIONS
-	CHARACTER*10 SOLUTION_METHOD
+	CHARACTER(LEN=10) OLD_SOLUTION_OPTIONS
+	CHARACTER(LEN=10) SOLUTION_METHOD
 	LOGICAL INSERT
 	LOGICAL FIRST_TIME
 	LOGICAL NEW_R_GRID
@@ -152,6 +152,7 @@
 	DATA FIRST_TIME/.TRUE./
 	DATA PREVIOUS_FREQ/0.0D0/
 !
+	SAVE
 	END MODULE FG_J_CMF_MOD_V12
 !
 ! 
@@ -208,6 +209,7 @@
 	USE MOD_RAY_MOM_STORE
 	IMPLICIT NONE
 !
+! Altered 19-Aug-2015: Added check that SIGMA> -1.0D0; Some code improvements (cur_hmi, 28-Jun-2015).
 ! Altered 30-Dec-2013: Fixed expressions for HPLUS_OB and HPLUS_IB: Change OMP schedule to dynamic.
 ! Altered 08-Jan-2012: Changed to V12. Added REXT_FAC to call.
 ! Altered 07-Jul-2011: Changed extrapolation region I to max-value of 10 (rathee than ND/6).
@@ -790,6 +792,10 @@
 	  IF(IOS .EQ. 0)ALLOCATE ( CV(NRAY_MAX,NP),STAT=IOS )
 	  IF(IOS .EQ. 0)ALLOCATE ( DTAU(NRAY_MAX,NP),STAT=IOS )
 	  IF(IOS .EQ. 0)ALLOCATE ( GAM(NRAY_MAX,NP),STAT=IOS )
+	  IF(IOS .NE. 0)THEN
+	    WRITE(LUER,*)'Error allocating V_RAY etc in FG_J_CMF_V12: Status=',IOS
+	    STOP	
+          END IF
 !
 !***************************************************************************
 !***************************************************************************
@@ -901,13 +907,25 @@
 	  CALL MON_INT_FUNS_V2(V_COEF,V_EXT,LOG_R_EXT,ND_EXT)
 	  CALL MON_INT_FUNS_V2(SIGMA_COEF,SIGMA_EXT,LOG_R_EXT,ND_EXT)
 !
+	  DO I=1,ND
+	    IF(SIGMA(I) .LT. -1.0D0)THEN
+	      WRITE(LUER,*)'Error in FG_J_CMF_V12 - SIGMA .LT. -1.0D0'
+	      WRITE(LUER,*)I,SIGMA(I)
+	      STOP
+	    END IF
+	  END DO
+	    
 	  DO LS=1,NP
+!
+! The check on SIGMA is to allow for the possibility of a non-monotonic velcoity law in the
+! region where V is small, and hece where SIGAMA is unimportant.
 !
 	    DO I=1,NI_RAY(LS)
 	      K=RAY_PNT(I,LS)
 	      T1=LOG(R_RAY(I,LS)/R_EXT(K))
 	      V_RAY(I)=((V_COEF(K,1)*T1+V_COEF(K,2))*T1+V_COEF(K,3))*T1+V_COEF(K,4)
 	      SIGMA_RAY(I)=((SIGMA_COEF(K,1)*T1+SIGMA_COEF(K,2))*T1+SIGMA_COEF(K,3))*T1+SIGMA_COEF(K,4)
+	      IF(SIGMA_RAY(I) .LE. -1.0D0)SIGMA_RAY(I)=-0.999D0
 	    END DO
 !
 !
@@ -1326,6 +1344,7 @@ C
 	    IF(NI_RAY(LS) .EQ. 1)THEN
 	      I_P(1,LS)=0.0D0
 	      I_M(1,LS)=0.0D0
+	      NI=1
 	      GOTO 1000
 	    END IF
 !
@@ -1414,7 +1433,8 @@ C
 	        T1=DTAU(I,LS)
 	        EE(I)=0.0D0
 	        IF(T1 .LT. 700.0D0)EE(I)=EXP(-T1)
-	        IF(T1 .GT. 0.5D0)THEN
+	        IF(T1 .GE. 40.0D0)THEN
+	        ELSE IF(T1 .GT. 0.5D0)THEN
 	          E0(I)=1.0D0-EE(I)
 	          E1(I)=1.0D0-E0(I)/T1
 	          E2(I)=1.0D0-2.0D0*E1(I)/T1
@@ -1438,14 +1458,24 @@ C
 	        END IF
 	      END DO
 !
-              DO I=1,NI-1
-	        A0(I,LS)=EE(I)
-	        A1(I,LS)=E0(I)-3.0D0*E2(I)+2.0D0*E3(I)
-	        A2(I,LS)=3.0D0*E2(I)-2.0D0*E3(I)
-	        A3(I,LS)=DTAU(I,LS)*(E1(I)-2.0D0*E2(I)+E3(I))
-	        A4(I,LS)=DTAU(I,LS)*(E3(I)-E2(I))
+	      DO I=1,NI-1
+	        T1=DTAU(I,LS)
+	        IF(T1 .GE. 40.0D0)THEN
+	          A0(I,LS)=EE(I)
+	          A1(I,LS)=(6.0D0-12.0/T1)/T1/T1
+	          A2(I,LS)=1.0D0-A1(I,LS)
+	          A3(I,LS)=(2.0D0-6.0D0/T1)/T1
+	          A4(I,LS)=(4.0D0-6.0D0/T1)/T1-1.0D0
+	        ELSE 
+	          A0(I,LS)=EE(I)
+	          A1(I,LS)=E0(I)-3.0D0*E2(I)+2.0D0*E3(I)
+	          A2(I,LS)=3.0D0*E2(I)-2.0D0*E3(I)
+	          A3(I,LS)=DTAU(I,LS)*(E1(I)-2.0D0*E2(I)+E3(I))
+	          A4(I,LS)=DTAU(I,LS)*(E3(I)-E2(I))
+	        END IF
 	      END DO
 	    END IF
+!
 !	    CALL TUNE(2,'FG_NEW_F')
 !
 ! ******************* INWARD DIRECTED RAYS *********************************
@@ -1488,6 +1518,18 @@ C
 	1        +    SOURCE_PRIME(I+1)*A2(I,LS)
 	1        +    dS(I)*A3(I,LS)
 	1        +    dS(I+1)*A4(I,LS) )
+	    END DO
+!
+	    DO I=1,NI-1
+	      IF(I_M(I+1,LS) .LT. 0)THEN
+	        WRITE(6,*)'Error for I_M, LS=',LS,ND,NI,FREQ
+	        WRITE(6,'(2X,A,13(8X,A))')'I','IMP1','IMPR','DTAU','   Q',
+	1                     '  SI','SIP1',' dSI','dSIP',
+	1                     '  A0','  A1','  A2','  A3','  A4'
+	        WRITE(6,'(I3,13ES12.4)')I,I_M(I+1,LS),I_M_PREV(I+1,LS),DTAU(I,LS),Q(I),
+	1                   SOURCE_PRIME(I),SOURCE_PRIME(I+1),dS(I),dS(I+1),
+	1                   A0(I,LS),A1(I,LS),A2(I,LS),A3(I,LS),A4(I,LS)
+	      END IF
 	    END DO
 !
 ! ******************* OUTWARD DIRECTED RAYS *********************************
@@ -1532,6 +1574,17 @@ C
 	1        +    SOURCE_PRIME(I)*A2(I,LS)
 	1        -    dS(I+1)*A3(I,LS)
 	1        -    dS(I)*A4(I,LS) )
+	    END DO
+!
+	    DO I=1,NI
+	      IF(I_P(I,LS) .LT. 0)THEN
+	        WRITE(6,*)'Error for I_P, LS=',LS,ND,NI
+	        WRITE(6,'(2X,A,11(7X,A))')'I','  IM',' IMP','DTAU','   Q','   S','  dS',
+	1                     '  A0','  A1','  A2','  A3','  A4'
+	        WRITE(6,'(I3,11ES12.4)')I,I_P(I,LS),I_P_PREV(I,LS),DTAU(I,LS),
+	1                   Q(I),SOURCE_PRIME(I),dS(I),
+	1                   A0(I,LS),A1(I,LS),A2(I,LS),A3(I,LS),A3(I,LS)
+	      END IF
 	    END DO
 C
 C Note that V=AV(1)-IBOUND.

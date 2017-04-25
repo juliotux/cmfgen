@@ -14,7 +14,7 @@ C AIR_LAM=
 C SCALE_FACTOR=
 C
 C Where:
-C      The Flux Unit can Jy, or egs/cm^2/sec/Ang, or Norm.
+C      The Flux Unit can Jy, or ergs/cm^2/s/Ang, or Norm.
 C      The WAVE_UNIT can be Anstroms
 C      AIR_LAM can be TRUE (air) or FALSE (vac)
 C
@@ -26,7 +26,7 @@ C occur (if present) after FLUX_UNIT. No blank lines are allowed between
 c specifiers.
 C
 C And the a list of wavelenghts (in Angstroms) and Fluxes (in Jy or 
-C egs/cm^2/sec/Ang). One pair of data is assumed to be on each
+C ergs/cm^2/s/Ang). One pair of data is assumed to be on each
 C line.
 C 
 C The routine returns the wavelngth (in Angstroms) and the flux in 

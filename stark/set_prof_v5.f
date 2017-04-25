@@ -34,10 +34,13 @@
 	1             TEMP_IN,VTURB_IN,ND,
 	1             PROF_TYPE,PROF_LIST_LOCATION,
 	1             NU_ZERO,NL,NUP,AMASS_IN,Z_IN,
-	1             GAM_RAD,GAM_COL,
+	1             GAM_RAD,C4_INTER,
 	1             TDOP,AMASS_DOP,VTURB,MAX_PROF_ED,
 	1             END_RES_ZONE,NORM_PROFILE,LU_STK)
 !
+! Altered 18-May-2015: LOC_GAM_COL is set to C4 unless specifically set in STRK_LIST.
+! Altered 20-May-2014: VERBOSE option introduced, and sone diagnostic output was modified.
+! Altered 14-May-2014: MAX_PROF_ED now applies to all profiles
 ! Altered 31-Jan-2014: Added MAX_PROF_ED to call (changed to V5).
 ! Altered 06-Jan-2014: VTURB_FIX replaced by TDOP,AMASS_DOP,VTURB in call (changed to V4).
 !                          (taken from cur_cm_25jun13 development version).
@@ -68,7 +71,7 @@
 	REAL*8 Z_IN
 	REAL*8 NU_ZERO
 	REAL*8 GAM_RAD
-	REAL*8 GAM_COL
+	REAL*8 C4_INTER
 	REAL*8 VTURB		!Turbulent velocity (km/s): same at all depths
 	REAL*8 TDOP
 	REAL*8 AMASS_DOP
@@ -77,6 +80,7 @@
 	CHARACTER*(*) PROF_TYPE
 	LOGICAL END_RES_ZONE
 	LOGICAL NORM_PROFILE
+	LOGICAL VERBOSE
 !
 	LOGICAL, PARAMETER :: RET_LOG=.FALSE.
 	LOGICAL, PARAMETER :: L_FALSE=.FALSE.
@@ -89,6 +93,7 @@
 	REAL*8 T1,T2
 	REAL*8 TMP_ED,NU_DOP
 	REAL*8 TMP_VEC(ND)
+	REAL*8 ED_MOD(ND)
 	REAL*8 XNU(ML_END-ML_ST+1)
 	REAL*8 A_VOIGT
 	REAL*8 V_VOIGT
@@ -138,15 +143,16 @@
           TMP_VEC(1:ND)=( VTURB_IN(1:ND)/12.85D0  )**2
           T2=NU_ZERO*12.85D0/C_KMS
 	  LOC_GAM_RAD=GAM_RAD
-	  LOC_GAM_COL=GAM_COL
+	  LOC_GAM_COL=1.55D+04*(ABS(C4_INTER)**0.667D0)
 	  ID=PROF_LIST_LOCATION
 	  IF(ID .NE. 0)THEN
 	    LOC_GAM_RAD=LST_GAM_RAD(ID)
 	    LOC_GAM_COL=LST_GAM_COL(ID)
 	  END IF
 	  DO I=1,ND
+	    TMP_ED=MIN(ED_IN(I),MAX_PROF_ED)
             NU_DOP=T2*SQRT( TEMP_IN(I)/AMASS_IN + TMP_VEC(I) )
-	    A_VOIGT=0.25D-15*(LOC_GAM_RAD+LOC_GAM_COL*ED_IN(I))/PI/NU_DOP
+	    A_VOIGT=0.25D-15*(LOC_GAM_RAD+LOC_GAM_COL*TMP_ED)/PI/NU_DOP
 	    V_VOIGT=(NU(ML_CUR)-NU_ZERO)/NU_DOP
 	    PROF(I)=1.0D-15*VOIGT(A_VOIGT,V_VOIGT)/NU_DOP
 	  END DO
@@ -216,6 +222,10 @@
 !
 ! Determine the location where the STARK (i.e. Line) profile can be stored.
 !
+	  CALL GET_VERBOSE_INFO(VERBOSE)
+	  DO I=1,ND
+	   ED_MOD(I)=MIN(ED_IN(I),MAX_PROF_ED)
+	  END DO
 	  LOC_INDX=0
 	  DO ML=1,NSTORE_MAX
 	    IF( STORE_AVAIL(ML) )THEN
@@ -256,31 +266,36 @@
 	END IF
 	ID=PROF_LIST_LOCATION		!Location in arrays
 	XNU(1:NF)=NU(ML_ST:ML_END)
+900	FORMAT(X,A,T20,A,T26,F20.10,2I6,3I10,F6.1)
 	IF(PROF_TYPE .EQ. 'BS_HHE' .OR. PROF_TYPE .EQ. 'LEMKE_HI')THEN
 	  IF(PROF_TYPE .EQ. 'BS_HHE')THEN
-            WRITE(LUER,*)'Using BS_HHE: ',LST_SPECIES(ID),LST_WAVE(ID),LST_NL(ID),LST_NUP(ID)
+            IF(VERBOSE)WRITE(LUER,900)'Using BS_HHE: ',LST_SPECIES(ID),LST_WAVE(ID),
+	1                LST_NL(ID),LST_NUP(ID),ML_CUR,ML_ST,ML_END
           ELSE
-            WRITE(LUER,*)'Using LEMKE:  ',LST_SPECIES(ID),LST_WAVE(ID),LST_NL(ID),LST_NUP(ID)
+            IF(VERBOSE)WRITE(LUER,900)'Using LEMKE:  ',LST_SPECIES(ID),LST_WAVE(ID),
+	1                LST_NL(ID),LST_NUP(ID),ML_CUR,ML_ST,ML_END
 	  END IF
 	  ITR=LST_PID(ID)		!Location in file.
 	  CALL RD_BS_STRK_TAB(LST_SPECIES(ID),NU_ZERO,
 	1               LST_NL(ID),LST_NUP(ID),PROF_TYPE,ITR,LU_STK)
 	  CALL STRK_BS_HHE(PROF_STORE(1,1,LOC_INDX),XNU,NF,
-	1               ED_IN,TEMP_IN,VTURB_IN,ND,
+	1               ED_MOD,TEMP_IN,VTURB_IN,ND,
 	1               NU_ZERO,AMASS_IN,L_FALSE)
 !
 	ELSE IF(PROF_TYPE .EQ. 'HeI_IR_STRK')THEN
-          WRITE(LUER,*)'Using HeI_IR_STRK: ',LST_SPECIES(ID),LST_WAVE(ID),LST_NL(ID),LST_NUP(ID)
+          IF(VERBOSE)WRITE(LUER,900)'Using HeI_IR_STRK: ',LST_SPECIES(ID),LST_WAVE(ID),
+	1              LST_NL(ID),LST_NUP(ID),ML_CUR,ML_ST,ML_END
 	  CALL STRK_HEI_IR(PROF_STORE(1,1,LOC_INDX),XNU,NF,
-	1                   ED_IN,TEMP_IN,VTURB_IN,
+	1                   ED_MOD,TEMP_IN,VTURB_IN,
 	1                   POP_PROTON,POP_HEPLUS,ND,NU_ZERO,
 	1                   LST_SPECIES(ID),LST_NL(ID),LST_NUP(ID),
 	1                   AMASS_IN,PROF_TYPE,LU_STK)
 !
 	ELSE IF(PROF_TYPE .EQ. 'DS_STRK')THEN
-          WRITE(LUER,*)'Using DS_STRK: ',LST_SPECIES(ID),LST_WAVE(ID),LST_NL(ID),LST_NUP(ID)
+          IF(VERBOSE)WRITE(LUER,900)'Using DS_STRK: ',LST_SPECIES(ID),LST_WAVE(ID),
+	1              LST_NL(ID),LST_NUP(ID),ML_CUR,ML_ST,ML_END
 	  CALL STRK_DS(PROF_STORE(1,1,LOC_INDX),XNU,NF,
-	1	         ED_IN,TEMP_IN,VTURB_IN,
+	1	         ED_MOD,TEMP_IN,VTURB_IN,
 	1                ND,NU_ZERO,
 	1                LST_SPECIES(ID),LST_NL(ID),LST_NUP(ID),
 	1                AMASS_IN,PROF_TYPE,LU_STK)
@@ -293,6 +308,8 @@
 	    WRITE(LUER,*)'Error in SET_PROF: NUP < NL'
 	    STOP
 	  END IF
+          IF(VERBOSE)WRITE(LUER,900)'Using HZ_STARK: ',' ',0.01D0*C_KMS/NU_ZERO,
+	1              NL,NUP,ML_CUR,ML_ST,ML_END,Z_IN
 !                          
 ! Convert from Frequency to Angstrom space, measured from line center.
 !
@@ -310,7 +327,6 @@
 	1        TMP_ED,TEMP_IN(I),VTURB_IN(I),
 	1        NL,NUP,Z_IN,AMASS_IN,RET_LOG)
 	    PROF_STORE(I,1:NF,LOC_INDX)=PR_GRIEM(1:NF)
-	    IF(I .EQ. ND)WRITE(153,'(2I6,4ES14.4)')NL,NUP,0.2998D+04/NU_ZERO,TMP_ED,TEMP_IN(I),VTURB_IN(ND)
 	  END DO
 	ELSE
 	  WRITE(LUER,*)'Error in SET_PROF_V3'
@@ -359,7 +375,7 @@
 !
 !	I=ND-7
 !	WRITE(99,*)AMASS_IN,NL,NUP
-!	WRITE(99,*)ED_IN(I),TEMP_IN(I),VTURB_IN(I)
+!	WRITE(99,*)ED_MOD(I),TEMP_IN(I),VTURB_IN(I)
 !	WRITE(99,'(1P,5E15.5)')0.01D0*C_KMS/NU_STORE(1:NF,LOC_INDX)
 !	WRITE(99,'(1P,5E15.5)')PROF_STORE(I,1:NF,LOC_INDX)
 !

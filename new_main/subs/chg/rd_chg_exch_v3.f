@@ -17,6 +17,7 @@
 	USE CHG_EXCH_MOD_V3
 	IMPLICIT NONE
 !
+! Altered 22-Sep-2016: Error reporting improved
 ! Altered 04-Dec-200:  Bug fix: Could enter infinite loop when left adjusting
 !                      reaction string.
 !                      Now use / to allow the specification of one alternate
@@ -115,6 +116,12 @@
 	  STRING=' '
 	  DO WHILE(STRING .EQ. ' ' .OR. STRING(1:1) .EQ. '!')
 	    READ(LUIN,'(A)',IOSTAT=IOS)STRING
+	    IF(IOS .NE. 0)THEN
+	      WRITE(LUER,'(A,I3)')'Error reading charge exchange reaction # ',I
+	      WRITE(LUER,'(A,I3)')'Last reaction read follows'
+	      WRITE(LUER,'(A)')TRIM(OLD_STRING)
+	      STOP
+	    END IF
 	  END DO
 	  OLD_STRING=STRING
 !
@@ -129,6 +136,7 @@
 	    IF( L .NE. INDEX(STRING,'  '))THEN
 	      WRITE(LUER,*)'Error in RD_CHG_EXCH'
 	      WRITE(LUER,*)'Use at least 2 spaces to separate reaction data'
+	      WRITE(LUER,*)TRIM(OLD_STRING)
 	      STOP
 	    END IF
 	    SPEC_ID_CHG_RD(I,K)=STRING(1:L-1)
@@ -213,7 +221,8 @@
 	      IF(SPEC_ID_CHG_RD(I,L) .EQ. SPEC_ID_CHG_RD(I,K))THEN
 	        WRITE(LUER,*)'Error in RD_CHG_EXCH'
 	        WRITE(LUER,*)'Duplication of species ID, reaction:',I
-!	        STOP
+	        WRITE(LUER,'(A,3X,A)')SPEC_ID_CHG_RD(I,L),SPEC_ID_CHG_RD(I,K)
+	        STOP
 	      END IF
 	    END DO
 	  END DO
@@ -232,7 +241,8 @@
 	1              SPEC_ID_CHG_RD(I,2)(2:2) .LE. 'z')L=2
 	  IF(SPEC_ID_CHG_RD(I,2)(1:L) .NE. SPEC_ID_CHG_RD(I,4)(1:L))THEN
 	    WRITE(LUER,*)'Error in RD_CHG_EXCH',
-	1	' SPECIES 3 and 4 don''t match for reaction',I
+	1	' SPECIES 2 and 4 don''t match for reaction',I
+	    WRITE(6,'(A,5X,A)')SPEC_ID_CHG_RD(I,2)(1:L),SPEC_ID_CHG_RD(I,4)(1:L)
 	    STOP
 	  END IF
 !

@@ -81,6 +81,7 @@
 !
 	LOGICAL RD_MEANOPAC
 	LOGICAL GRID_SAT
+	LOGICAL ROUND_ERROR
 !
 	CHARACTER(LEN=132) STRING
 	CHARACTER(LEN=132) FILE_IN
@@ -102,6 +103,7 @@
 	WRITE(6,'(A)')'   ID           Half grid spacing betwen I=FST and I=LST with modifcation to adjacent points'
 	WRITE(6,'(A)')'   IR           Insert additional points betwen I=FST and I=LST'
 	WRITE(6,'(A)')'   SCALE_R:     Scale radius grid'
+	WRITE(6,'(A)')'   ADDR:        Add extra R points in R space'
 	WRITE(6,'(A)')'   TAU:         Refine grid and add points (multiple ranges) in TAU space'
 	WRITE(6,'(A)')'   RTAU:        Refine whole grid - dTAU and dR space'
 	WRITE(6,'(A)')' '
@@ -133,25 +135,42 @@
 ! Read in optical depth scale. Needed for RTAU and TAU options. Also used
 ! for checking purposes (if available) for some other options.
 !
+! We use TAU_SAV for dTAU, and is used to increase the precision of the TAU
+! scale (as insufficient digits may be print out).
+!
+	ROUND_ERROR=.FALSE.
 	OPEN(UNIT=20,FILE='MEANOPAC',STATUS='OLD',ACTION='READ',IOSTAT=IOS)
 	  IF(IOS .EQ. 0)THEN
 	    READ(20,'(A)')STRING
 	    DO I=1,ND
-	      READ(20,*)RTMP(I),J,OLD_TAU(I)
+	      READ(20,*)RTMP(I),J,OLD_TAU(I),TAU_SAV(I)
 	      J=MAX(I,2)
 	      T1=R(J-1)-R(J)
-	      IF( ABS(RTMP(I)-R(I))/T1 .GT. 2.0D-03 )THEN
-	        WRITE(6,*)ABS(RTMP(I)-R(I))/T1
+	      IF( ABS(RTMP(I)-R(I))/T1 .GT. 2.0D-03 .AND. .NOT. ROUND_ERROR)THEN
+	        WRITE(6,*)' '
 	        WRITE(6,*)'Possible eror with MEANOPAC -- inconsistent R grid'
-	        WRITE(6,*)'R(I)=',R(I)
-	        WRITE(6,*)'RTMP(I)=',RTMP(I)
-	        STOP
+	        WRITE(6,*)'Error could simply be a lack of sig. digits in MEANOPAC'
+	        WRITE(6,*)' RMO(I)=',RTMP(I)
+	        WRITE(6,*)'   R(I)=',R(I)
+	        WRITE(6,*)' R(I+1)=',R(I+1)
+	        ROUND_ERROR=.TRUE.
+	        CALL GEN_IN(ROUND_ERROR,'Continue as only rounding error?')
+	        IF(.NOT. ROUND_ERROR)STOP
 	      END IF
 	    END DO
+!	    DO I=8,1,-1
+!             OLD_TAU(I)=OLD_TAU(I+1)-TAU_SAV(I)
+!            END DO
+ 	     DO I=2,ND
+              OLD_TAU(I)=OLD_TAU(I-1)+TAU_SAV(I-1)
+             END DO
 	    RD_MEANOPAC=.TRUE.
 	  ELSE
 	    RD_MEANOPAC=.FALSE.
 	  END IF
+	  IF(ROUND_ERROR .AND. RD_MEANOPAC)THEN
+	    RTMP(1:ND)=R(1:ND)
+	  END IF 
 	CLOSE(UNIT=20)
 !
 	CALL SET_CASE_UP(OPTION,IZERO,IZERO)
@@ -178,24 +197,34 @@
 	  DTAU2_ON_DTAU1=100.0D0
 	  dLOGT_MAX=0.05D0
 !
+	  WRITE(6,'(A)')BLUE_PEN
 	  WRITE(6,'(A)')' '
 	  CALL GEN_IN(NEW_ND,'Input new number of depth points')
+	  WRITE(6,'(A)')RED_PEN
+	  WRITE(6,'(A)')' The following factor is used to adjust the importance of the dR to the change in dTAU '
+	  WRITE(6,'(A)')BLUE_PEN
 	  CALL GEN_IN(R_SCALE_FAC,'Factor (>1) to enhance maximum dLog(R) spacing')
-	  CALL GEN_IN(dLOGT_MAX,'Maximum fractional change in the temperature')
+	  CALL GEN_IN(dLOGT_MAX,'Maximum fractional change in the temperature: set to > 1.0 to switch T check off')
 !
 	  WRITE(6,'(A)')BLUE_PEN
 	  CALL GEN_IN(NIB,'Number of depth points to insert at INNER boundary')
 	  CALL GEN_IN(IB_RAT,'Ratio in optical depth increments at INNER boundry (>1)')
 !
-	  WRITE(6,'(A)')RED_PEN
 	  CALL GEN_IN(NOB,'Number of depth points to insert at OUTER boundary')
-	  CALL GEN_IN(OB_RAT,'Ratio in optical depth increments at OUTER boundry (>1)')
+	  IF(NOB .NE. 1)CALL GEN_IN(OB_RAT,'Ratio in optical depth increments at OUTER boundry (>1)')
+	  WRITE(6,'(A)')RED_PEN
+	  WRITE(6,'(A)')' The following factor stretches the optical depth scale so that more points'
+	  WRITE(6,'(A)')' are placed near the outer boundary (>=0 & < 1):'
+	  WRITE(6,'(A)')BLUE_PEN
 	  CALL GEN_IN(SCL_FAC,'Factor to scale optical depth at OUTER boundary: TAU=TAU-SF*TAU(1)')
+	  IF(SCL_FAC .LT. 0.0D0 .OR. SCL_FAC .GE. 1.0D0)THEN
+	    WRITE(6,*)'Invalid scale factor: should be >=0 and < 1.0'
+	    STOP
+	  END IF
 	  CALL GEN_IN(DTAU2_ON_DTAU1,'~DTAU(2)/DTAU(1) at outer boudary')
 	  WRITE(6,'(A)')DEF_PEN
 !
 	  T1=OLD_TAU(1)
-	  WRITE(6,*)T1
 	  DO I=1,ND
 	    OLD_TAU(I)=OLD_TAU(I)-SCL_FAC*T1
 	  END DO
@@ -329,6 +358,39 @@
 ! Now create the NEW R grid.
 !
 	  CALL MON_INTERP(RTMP,NEW_ND,IONE,NEW_TAU,NEW_ND,R,ND,OLD_TAU,ND)
+!
+	  CALL OUT_RGRID(RTMP,NEW_ND,R,DI,ED,T,IRAT,VEL,CLUMP_FAC,OLD_TAU,ND,RMIN,LUM,RD_MEANOPAC)
+!
+! Option to insert extra points equally space in LOG(TAU). Multiple regions may
+! be edited at the same time.
+!
+	ELSE IF(OPTION .EQ. 'ADDR')THEN
+!
+	  WRITE(6,*)' '
+	  WRITE(6,*)' '
+	  CALL GEN_IN(IST,'Initial depth index bounding revison region')
+	  CALL GEN_IN(IEND,'Last depth index bounding revison region')
+	  IST=MAX(IST,2); IEND=MIN(IEND,ND)
+	  NG=IEND-IST-1
+!
+	  IF(IEND .NE. ND)NG=(R(IST)-R(IEND))/(R(IEND)-R(IEND+1))-1
+	  WRITE(6,'(A)')' '
+	  WRITE(6,*)'Number of points in the interval is ',NG
+	  CALL GEN_IN(NG,'Enter new number of grid points for the interval')
+	  NEW_ND=IST+NG+(ND-IEND)+1
+!
+	  DO I=1,IST
+	    RTMP(I)=R(I)
+	  END DO
+	  T1=(R(IST)-R(IEND))/(NG+1)
+	  DO I=IST+1,IST+NG
+	     RTMP(I)=RTMP(I-1)-T1
+	  END DO
+	  DO I=IST+NG+1,NEW_ND
+	    RTMP(I)=R(IEND+(I-IST-NG-1))
+	  END DO
+!
+! Now create the NEW R grid.
 !
 	  CALL OUT_RGRID(RTMP,NEW_ND,R,DI,ED,T,IRAT,VEL,CLUMP_FAC,OLD_TAU,ND,RMIN,LUM,RD_MEANOPAC)
 !
@@ -801,6 +863,8 @@
 	REAL*8 NEW_VEL(NEW_ND)
 	REAL*8 NEW_CLUMP_FAC(NEW_ND)
 	REAL*8 NEW_TAU(NEW_ND)
+	REAL*8 NEW_SIGMA(NEW_ND)
+	REAL*8 COEF(NEW_ND,4)
 !
 	LOGICAL RD_MEANOPAC
 !
@@ -840,6 +904,7 @@
 	END DO
 	CLOSE(UNIT=10)
 !
+	NEW_TAU=0.0D0
 	IF(RD_MEANOPAC)THEN
 	  CALL MON_INTERP(NEW_TAU,NEW_ND,IONE,RTMP,NEW_ND,OLD_TAU,ND,R,ND)
 	  OPEN(UNIT=LU,FILE='R_GRID_CHK',STATUS='UNKNOWN')
@@ -860,5 +925,22 @@
 	  CLOSE(UNIT=LU)
 	END IF
 !
+        CALL MON_INT_FUNS_V2(COEF,NEW_VEL,RTMP,NEW_ND)
+        DO I=1,NEW_ND
+          NEW_SIGMA(I)=COEF(I,3)
+	  NEW_SIGMA(I)=RTMP(I)*NEW_SIGMA(I)/NEW_VEL(I)-1.0D0
+	END DO
+        OPEN(UNIT=10,FILE='RVSIG_HOPE',STATUS='UNKNOWN')
+	  WRITE(10,'(A)')'!'
+          WRITE(10,'(A,7X,A,9X,10X,A,11X,A,3X,A)')'!','R','V(km/s)','Sigma','Depth'
+          WRITE(10,'(A)')'!'
+          WRITE(10,'(A)')' '
+          WRITE(10,'(I4,20X,A)')NEW_ND,'!Number of depth points`'
+          WRITE(10,'(A)')' '
+          DO I=1,ND
+            WRITE(10,'(F18.8,ES17.7,F17.7,4X,I4)')RTMP(I),NEW_VEL(I),NEW_SIGMA(I),I
+          END DO
+	CLOSE(UNIT=10)
+
 	STOP
 	END

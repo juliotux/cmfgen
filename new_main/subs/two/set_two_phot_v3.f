@@ -12,10 +12,15 @@
 	USE TWO_PHOT_MOD
 	IMPLICIT NONE
 !
+! Altered 01-MAr-2016: Bug fixed -- related to correction of A values for H I and He II when
+!                        using an unsplit n=2 level [23-Feb-2016]. Code had been incorrectly
+!                        fixed earlier to fix the fact that I was using the A(2s->1s2) value
+!                        for the full n=2 state. 
+! Altered 19-Aug-2015: Added options to improve two photon absorption (cur_hmi,14-Jul-2015)
 ! Altered 05-Apr-2011 - Changed to V3.
 !                       HNST_F_ON_S (rather than HNST_F) is passed in call.
-!                       HNST_F/HNST_S replaced by HNST_F_ON_S - done to faciliate
-!                         modifications allowing lower temperaturs.
+!                       HNST_F/HNST_S replaced by HNST_F_ON_S - done to facilitate
+!                         modifications allowing lower temperatures.
 ! Created 26-Jun-1998
 !
 	INTEGER N_S
@@ -35,7 +40,6 @@
 	CHARACTER*(*) SPECIES
 	CHARACTER*(*) LEVEL_NAME(N_F)
 !
-	REAL*8 T(ND)
 	REAL*8 GION
 	REAL*8 ZION
 !
@@ -64,11 +68,13 @@
 	  ALLOCATE (ION_LOW_LEV_TWO(N_TWO))
 	  ALLOCATE (ION_UP_LEV_TWO(N_TWO))
 	  ALLOCATE (ION_ID_TWO(N_TWO))
+	  ALLOCATE (LST_FREQ_INDX_TWO(N_TWO))
 C
 	  ALLOCATE (FS_RAT_LOW(ND,N_TWO))
 	  ALLOCATE (FS_RAT_UP(ND,N_TWO))
 	  ALLOCATE (UP_RATE_TWO(ND,N_TWO))
 	  ALLOCATE (DOWN_RATE_TWO(ND,N_TWO))
+	  ALLOCATE (PHOT_OC_TWO(ND,N_TWO))
 C
 	  INITIALIZE_TWO=.TRUE.
 	END IF
@@ -88,6 +94,7 @@ C
 	  FS_RAT_UP(:,:)=0.0D0
 	  DOWN_RATE_TWO(:,:)=0.0D0
 	  UP_RATE_TWO(:,:)=0.0D0
+	  LST_FREQ_INDX_TWO=0
 	  TWO_PHOT_AVAILABLE(:)=.FALSE.
 	END IF
 !
@@ -125,6 +132,20 @@ C
 	          G_UP_TWO(J)=G_F(I_F)
 	          FREQ_TWO(J)=FREQ_TWO(J)-EDGE_F(I_F)
 	          FS_RAT_UP(1:ND,J)=HNST_F_ON_S(I_F,1:ND)
+!
+! The following treats the case when the 2s and 2p state are treated as a single level.
+! In this case we need to reduce the decay rate by a factor of 4 to account for the 
+! higher statistical weight of the merged level.
+!
+	          IF(LEVEL_NAME(I) .EQ. '2___')THEN
+	            IF(.NOT. TWO_PHOT_COEF_FIXED(J))THEN
+	              COEF_TWO(J,1)=COEF_TWO(J,1)/4.0D0
+	              LUER=ERROR_LU()
+	              WRITE(LUER,'(1X,A,1X,A,2X,A)')'Warning in SET_TWO_PHOT -- adjusting A'//
+	1               ' as working with full n=2 level',TRIM(SPECIES),TRIM(LEVEL_NAME(I))
+	              TWO_PHOT_COEF_FIXED(J)=.TRUE.
+	            END IF
+	         END IF
 	       END IF
 	    END DO
 !
@@ -134,6 +155,7 @@ C
 	      LUER=ERROR_LU()
 	      WRITE(LUER,*)'Error in SET_TWO_PHOT --- invalid level ordering'
 	      WRITE(LUER,*)SPEC_ID_TWO(J)
+	      WRITE(LUER,*)TRIM(UP_NAME_TWO(J)),'   ',TRIM(A_UP_NAME_TWO(J))
 	      STOP
 	    END IF
 	    TWO_PHOT_AVAILABLE(J)=.TRUE.

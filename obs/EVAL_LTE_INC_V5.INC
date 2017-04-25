@@ -5,6 +5,7 @@
 !  (a) The full atoms.
 !  (B) The Super-Level model atom.
 !
+! Altered 05-Mar-2015 : Bug fix. Added ATM(ID+1)%LOG_XzVLTE(1,I)=LOG(ATM(ID)%DXzV_F(I)) - RSS
 ! Altered 17-Dec-2011 : Changed to LTEPOP_WLD_V2 and LTE_POP_SL_V2. These contain LOG_XzVLTE etc
 !                           and are designed to faciltate lower wind temperatures.
 ! Altered 01-Mar-1999 - Variables now accessed by pointer reference.
@@ -29,8 +30,9 @@
 	1          ATM(ID)%NXzV_F,          ATM(ID)%XzV_PRES, T,ND)
 	    IF(.NOT. ATM(ID+1)%XzV_PRES)THEN
 	      DO I=1,ND
-	        ATM(ID+1)%XzV(1,I)=ATM(ID)%DXzV_F(I)		!True if not present.
-	        ATM(ID+1)%XzVLTE(1,I)=ATM(ID)%DXzV_F(I)		!True if not present.
+	        ATM(ID+1)%XzV(1,I)=ATM(ID)%DXzV_F(I)	 	        !True if not present.
+	        ATM(ID+1)%XzVLTE(1,I)=ATM(ID)%DXzV_F(I)  		!True if not present.
+	        ATM(ID+1)%LOG_XzVLTE(1,I)=LOG(ATM(ID)%DXzV_F(I))        !True if not present (RSS fix)
 	        ATM(ID+1)%dlnXzVLTE_dlnT(1,I)=0.0D0
 	      END DO
 	    END IF

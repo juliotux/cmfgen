@@ -1,6 +1,9 @@
 	SUBROUTINE OUT_JH(RSQ_J,RSQ_H,H_INBC,H_OUTBC,NU,NCF,R,V,ND,INIT,OPTION)
 	IMPLICIT NONE
 !
+! Altered: 04-May-2016.  R and V grid is now output at beginning when INIT is TRUE. 
+!                         This ensures that R and V are current. Old values may have 
+!                         been wrtten out with GREY option.  
 	INTEGER ND
 	INTEGER NCF
 	REAL*8 NU
@@ -88,8 +91,12 @@
 ! the first real data --- in this case R & V. IREC will contain
 ! the first record to be written for the frequency dependent J & H.
 !
+! The R,V write ensures R and V is uptodate if we have updated the R
+! grid and used the GREY option.
+!
 	IF(INIT)THEN
 	  WRITE(LU_OUT,REC=3)ST_IREC,NCF,ND
+	  WRITE(LU_OUT,REC=ST_IREC)(R(I),I=1,ND),(V(I),I=1,ND)
 	  IREC=ST_IREC+2   	!R,V, and frequency integrated J, H.
 	  NU_STORE=0.0D0
 	END IF

@@ -1,0 +1,119 @@
+!
+! This is a simple routine designed to compute the normalized depth of
+! bound-bound transitions for a plane-paralell model. This normailzed depth
+! (i.e., deficit) can be use for the purposes of line identications.
+!
+	SUBROUTINE GET_FLUX_DEFICIT(DEFICIT,R,ETA,CHI,CHI_RAY,CHI_SCAT,
+	1              ESEC,ETAL,CHIL,FREQ,DBB,ND)
+	IMPLICIT NONE
+	INTEGER ND
+!
+! Altered 07-Mar-2016: Bug fix -- F was not being initialized.
+! Created 24-Feb-2015
+!
+	REAL*8 R(ND)
+	REAL*8 ETA(ND)
+	REAL*8 CHI(ND)
+	REAL*8 CHI_RAY(ND)
+	REAL*8 CHI_SCAT(ND)
+	REAL*8 ESEC(ND)
+	REAL*8 ETAL(ND)
+	REAL*8 CHIL(ND)
+	REAL*8 FREQ
+	REAL*8 DBB
+	REAL*8 DEFICIT
+!
+	INTEGER, PARAMETER :: IZERO=0
+	INTEGER, PARAMETER :: NANG=5
+	CHARACTER(LEN=6), PARAMETER :: METHOD='LOGMON'
+	LOGICAL, PARAMETER :: DIFF=.TRUE.
+	LOGICAL, PARAMETER :: COHERENT_ES=.TRUE.
+!
+	REAL*8, SAVE :: INBC
+	REAL*8, SAVE ::  HBC_J
+	REAL*8, SAVE ::  HBC_S
+	REAL*8 IC
+	REAL*8 CONT_FLUX
+	REAL*8 LINE_FLUX
+	REAL*8 T1
+	INTEGER I
+!
+	LOGICAL, SAVE :: FIRST_TIME=.TRUE.
+	LOGICAL, SAVE :: INIT=.TRUE.
+	LOGICAL INACCURATE
+	LOGICAL THK_CONT
+	LOGICAL NEW_FREQ
+	CHARACTER(LEN=10) INNER_BND_COND
+!
+	REAL*8, SAVE :: IPLUS(NANG)
+	REAL*8, SAVE, ALLOCATABLE :: TA(:)
+	REAL*8, SAVE, ALLOCATABLE :: F(:)
+	REAL*8, SAVE, ALLOCATABLE :: FOLD(:)
+	REAL*8, SAVE, ALLOCATABLE :: RJ(:)
+	REAL*8, SAVE, ALLOCATABLE :: HNU(:)
+	REAL*8, SAVE, ALLOCATABLE :: NEWRJ(:)
+	REAL*8, SAVE, ALLOCATABLE :: SOURCE(:)
+	REAL*8, SAVE, ALLOCATABLE :: ZETA(:)
+	REAL*8, SAVE, ALLOCATABLE :: THETA(:)
+!
+	IF(FIRST_TIME)THEN
+	  ALLOCATE (TA(ND),F(ND),FOLD(ND))
+	  ALLOCATE (RJ(ND),NEWRJ(ND),HNU(ND))
+	  ALLOCATE (SOURCE(ND),ZETA(ND),THETA(ND))
+!
+	  HBC_S=0.50D0
+	  HBC_J=0.99D0
+	  FOLD=0.33D0
+	  F=0.33D0
+	  FIRST_TIME=.FALSE.
+	  INIT=.TRUE.
+	END IF
+!
+! Compute the continuum flux at the central wavelength. We assume 
+! coherent electron scattering, the diffusion approimation, and an 
+! optically thin boundary condition.
+!
+	THK_CONT=.FALSE.
+	INACCURATE=.TRUE.
+	NEW_FREQ=.TRUE.
+	DO WHILE(INACCURATE)
+	  T1=DBB
+	  CALL MOM_J_PP_V1(ETA,CHI,ESEC,R,F,RJ,HNU,
+	1          HBC_J,HBC_S,INBC,
+	1          FREQ,DIFF,DBB,IC,METHOD,COHERENT_ES,
+	1          IZERO,INIT,NEW_FREQ,ND)
+!
+	  DO I=1,ND
+	    SOURCE(I)=(ETA(I)+CHI_SCAT(I)*RJ(I))/CHI(I)
+	  END DO
+	  CALL FCOMP_PP_V2(R,NEWRJ,F,SOURCE,CHI,IPLUS,
+	1           HBC_J,HBC_S,INBC,DBB,IC,THK_CONT,DIFF,
+	1           ND,NANG,METHOD)
+!
+	  INACCURATE=.FALSE.
+	  T1=0.0D0
+	  DO I=1,ND
+	    T1=MAX(ABS(FOLD(I)-F(I)),T1) 
+	    FOLD(I)=F(I)
+	  END DO
+	  IF(T1 .GT. 1.0E-05)INACCURATE=.TRUE.
+	  INIT=.FALSE.
+	  NEW_FREQ=.FALSE.
+	END DO
+	CONT_FLUX=HBC_J*NEWRJ(1)
+!
+! We now compute the flux at line center.
+!
+	DO I=1,ND
+	  SOURCE(I)=(ETA(I)+ETAL(I)+CHI_SCAT(I)*RJ(I))/(CHI(I)+CHIL(I))
+	  TA(I)=CHI(I)+CHIL(I)
+	END DO
+	CALL FCOMP_PP_V2(R,NEWRJ,F,SOURCE,TA,IPLUS,
+	1           HBC_J,HBC_S,INBC,DBB,IC,THK_CONT,DIFF,
+	1           ND,NANG,METHOD)
+	LINE_FLUX=HBC_J*NEWRJ(1)
+!
+	DEFICIT=(CONT_FLUX-LINE_FLUX)/CONT_FLUX
+!
+	RETURN
+	END

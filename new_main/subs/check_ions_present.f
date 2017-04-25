@@ -190,6 +190,7 @@
 ! 
 	HDKT_EV=4.7994145D0/4.13566733D0
 	FIRST_TIME=.TRUE.
+	EXTRA_INT_EN=0.0D0
 	DO ISPEC=1,NUM_SPECIES
 	  IF(SPECIES_PRES(ISPEC))THEN
 	    ID=SPECIES_END_ID(ISPEC)-1
@@ -206,7 +207,7 @@
 	           WRITE(LUWARN,'(A,A,/,A)')' NB: If XzV needs to be included it will also be necessary to',
 	1                             ' include XzIV, as this was',
 	1                             '      only included as the ground state.'
-	           WRITE(LUWARN,'(A,X,A,I3,A,ES10.4,A,ES10.4)')' Parameters at check depth:',
+	           WRITE(LUWARN,'(A,1X,A,I3,A,ES10.4,A,ES10.4)')' Parameters at check depth:',
 	1	          'Depth=',DPTH_INDX,'   T=',T_VAL,'   ED=',ED_VAL
 	           FIRST_TIME=.FALSE.
 	         END IF

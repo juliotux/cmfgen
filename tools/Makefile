@@ -19,6 +19,8 @@ OBJ = $(LIB)(usr_option.o)\
       $(LIB)(mod_color_pen_def.o)\
       $(LIB)(new_gen_in.o)\
       $(LIB)(get_indx.o)\
+      $(LIB)(read_keyword.o)\
+      $(LIB)(rd_sing_vec_rvtj.o)\
       $(LIB)(set_case_fn.o)\
       $(LIB)(sve_file.o)\
       $(LIB)(update_keyword.o)\
@@ -58,8 +60,6 @@ $(LIB)(usr_hidden.o) : usr_hidden.f $(LIB)(wr_string.o) $(LIB)(sve_file.o)
 
 #char_functions_class.o) \
 #             libplot.a(pixplot_module.o) 
-
-
 
 
 clean :

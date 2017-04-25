@@ -2,6 +2,7 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered 02-Nov-2014  : Now need to do P-option to enter GRAMON_PGPLOT.
 ! Altered 10-June-2009 : Inserted JMF, JMR options
 !                         Made J_COMP_full 2nd default filename
 !
@@ -31,7 +32,8 @@
 	REAL*8 SUM2
 	REAL*8 SUM3
 	CHARACTER(LEN=20) PLT_OPT
-	CHARACTER(LEN=20) YLAB
+	CHARACTER(LEN=30) XLAB
+	CHARACTER(LEN=30) YLAB
 !
 	INTEGER I,IBEG
 	INTEGER NCF
@@ -110,7 +112,9 @@
 	  WRITE(6,*)'  DF: Plot %error against frequency at outer boundary'
 	  WRITE(6,*)'  DW: Plot $error against wavelength at outer boundary'
 	  WRITE(6,*)' I??: Inner boundary options (as for outrer boundary)'
+	  WRITE(6,*)'   P: Do the plot'
 	  WRITE(6,*)'E(X): Exit routine'
+	  WRITE(6,*)' '
 	  CALL GEN_IN(PLT_OPT,'Plot option')
 !
 	  IF(UC(PLT_OPT) .EQ. 'LY')THEN
@@ -121,87 +125,98 @@
 	       WRITE(6,*)'Y axis is now linear'
 	     END IF
 	  ELSE IF(UC(PLT_OPT) .EQ. 'JF')THEN
+	    XLAB='\gn(10\u15 \dHz)'
 	    YLAB='J(ray)'
 	    IF(LOGY)YLAB='Log J(ray)'
 	    CALL SET_YVEC(YV,JR_OUT,NCF,LOGY)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)',YLAB,' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'JW')THEN
+	    XLAB='\gl(\A)'
 	    YLAB='J(ray)'
 	    IF(LOGY)YLAB='Log J(ray)'
 	    CALL SET_YVEC(YV,JR_OUT,NCF,LOGY)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)',YLAB,' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'JMF')THEN
+	    XLAB='\gn(10\u15 \dHz)'
 	    YLAB='J(mom)'
 	    IF(LOGY)YLAB='Log J(mom)'
 	    CALL SET_YVEC(YV,JM_OUT,NCF,LOGY)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)',YLAB,' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'JMW')THEN
+	    XLAB='\gl(\A)'
 	    YLAB='J(mom)'
 	    IF(LOGY)YLAB='Log J(mom)'
 	    CALL SET_YVEC(YV,JM_OUT,NCF,LOGY)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)',YLAB,' ',' ')
 !
 	  ELSE IF(UC(PLT_OPT) .EQ. 'DJW')THEN
+	    XLAB='\gl(\A)'
+	    YLAB='J(ray)-J(mom)'
 	    YV(1:NCF)=JR_OUT(1:NCF)-JM_OUT(1:NCF)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)','J(ray)-J(mom)',' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'DJF')THEN
+	    XLAB='\gn(10\u15 \dHz)'
+	    YLAB='J(ray)-J(mom)'
 	    YV(1:NCF)=JR_OUT(1:NCF)-JM_OUT(1:NCF)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)','J(ray)-J(mom)',' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'DF')THEN
+	    XLAB='\gn(10\u15 \dHz)'
+	    YLAB='% Difference'
 	    CALL DP_CURVE(NCF,NU,DIFF_OUT)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)','% Difference',' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'DW')THEN
+	    XLAB='\gl(\A)'
+	    YLAB='% Difference'
 	    CALL DP_CURVE(NCF,LAM,DIFF_OUT)
-	    CALL GRAMON_PGPLOT('\gl(\A)','% Difference',' ',' ')
 !
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IJF')THEN
 	    YLAB='J(ray)'
 	    IF(LOGY)YLAB='Log J(ray)'
 	    CALL SET_YVEC(YV,JR_IN,NCF,LOGY)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)',YLAB,' ',' ')
+	    XLAB='\gn(10\u15 \dHz)'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IJW')THEN
 	    YLAB='J(ray)'
 	    IF(LOGY)YLAB='Log J(ray)'
 	    CALL SET_YVEC(YV,JR_IN,NCF,LOGY)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)',YLAB,' ',' ')
+	    XLAB='\gl(\A)'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IJMF')THEN
 	    YLAB='J(mom)'
 	    IF(LOGY)YLAB='Log J(mom)'
 	    CALL SET_YVEC(YV,JM_IN,NCF,LOGY)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)',YLAB,' ',' ')
+	    XLAB='\gn(10\u15 \dHz)'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IJMW')THEN
 	    YLAB='J(mom)'
 	    IF(LOGY)YLAB='Log J(mom)'
 	    CALL SET_YVEC(YV,JM_IN,NCF,LOGY)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)',YLAB,' ',' ')
+	    XLAB='\gl(\A)'
 !
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IDJW')THEN
 	    YV(1:NCF)=JR_IN(1:NCF)-JM_IN(1:NCF)
 	    CALL DP_CURVE(NCF,LAM,YV)
-	    CALL GRAMON_PGPLOT('\gl(\A)','J(ray)-J(mom)',' ',' ')
+	    XLAB='\gl(\A)'
+	    YLAB='J(ray)-J(mom)'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IDJF')THEN
 	    YV(1:NCF)=JR_IN(1:NCF)-JM_IN(1:NCF)
 	    CALL DP_CURVE(NCF,NU,YV)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)','J(ray)-J(mom)',' ',' ')
+	    YLAB='J(ray)-J(mom)'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IDF')THEN
 	    CALL DP_CURVE(NCF,NU,DIFF_IN)
-	    CALL GRAMON_PGPLOT('\gn(10\u15 \dHz)','% Difference',' ',' ')
+	    XLAB='\gn(10\u15 \dHz)'
+	    YLAB='% Difference'
 	  ELSE IF(UC(PLT_OPT) .EQ. 'IDW')THEN
 	    CALL DP_CURVE(NCF,LAM,DIFF_IN)
-	    CALL GRAMON_PGPLOT('\gl(\A)','% Difference',' ',' ')
+	    XLAB='\gl(\A)'
+	    YLAB='% Difference'
+!
+	  ELSE IF(UC(PLT_OPT) .EQ. 'P')THEN
+	    CALL GRAMON_PGPLOT(XLAB,YLAB,' ',' ')
 	  ELSE IF(UC(PLT_OPT) .EQ. 'EX' .OR. UC(PLT_OPT) .EQ. 'E')THEN
 	    STOP
 	  END IF
+	  PLT_OPT='P'
 	END DO
 !
 	END

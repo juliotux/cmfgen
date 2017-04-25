@@ -1,0 +1,127 @@
+	SUBROUTINE GET_PROF_PARAMS(XV,YV,NCF,LINE_WAVE,DO_EMISS,SN_AGE,DIR_NAME,LU)
+	IMPLICIT NONE
+!
+	INTEGER NCF
+	INTEGER LU
+	REAL*4 XV(NCF)
+	REAL*4 YV(NCF)
+	REAL*4 DATA(NCF)                !Local storage
+	REAL*8 SN_AGE
+	REAL*8 LINE_WAVE
+	LOGICAL DO_EMISS
+	CHARACTER(LEN=*) DIR_NAME
+!
+	REAL*8 T1,T2
+	REAL*8 QW
+	REAL*8 MAXIMUM,MINIMUM
+	REAL*8 XEMIS_MEAN
+	REAL*8 C_Mms
+	REAL*8 SPEED_OF_LIGHT
+	EXTERNAL SPEED_OF_LIGHT
+!
+	INTEGER I,J,K
+	INTEGER IMIN,IMAX
+!
+	C_MMS=1.0D-08*SPEED_OF_LIGHT()
+!
+	MAXIMUM=-1000.0D0; MINIMUM=10000.0D0
+	DO J=1,NCF
+	  IF(XV(J) .GT. 0.95D0*LINE_WAVE .AND. XV(J) .LT. LINE_WAVE)THEN
+	    IF(YV(J) .LT. MINIMUM)THEN
+	      MINIMUM=YV(J)
+	      IMIN=J
+	    END IF
+	  END IF
+	END DO
+	DO J=IMIN,NCF 
+	  IF(XV(J) .LT. 1.1D0*LINE_WAVE)THEN
+	    IF(YV(J) .GT. MAXIMUM)THEN
+	      MAXIMUM=YV(J)
+	      IMAX=J
+	    END IF
+	  END IF
+	END DO
+!
+! Find centroid, integreating between the limits set by Y=0
+!
+	DATA=YV-1.0D0
+	IF(MINIMUM .GT. 1.0D0 .AND. SN_AGE .GT. 30.0)DATA=DATA-MINIMUM
+	T1=0.0D0; T2=0.0D0
+	DO J=IMIN,1,-1
+	  IF(DATA(J) .GT. 0.0D0)THEN
+	    DO K=J,IMIN-1
+	      QW=0.5D0*(XV(K+1)-XV(K))
+	      T1=T1+QW*(XV(K)*DATA(K)+XV(K+1)*DATA(K+1))
+	      T2=T2+QW*(DATA(K)+DATA(K+1))
+	    END DO
+	    EXIT
+	  END IF
+	END DO
+	DO J=IMIN,IMAX
+	  IF(DATA(J) .GT. 0.0D0)THEN
+	    DO K=IMIN,J-1
+	      QW=0.5D0*(XV(K+1)-XV(K))
+	      T1=T1+QW*(XV(K)*DATA(K)+XV(K+1)*DATA(K+1))
+	      T2=T2+QW*(DATA(K)+DATA(K+1))
+	    END DO
+	    EXIT
+	  END IF
+	END DO
+	IF(T2 .NE. 0)THEN
+	  T1=T1/T2
+	ELSE
+	  WRITE(6,*)'Normalization for absorption is zero'
+	  T1=0.0D0
+	END IF
+!
+!
+! Find emission centroid, integreating between the limits set by Y=0.75D*PEAK
+!
+	IF(DO_EMISS)THEN
+	  XEMIS_MEAN=0.0D0; T2=0.0D0
+	  DO J=IMAX,IMIN,-1
+	    IF(DATA(J) .LT. 0.75D0*DATA(IMAX))THEN
+	      DO K=J,IMAX-1
+	        QW=0.5D0*(XV(K+1)-XV(K))
+	        XEMIS_MEAN=XEMIS_MEAN+QW*(XV(K)*DATA(K)+XV(K+1)*DATA(K+1))
+	        T2=T2+QW*(DATA(K)+DATA(K+1))
+	      END DO
+	      EXIT
+	    END IF
+	  END DO
+	  DO J=IMAX,NCF
+	    IF(DATA(J) .LT. 0.75D0*DATA(IMAX))THEN
+	      DO K=IMAX,J-1
+	        QW=0.5D0*(XV(K+1)-XV(K))
+	        XEMIS_MEAN=XEMIS_MEAN+QW*(XV(K)*DATA(K)+XV(K+1)*DATA(K+1))
+	        T2=T2+QW*(DATA(K)+DATA(K+1))
+	      END DO
+	      EXIT
+	    END IF
+	  END DO
+	  IF(T2 .NE. 0)THEN
+	    XEMIS_MEAN=XEMIS_MEAN/T2
+	  ELSE
+	    WRITE(6,*)'Normalization for emission is zero'
+	    XEMIS_MEAN=0.0D0
+	  END IF
+	END IF
+!
+	IF(DO_EMISS)THEN
+	  WRITE(6,*)XV(IMIN),XV(IMAX)
+	  WRITE(LU,'(F7.3,8ES14.4)')SN_AGE,
+	1         XV(IMIN),YV(IMIN),
+	1         C_Mms*(XV(IMIN)/LINE_WAVE-1.0D0),
+	1         C_Mms*(T1/LINE_WAVE-1.0D0),
+	1         XV(IMAX),YV(IMAX),
+	1         C_Mms*(XV(IMAX)/LINE_WAVE-1.0D0),
+	1         C_Mms*(XEMIS_MEAN/LINE_WAVE-1.0D0)
+	ELSE
+	  WRITE(LU,'(F7.3,8ES14.4)')SN_AGE,
+	1         XV(IMIN),YV(IMIN),
+	1         C_Mms*(XV(IMIN)/LINE_WAVE-1.0D0),
+	1         C_Mms*(T1/LINE_WAVE-1.0D0)
+	END IF
+!
+	RETURN
+	END

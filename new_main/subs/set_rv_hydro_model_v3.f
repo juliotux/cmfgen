@@ -6,6 +6,8 @@
 	1                  SN_AGE_DAYS,PURE_HUBBLE_FLOW,N_IB_INS,N_OB_INS,RDINR,ND,LU)
 	IMPLICIT NONE
 !
+! Altered 25-Jan-2015 : Bug fix. Error assoicated with RDINR when NLEV> ND.
+!                         Now read in to T1, since we don't requird the level populations.
 ! Altered 09-Jul-2013 : Now use to depths 1 and 8 (rather than 1 & 2) to estimate boundary optical depth.
 ! Altered 28-Aug-2012 : Incorrect dimension (ND instead of J) was being passed to
 !                         MON_INTERP. Causes access issue/crash rather than wrong result.
@@ -45,6 +47,7 @@
 	REAL*8, ALLOCATABLE :: LOG_R_HYDRO(:)
 	REAL*8, ALLOCATABLE :: V_HYDRO(:)
 	REAL*8, ALLOCATABLE :: SIGMA_HYDRO(:)
+	REAL*8, ALLOCATABLE :: T_HYDRO(:)
 	REAL*8, ALLOCATABLE :: DENSITY_HYDRO(:)
 	REAL*8, ALLOCATABLE :: KAPPA_HYDRO(:)
 	REAL*8, ALLOCATABLE :: TAU_HYDRO(:)
@@ -52,6 +55,7 @@
 	REAL*8, ALLOCATABLE :: OLD_R(:)
 	REAL*8, ALLOCATABLE :: LOG_OLD_R(:)
 	REAL*8, ALLOCATABLE :: OLD_TAU(:)
+	REAL*8, ALLOCATABLE :: OLD_T(:)
 	REAL*8, ALLOCATABLE :: COEF(:,:)
 !
 	REAL*8 TA(ND)
@@ -67,6 +71,12 @@
 	REAL*8 NEXT_R
 	REAL*8 DEN_SCL_FAC
 	REAL*8 TAU_BEG,TAU_END
+!
+	REAL*8 R_SCL_FAC
+	REAL*8 dLOG_T
+	REAL*8 IB_RAT
+	REAL*8 OB_RAT
+	REAL*8 DTAU2_ON_DTAU1
 !
 ! These indicate the ratio of DTAU in the fine grid near the inner and outer boudary.
 ! They are currently hardwird, but could be passed as parameters.
@@ -149,10 +159,12 @@
 	ALLOCATE (R_HYDRO(NX));          R_HYDRO=0.0D0
 	ALLOCATE (LOG_R_HYDRO(NX));      LOG_R_HYDRO=0.0D0
 	ALLOCATE (TAU_HYDRO(NX));        TAU_HYDRO=0.0D0
+	ALLOCATE (T_HYDRO(NX));          T_HYDRO=0.0D0
 !
 	ALLOCATE (OLD_R(NX));		 OLD_R=0.0D0
 	ALLOCATE (LOG_OLD_R(NX));        LOG_OLD_R=0.0D0
 	ALLOCATE (OLD_TAU(NX));		 OLD_TAU=0.0D0
+	ALLOCATE (OLD_T(NX));		 OLD_T=0.0D0
 !
 ! Get basic HYDRO grid vectors.
 !
@@ -170,6 +182,8 @@
 	    READ(LU,*)DENSITY_HYDRO
 	  ELSE IF(INDEX(STRING,'Kappa') .NE. 0)THEN
 	    READ(LU,*)KAPPA_HYDRO
+	  ELSE IF(INDEX(STRING,'Temperature') .NE. 0)THEN
+	    READ(LU,*)T_HYDRO
 	  ELSE IF(INDEX(STRING,'ass fraction') .NE. 0)THEN
 	    IF(R_HYDRO(1) .EQ. 0.0D0 .OR. 
 	1             V_HYDRO(1) .EQ. 0.0D0 .OR.
@@ -266,10 +280,10 @@
 !
 	  DO I=1,ND
 	    READ(LU,*,IOSTAT=IOS)R(I),TA(I),TA(I),TA(I),TA(I),V(I)
-	    IF(IOS .EQ. 0)READ(LU,*,IOSTAT=IOS)(TA(J),J=1,NOLD)
+	    IF(IOS .EQ. 0)READ(LU,*,IOSTAT=IOS)(T1,J=1,NOLD)
 	    IF(IOS .NE. 0)THEN
 	      LUER=ERROR_LU()
-	      WRITE(LUER,*)'Error in SET_RV_HYDRO_MODEL_V3 --- unable to R grid in file with R grid'
+	      WRITE(LUER,*)'Error in SET_RV_HYDRO_MODEL_V3 --- unable to read R grid in file with R grid'
 	      STOP
 	    END IF
           END DO
@@ -381,16 +395,20 @@
 	    OLD_TAU(2:NS)=TAU_HYDRO(J:NX)
 	    T1=(RMAX-R_HYDRO(J))/(R_HYDRO(J-1)-R_HYDRO(J))
 	    OLD_TAU(1)=T1*TAU_HYDRO(J-1)+(1.0D0-T1)*TAU_HYDRO(J)
+	    OLD_T(1)=T1*T_HYDRO(J-1)+(1.0D0-T1)*T_HYDRO(J)
 	  ELSE
 	    NS=NX
 	    OLD_R(1:NS)=R_HYDRO(1:NX)
 	    OLD_TAU(1:NS)=TAU_HYDRO(1:NX)
+	    OLD_T(1:NS)=T_HYDRO(1:NX)
 	  END IF
 !
 ! Estimate spacing to get required grid spacing.
 !
-          CALL SET_SN_R_GRID(R,OLD_R,OLD_TAU,IB_FAC,OB_FAC,N_IB_INS,N_OB_INS,ND,NS)
-
+!          CALL SET_SN_R_GRID(R,OLD_R,OLD_TAU,IB_FAC,OB_FAC,N_IB_INS,N_OB_INS,ND,NS)
+	  R_SCL_FAC=1.2D0; dLOG_T=0.04D0; IB_RAT=2.0D0; OB_RAT=1.5D0; DTAU2_ON_DTAU1=100.0D0
+	  CALL ADJUST_SN_R_GRID(R,OLD_R,OLD_T,OLD_TAU,R_SCL_FAC,dLOG_T,
+	1         IB_RAT,OB_RAT,DTAU2_ON_DTAU1,N_IB_INS,N_OB_INS,ND,NS)
 	  WRITE(LUER,*)'Computed R grid in SET_RV_HYDRO_MODEL_V3'
 !
 	END IF

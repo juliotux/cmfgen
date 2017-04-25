@@ -11,6 +11,7 @@ LIB_MOD=$(LIB_DIR)libmod.a
 # Entries for library
 #
 OBJ = $(LIB)(rd_auto_v1.o)\
+      $(LIB)(add_auto_rates.o)\
       $(LIB)(steq_auto_v2.o)
 
 all : $(LIB)

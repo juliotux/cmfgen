@@ -120,10 +120,15 @@ C temporary vector for ED*CLUMP_FAC.
 C
         NEWED(1:ND)=ED(1:ND)*CLUMP_FAC(1:ND)
         TAU(1)=6.65D-15*NEWED(1)*R(1)
+	K=0
 	DO I=2,ND
           TAU(I)=TAU(I-1)+6.65D-15*(NEWED(I-1)+NEWED(I))*(R(I-1)-R(I))*0.5D0
           IF(TAU(I) .LE. 1.0D0)K=I
         END DO
+	IF(K .EQ. 0)THEN
+	  WRITE(6,*)'Error -- computed TAU is < 1 in INIT_TEMP_V2'
+	  STOP
+	END IF
         T1=(1.0D0-TAU(K))/(TAU(K+1)-TAU(K))
         RTAU1=T1*R(K+1)+(1.0D0-T1)*R(K)
 C

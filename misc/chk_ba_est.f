@@ -1,9 +1,8 @@
 !
-! Small program to read in two BA_ASI_N_D? filesi from successiive iterations. 
+! Small program to read in two BA_ASI_N_D? files from successive iterations. 
 ! Ideally the populations for the iterations should be identical, except for one
-! value. This code allows a comparision between the actual chnges, and those predicted
-! from siolution of the linearized equations.
-! the set of simultaneous equations. Usefule for testing.
+! value. This code allows a comparision between the actual changes, and those predicted
+! from solution of the linearized equations. Useful for testing.
 !
 	PROGRAM CHK_BA_EST
 	USE GEN_IN_INTERFACE
@@ -63,13 +62,18 @@
 	CALL GEN_IN(FILENAME,'Old file with BA and STEQ data')
 	CALL RD_BA_MAT(CMAT_B,STEQ_B,POPS_B,NT,FILENAME,LU)
 !
-	WRITE(6,*)'The following variables were changed'
+	WRITE(6,*)'The following variables were changed -- ideally only one should have changed'
+	IVAR=0
 	DO I=1,NT
 	  IF(POPS_A(I) .NE. POPS_B(I))THEN
 	     WRITE(6,*)I,POPS_A(I),POPS_B(I)
 	     IVAR=I
 	  END IF
 	END DO
+	IF(IVAR .EQ. 0)THEN
+	  WRITE(6,*)'Error -- all level populations are identical'
+	  STOP
+	END IF
 !
 	DO I=1,NT
 	  dSTEQ(I)=CMAT_B(I,IVAR)*(POPS_A(IVAR)-POPS_B(IVAR))/POPS_B(IVAR)

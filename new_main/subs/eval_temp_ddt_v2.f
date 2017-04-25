@@ -18,6 +18,7 @@
 	USE NUC_ISO_MOD
 	IMPLICIT NONE
 !
+! Altered 01-Sep-2016: TIME_SEQ_NO changed from integer to real.
 ! Altered 22-Nov-2011 : Changed call to GET_POPS_AT_PREV_TIME_STEP from V4 to V5
 !                          (POPS was added to call).
 ! Altered 11-Nov-2009 : Fixed bug in BA calculation --- was skipping depth ND.
@@ -36,7 +37,6 @@
 	INTEGER ND
 	INTEGER DIAG_INDX
 	INTEGER NUM_BNDS
-	INTEGER TIME_SEQ_NO
 !
 ! Output:
 !
@@ -49,6 +49,7 @@
 	REAL*8 AVE_ENERGY(NT)
 	REAL*8 WORK(ND)
 	REAL*8 HDKT
+	REAL*8 TIME_SEQ_NO
 !
 ! Local vectors.
 !

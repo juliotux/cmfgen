@@ -15,6 +15,9 @@ C
 	USE MOD_LEV_DIS_BLK
 	IMPLICIT NONE
 C
+C Altered 08-Sep-2015 - Limit NEFF to be less than 31. All levels we include
+C                         have n< 30. If neff> 30, mut have different core.
+C                         Temporary fix -- we need to provide core information.
 C Altered 03-Jul-2001 - Only computes NEFF for levels below the ionization
 C                          limit. We need to include a check on the core. 
 C Altered 15-Dec-1997 - MOD_LEV_DIS_BLK replaces include file. Level
@@ -36,7 +39,7 @@ C
 	  DO LEV=1,NC2
 	    T1=3.289395D0*ZC2*ZC2/EDGE_C2(LEV)
 	    NEFF=0.0D0
-	    IF(T1 .GT. 0.0D0)NEFF=SQRT(T1)
+	    IF(T1 .GT. 0.0D0 .AND. T1 .LT. 961.0D0)NEFF=SQRT(T1)
 	    IF(NEFF .LE. 2.01D0*ZC2)THEN			!0.01 allows for atomic mass
 	      DO I=1,ND
 	        W_C2(LEV,I)=1.0D0

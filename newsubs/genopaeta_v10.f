@@ -12,6 +12,8 @@ C
 	USE MOD_LEV_DIS_BLK
 	IMPLICIT NONE
 C
+C Altered 23-Oct-2016 - Added PHOT_DIS_PARAMETER
+C Altered 19-Aug-2015 - Added call to DO_HMI_FF (cur_hmi, 21-Jun-2015)
 C Altered 03-Feb-2011 - Call changed: Include LOG_HNST and DIST replaced vy LOG_DIST.
 C                          Updated to V10.
 C Altered 13-Jun-2010 - Now include free-free contribution for all level. Particularly necessary
@@ -122,7 +124,17 @@ C Add in free-free contribution. Because SN can be dominated by elements other
 C than H and He, we now sum over all levels. To make sure that we only do this
 C one, we only include the FREE-FREE contribution for the ion when PHOT_ID is one.
 C
-	IF(IONFF .AND. PHOT_ID .EQ. 1)THEN
+	IF(ZION .EQ. 0.0D0)THEN
+	  I=7
+	  IF(LST_DEPTH_ONLY)THEN
+	    K=ND_LOC
+	    COR_FAC(K)=DI(1,K)
+	    CALL DO_HMI_FF(ETA(K),CHI(K),COR_FAC(K),ED(K),T(K),EMHNUKT(K),NU,I,K)
+	  ELSE
+	    COR_FAC=DI(1,1:ND)
+	    CALL DO_HMI_FF(ETA,CHI,COR_FAC,ED,T,EMHNUKT,NU,I,ND)
+	  END IF
+	ELSE IF(IONFF .AND. PHOT_ID .EQ. 1)THEN
 C
 C Compute free-free gaunt factors. Replaces call to GFF in following DO loop.
 C
@@ -230,11 +242,7 @@ C
 	    IF(NU .GE. EDGE(I) .AND. ALPHA_VEC(I) .GT. 0.0D0)THEN
 	      TETA2=TETA1*ALPHA_VEC(I)
 	      DO K=K_ST,ND
-!	        IF(HNST(I,K) .EQ. 0.0D0)THEN
-	          T1=EXP(LOG_COR_FAC(K)+LOG_HNST(I,K))
-!	        ELSE
-!	          T1=HNST(I,K)*COR_FAC(K)
-!	        END IF
+	        T1=EXP(LOG_COR_FAC(K)+LOG_HNST(I,K))
 	        CHI(K)=CHI(K)+ALPHA_VEC(I)*(HN(I,K)-T1)
 	        ETA(K)=ETA(K)+TETA2*T1
 	      END DO
@@ -246,13 +254,11 @@ C
 	      DO K=K_ST,ND
 	        T1=7.782D0+XDIS(K)*DIS_CONST(I)
 	        T2=T1/(T1+YDIS(K)*DIS_CONST(I)*DIS_CONST(I))
-!	        IF(HNST(I,K) .EQ. 0.0D0)THEN
+	        IF(T2 .GT. PHOT_DIS_PARAMETER)THEN
 	          T1=EXP(LOG_HNST(I,K)-HDKT*NU/T(K))
-!	        ELSE
-!	          T1=HNST(I,K)*EMHNUKT(K)
-!	        END IF
-	        CHI(K)=CHI(K)+ALPHA_VEC(I)*T2*(HN(I,K)-T1)
-	        ETA(K)=ETA(K)+TETA2*T2*T1
+	          CHI(K)=CHI(K)+ALPHA_VEC(I)*T2*(HN(I,K)-T1)
+	          ETA(K)=ETA(K)+TETA2*T2*T1
+	        END IF		!NU > EDGE
 	      END DO
 	    END IF		!NU > EDGE
 	  END DO		!Depth
@@ -268,11 +274,7 @@ CC!$OMP DO
 	    TMP_ETA(1:N)=0.0D0
 	    DO I=1,N
 	      IF(NU .GE. EDGE(I) .AND. ALPHA_VEC(I) .GT. 0.0D0)THEN
-!	        IF(HNST(I,K) .EQ. 0.0D0)THEN
-	          T1=EXP(LOG_COR_FAC(K)+LOG_HNST(I,K))
-!	        ELSE
-!	          T1=HNST(I,K)*COR_FAC(K)
-!	        END IF
+	        T1=EXP(LOG_COR_FAC(K)+LOG_HNST(I,K))
 	        TMP_CHI(I)=ALPHA_VEC(I)*(HN(I,K)-T1)
 	        TMP_ETA(I)=ALPHA_VEC(I)*T1
 	      ELSE IF(DIS_CONST(I) .GE. 0.0D0)THEN
@@ -281,13 +283,11 @@ C Add in BOUND-FREE contributions due to level dissolution.
 C
 	        T1=7.782D0+XDIS(K)*DIS_CONST(I)
 	        T2=T1/(T1+YDIS(K)*DIS_CONST(I)*DIS_CONST(I))
-!	        IF(HNST(I,K) .EQ. 0.0D0)THEN
+	        IF(T2 .GT. PHOT_DIS_PARAMETER)THEN
 	          T1=EXP(LOG_HNST(I,K)-HDKT*NU/T(K))
-!	        ELSE
-!	          T1=HNST(I,K)*EMHNUKT(K) 
-!	        END IF
-	        TMP_CHI(I)=ALPHA_VEC(I)*T2*(HN(I,K)-T1)
-	        TMP_ETA(I)=ALPHA_VEC(I)*T2*T1
+	          TMP_CHI(I)=ALPHA_VEC(I)*T2*(HN(I,K)-T1)
+	          TMP_ETA(I)=ALPHA_VEC(I)*T2*T1
+	        END IF
 	      END IF
 	    END DO		!Level
 	    CHI(K)=CHI(K)+SUM(TMP_CHI)

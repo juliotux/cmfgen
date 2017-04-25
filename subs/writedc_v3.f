@@ -2,6 +2,7 @@
 	1                         LUM,ND,FILENAME,OPTION,FORM)
 	IMPLICIT NONE
 !
+! Altered 06-Sep-2016 : Now output 10 digits for R.
 ! Altered 21-Sep-2011 : Only outputs LOG(DC) when minimum dc < 10^{-290}
 ! Altered 05-Apr-2011 : Based on WRITEDC_V3 (10-Dec-2010)
 !                         LOG_HYDLTE instead of HYDLTE passed in call.
@@ -44,7 +45,7 @@
 ! 4 = CIII,NIV
 ! 5 = HeI (Singlets and Triplets)
 !
-	FMT='(5ES16.7)'		!Default format
+	FMT='(1X,5ES16.7)'		!Default format
 	IF(FORM .EQ. 2)FMT='(1X,1P,1E15.5,:/,1X,2E15.5,:/,1X,3E15.5,:/,(1X,4E15.5))'
 	IF(FORM .EQ. 3)FMT='(1X,1P,2E15.5,:/,1X,3E15.5,:/,(1X,4E15.5))'
 	IF(FORM .EQ. 4)FMT='(1X,1P,1E15.5,:/,1X,2E15.5,:/,1X,3E15.5,:/,(1X,6E15.5))'
@@ -125,8 +126,8 @@
 	  CLOSE(UNIT=LU)
 	 END IF
 !
-2120	 FORMAT(/,1X,ES15.7,4X,1PE11.4,5X,0P,I4,5X,I4)
-2122	 FORMAT(/,1X,ES15.7,6ES16.7,2X,I4,A1)
+2120	 FORMAT(/,ES17.10,4X,1PE11.4,5X,0P,I4,5X,I4)
+2122	 FORMAT(/,ES17.10,6ES16.7,2X,I4,A1)
 !
 	 RETURN
 	 END

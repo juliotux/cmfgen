@@ -4,7 +4,8 @@ C R(J+1).
 C
 	INTEGER FUNCTION GET_INDX_DP(RVAL,R,NW)
 	IMPLICIT NONE
-C                              
+C
+C Altered 19-May-2014 - Changed error unit form 2 to 6 (25-May-2014).                              
 C Altered 02-May-1990 - Bug fix: If on two consecutive calls, RVAL was the
 C                       same but the R array different, the returned index
 C                       was incorrect (referring to the first array). No
@@ -45,16 +46,16 @@ C
 	    RETURN
 	  END IF
 	  IF(RVAL .GT. R(1))THEN
-	    WRITE(2,*)'Error in GET_INDX_DP - RVAL too large.'
-	    WRITE(2,70)'R(1)=',R(1),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_DP - RVAL too large.'
+	    WRITE(6,70)'R(1)=',R(1),'RVAL=',RVAL
 70	    FORMAT(1X,1P,(3X,A,E12.4))
 	    RVAL=R(1)
 	    GET_INDX_DP=1
 	    RETURN
 	  END IF
 	  IF(RVAL .LT. R(NW))THEN
-	    WRITE(2,*)'Error in GET_INDX_DP - RVAL too small.'
-	    WRITE(2,70)'R(NW)=',R(NW),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_DP - RVAL too small.'
+	    WRITE(6,70)'R(NW)=',R(NW),'RVAL=',RVAL
 	    RVAL=R(NW)
 	    GET_INDX_DP=NW-1
 	    RETURN
@@ -87,15 +88,15 @@ C
 	    RETURN
 	  END IF
 	  IF(RVAL .LT. R(1))THEN
-	    WRITE(2,*)'Error in GET_INDX_DP - RVAL too small.'
-	    WRITE(2,70)'R(1)=',R(1),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_DP - RVAL too small.'
+	    WRITE(6,70)'R(1)=',R(1),'RVAL=',RVAL
 	    RVAL=R(1)
 	    GET_INDX_DP=1
 	    RETURN
 	  END IF
 	  IF(RVAL .GT. R(NW))THEN
-	    WRITE(2,*)'Warning in GET_INDX_DP - RVAL too large.'
-	    WRITE(2,70)'R(NW)=',R(NW),'RVAL=',RVAL
+	    WRITE(6,*)'Warning in GET_INDX_DP - RVAL too large.'
+	    WRITE(6,70)'R(NW)=',R(NW),'RVAL=',RVAL
 	    RVAL=R(NW)
 	    GET_INDX_DP=NW-1
 	    RETURN
@@ -165,16 +166,16 @@ C
 	    RETURN
 	  END IF
 	  IF(RVAL .GT. R(1))THEN
-	    WRITE(2,*)'Error in GET_INDX_SP - RVAL too large.'
-	    WRITE(2,70)'R(1)=',R(1),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_SP - RVAL too large.'
+	    WRITE(6,70)'R(1)=',R(1),'RVAL=',RVAL
 70	    FORMAT(1X,1P,(3X,A,E12.4))
 	    RVAL=R(1)
 	    GET_INDX_SP=1
 	    RETURN
 	  END IF
 	  IF(RVAL .LT. R(NW))THEN
-	    WRITE(2,*)'Error in GET_INDX_SP - RVAL too small.'
-	    WRITE(2,70)'R(NW)=',R(NW),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_SP - RVAL too small.'
+	    WRITE(6,70)'R(NW)=',R(NW),'RVAL=',RVAL
 	    RVAL=R(NW)
 	    GET_INDX_SP=NW-1
 	    RETURN
@@ -207,15 +208,15 @@ C
 	    RETURN
 	  END IF
 	  IF(RVAL .LT. R(1))THEN
-	    WRITE(2,*)'Error in GET_INDX_SP - RVAL too small.'
-	    WRITE(2,70)'R(1)=',R(1),'RVAL=',RVAL
+	    WRITE(6,*)'Error in GET_INDX_SP - RVAL too small.'
+	    WRITE(6,70)'R(1)=',R(1),'RVAL=',RVAL
 	    RVAL=R(1)
 	    GET_INDX_SP=1
 	    RETURN
 	  END IF
 	  IF(RVAL .GT. R(NW))THEN
-	    WRITE(2,*)'Warning in GET_INDX_SP - RVAL too large.'
-	    WRITE(2,70)'R(NW)=',R(NW),'RVAL=',RVAL
+	    WRITE(6,*)'Warning in GET_INDX_SP - RVAL too large.'
+	    WRITE(6,70)'R(NW)=',R(NW),'RVAL=',RVAL
 	    RVAL=R(NW)
 	    GET_INDX_SP=NW-1
 	    RETURN

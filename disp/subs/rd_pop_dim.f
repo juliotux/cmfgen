@@ -48,12 +48,18 @@ C
 	DO WHILE(INDX .EQ. 0)
 	  READ(LUIN,'(A)',IOSTAT=IOS,END=1000)STRING
 C
-	  IF(IOS .NE. 0)THEN
+C The test against 5001 is to overcome an issue with GFROTRAN which does not detect the
+C end of the file. This should cause no issues with othr compilers.
+C
+	  IF(IS_IOSTAT_END(IOS) .OR. IOS .EQ. 5001)THEN
+	    GOTO 1000
+	  ELSE IF(IOS .NE. 0)THEN
 	    WRITE(LUER,*)'***************************************************'
 	    WRITE(LUER,*)'***************************************************'
 	    WRITE(LUER,*)'Warning : Unable to get Number of levels record'
 	    WRITE(LUER,*)'Species is: ', DESC
 	    WRITE(LUER,*)'Warning ocurred in RD_POP_DIM'
+	    WRITE(LUER,*)'IOS=',IOS
 	    WRITE(LUER,*)'***************************************************'
 	    WRITE(LUER,*)'***************************************************'
 	    CIII_PRES=.FALSE.

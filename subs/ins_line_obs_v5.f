@@ -123,6 +123,11 @@
 !
 	MAX_BW_EXTENT = MAX(MAX_BW_EXTENT,MAX_B_EXTENT+2.0D0*dV_OBS_BIG/C_KMS)
 !
+	WRITE(6,'(A,2ES10.3,A)')' Maximum red  profile extent is ',MAX_R_EXTENT,(1.0D0-MAX_R_EXTENT)*C_KMS,' km/s'
+	WRITE(6,'(A,2ES10.3,A)')' Maximum red  wing    extent is ',MAX_RW_EXTENT,(1.0D0-MAX_RW_EXTENT)*C_KMS,' km/s'
+	WRITE(6,'(A,2ES10.3,A)')' Maximum blue profile extent is ',MAX_B_EXTENT,(MAX_B_EXTENT-1.0D0)*C_KMS,' km/s'
+	WRITE(6,'(A,2ES10.3,A)')' Maximum blue wing    extent is ',MAX_BW_EXTENT,(MAX_BW_EXTENT-1.0D0)*C_KMS,' km/s'
+!
 ! Spacing in km/s across various parts of the frequency spectrum. NB: These
 ! meanings have changed from version V3.
 !
@@ -152,11 +157,12 @@
 ! Continuum
 !
 	  dNU=FREQ(INDX)*BIG_SPACING
-	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      A'
+!	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      A'
 !
 ! Electron scattering wings. Since dV_OBS_KMS is the same for all lines,
 ! we can exit once e.s. wing region is found.
 !
+	  CALL TUNE(1,'MAX_BW_EXT')
 	  K=LN_INDX
 	  DO WHILE( K .LE. N_LINES .AND.
 	1               FREQ(INDX)-dNU .LT. 
@@ -172,51 +178,59 @@
 	    END IF
 	    K=K+1
 	  END DO
-  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      B'
+	  CALL TUNE(2,'MAX_BW_EXT')
+!  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      B'
 !
 ! Profile. As NU_STRT_LINE monotonically decreases, we can stop looking at
 !          line K when the next frequency is > NU_STRT_LINE(K). Since
 !          dV_OBS_PROF is the same for all lines, we can exit immediately.
 !
+	  CALL TUNE(1,'MAX_B_EXT')
 	  K=LN_INDX
-	  DO WHILE( K .LE. N_LINES .AND. FREQ(INDX)-dNU .LT. 
-	1               NU_STRT_LINE(MIN(K,N_LINES))*MAX_B_EXTENT )
-	    IF(INCL_ALL_LINES .OR. TRANS_TYPE(K) .EQ. 'BLANK')THEN
-	      T1=FREQ(INDX)-dNU
-	      IF( T1 .LE. NU_LINE(K)*MAX_B_EXTENT .AND.
-	1            FREQ(INDX) .GE. NU_LINE(K)*MAX_R_EXTENT)THEN
-	        T2=FREQ(INDX)*PROF_SPACING
-	        dNU=MIN(dNU,T2)
-	        EXIT
+	  IF(K .LE. N_LINES)THEN
+	    DO WHILE(FREQ(INDX)-dNU .LT. NU_STRT_LINE(MIN(K,N_LINES))*MAX_B_EXTENT )
+	      IF(INCL_ALL_LINES .OR. TRANS_TYPE(K) .EQ. 'BLANK')THEN
+	        T1=FREQ(INDX)-dNU
+	        IF(T1 .LE. NU_LINE(K)*MAX_B_EXTENT)THEN
+	          IF(FREQ(INDX) .GE. NU_LINE(K)*MAX_R_EXTENT)THEN
+	            T2=FREQ(INDX)*PROF_SPACING
+	            dNU=MIN(dNU,T2)
+	            EXIT
+	          END IF
+	        END IF
 	      END IF
-	    END IF
-	    K=K+1
-	  END DO
-  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      C'
+	      K=K+1
+	    END DO
+	  END IF
+	  CALL TUNE(2,'MAX_B_EXT')
+!  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      C'
 !
 ! Doppler core. If FRAC_DOP_OBS is large, this section will be effectively
 !               ignored. This sections is primarily needed when we see
 !               photospheric lines (e.g. as for an O star).
 !
+	  CALL TUNE(1,'MAX_O_EXT')
 	  K=LN_INDX
-	  DO WHILE( K .LE. N_LINES .AND.
-	1               FREQ(INDX)-dNU .LT. NU_STRT_LINE(MIN(K,N_LINES)))
-	    IF(INCL_ALL_LINES .OR. TRANS_TYPE(K) .EQ. 'BLANK')THEN
-	      T1=FREQ(INDX)-dNU
-	      NU_END_LINE=NU_LINE(K)-(NU_STRT_LINE(K)-NU_LINE(K))
-	      IF( (FREQ(INDX) .GT. NU_END_LINE .AND. 
-	1          T1 .LE. NU_STRT_LINE(K)) )THEN
-	        T2=FREQ(INDX)*FRAC_DOP_OBS*VEC_VMIN_VDOP(K)*
-	1             SQRT( 1.0D0+ C_KMS*ABS(1.0D0-NU_LINE(K)/FREQ(INDX))/
-	1                   VEC_VMIN_VDOP(K) )/C_KMS
-	        dNU=MIN(dNU,T2)
+	  IF(K .LE. N_LINES)THEN
+	    DO WHILE(FREQ(INDX)-dNU .LT. NU_STRT_LINE(MIN(K,N_LINES)))
+	      IF(INCL_ALL_LINES .OR. TRANS_TYPE(K) .EQ. 'BLANK')THEN
+	        T1=FREQ(INDX)-dNU
+	        NU_END_LINE=NU_LINE(K)-(NU_STRT_LINE(K)-NU_LINE(K))
+	        IF( (FREQ(INDX) .GT. NU_END_LINE .AND. 
+	1            T1 .LE. NU_STRT_LINE(K)) )THEN
+	          T2=FREQ(INDX)*FRAC_DOP_OBS*VEC_VMIN_VDOP(K)*
+	1               SQRT( 1.0D0+ C_KMS*ABS(1.0D0-NU_LINE(K)/FREQ(INDX))/
+	1                     VEC_VMIN_VDOP(K) )/C_KMS
+	          dNU=MIN(dNU,T2)
+	        END IF
 	      END IF
-	    END IF
-	    K=K+1
-	    IF(K .GT. N_LINES)EXIT
-	  END DO
-  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      D'
-  	  WRITE(149,'(2ES12.4,A)')FREQ(INDX),C_KMS*dNU/FREQ(INDX),'      D'
+	      K=K+1
+	      IF(K .GT. N_LINES)EXIT
+	    END DO
+	  END IF
+	  CALL TUNE(2,'MAX_O_EXT')
+!  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      D'
+!  	  WRITE(149,'(2ES12.4,A)')FREQ(INDX),C_KMS*dNU/FREQ(INDX),'      D'
 !
 	  FREQ(INDX+1)=FREQ(INDX)-dNU
 	  INDX=INDX+1

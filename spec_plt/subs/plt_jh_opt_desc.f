@@ -90,7 +90,7 @@
 	WRITE(6,'(A)')'                    [RSQJ]  -- Plot r^2.J?'
 	WRITE(6,'(A)')'    SPHJ         Dirty option to modify J for sphericity effects.'
 	WRITE(6,'(A)')'    ES           Convolves (J) with electron scattering redistribution function.'
-	WRITE(6,'(A)')'    EJ           Plots energy density'
+	WRITE(6,'(A)')'    EJ           Plots radiation energy density; computes E(J) summed over all depths'
 	WRITE(6,'(A)')'    BB           Plots blackbody spectrum at a given temperature.'
 	WRITE(6,'(A)')'    CF           Plots the integrated flux (H) as a function of depth'
 	WRITE(6,'(A)')'    CFD          Plots the integrated flux (H) as a function of frequencey at a given depth.  '

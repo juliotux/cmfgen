@@ -1,6 +1,8 @@
   
  Overhead is     0.000000000000000     
+    Count rate for wall clock is                 10000000
+ Maximum count for wall clock is      9223372036854775807
   
         Identifier           Elapsed             CPU
                                Time              Time
- SET_PROF                       0.843151         2.000000
+     SET_PROF                   0.005130         0.000000

@@ -1,5 +1,9 @@
 	MODULE CONTROL_VARIABLE_MOD
 !
+! Altered : 17-Oct-2016 : H_CHK_OPTION replaces CHECK_H_ON_J.
+! Altered : 01-Sep-2016 : TIME_SEQ_NO changed from integer to real.
+! Altered : 15-Jun-2016 : NT_ITERATION_COUNTER added to this routine so that it is accessible by CMFGEN_SUB.
+! Altered : 15-Feb-2015 : Added INSTANTANEOUS_ENERGY_DEPOSITION option (12-Jan-2015 on OSPREY[cur_cmf_gam])
 ! Incorporated: 02-Jan-2014: Changed to allow depth dependent profiles.
 ! Altered : 05-Apr-2011 : Added vriable R_GRD_REVISED (10-Feb-2011).
 ! Altered : 16-Jul-2010 : Added FIX_ALL_SPECIES variable.
@@ -17,6 +21,7 @@
 	INTEGER, PARAMETER :: IFOUR=4
 	INTEGER, PARAMETER :: IFIVE=5
 	INTEGER, PARAMETER :: ISIX=6
+	INTEGER, PARAMETER :: ISEV=7
 	INTEGER, PARAMETER :: ITEN=10
 !
 	REAL*8, PARAMETER :: RZERO=0.0D0
@@ -71,8 +76,8 @@
 	REAL*8 DJDT_RELAX_PARAM         !Factor to assist inclusion of DJDT terms.
 	REAL*8 SN_AGE_DAYS              !Age of SN in days.
 	REAL*8 RMAX_ON_RCORE
+	REAL*8 TIME_SEQ_NO              !Number of model in time sequence (need not be an integer).
 !
-	INTEGER TIME_SEQ_NO             !Number of model in time sequence.
 	LOGICAL SN_MODEL
 	LOGICAL SN_HYDRO_MODEL		!Use HYDRO model for SN input
 	LOGICAL PURE_HUBBLE_FLOW        !Forces a pure Hubble flow
@@ -80,6 +85,7 @@
 	LOGICAL JGREY_WITH_V_TERMS 	!Include velocity terms when comuting T(grey).
 	LOGICAL INCL_DJDT_TERMS         !Include DJDt terms in radiative transfer equation
 	LOGICAL USE_DJDT_RTE            !Use the radiative transfer equation solver which includes DJDt terms
+	LOGICAL USE_DR4JDT              !Explicitly difference Dr4JDt (rather than Dr3JDt)
 	LOGICAL DO_CO_MOV_DDT		!Include comoving drivative in SE equations.
 	LOGICAL DO_FULL_REL_OBS         !Include all relativistic terms in obs. frame computation.
 	LOGICAL DO_FULL_REL_CMF         !Include all relativistic terms in CMF obs. frame computation.
@@ -96,10 +102,13 @@
         REAL*8 NT_EMIN			!Minimum energy of non-thermal electrons
 	INTEGER NT_NKT
 	INTEGER NON_THERMAL_IT_CNTRL    !Controls how often we update the nonthermal electron distribution.
+	INTEGER NT_ITERATION_COUNTER
 	LOGICAL COMP_GREY_LST_IT        !Comput J(GREY) on last iteration [DEFAULT is TRUE].
 	LOGICAL SCL_NT_CROSEC
 	LOGICAL SCL_NT_ION_CROSEC
 	CHARACTER(LEN=12) NT_SOURCE_TYPE
+!
+	REAL*8 MINIMUM_ISO_POP          !Minimum isotop population for included isotope.
 !
 	LOGICAL USE_J_REL
 	LOGICAL USE_FORMAL_REL
@@ -116,6 +125,7 @@
 	REAL*8 RG_PAR(N_RG_PAR_MAX)
 	LOGICAL REVISE_R_GRID
 	LOGICAL R_GRID_REVISED
+        LOGICAL INSTANTANEOUS_ENERGY_DEPOSITION
 	CHARACTER(LEN=10) NEW_RGRID_TYPE
 	CHARACTER(LEN=10) SN_T_OPTION
 	CHARACTER(LEN=10) GAMRAY_TRANS
@@ -154,6 +164,7 @@
 	REAL*8 T_INIT_TAU
 	LOGICAL ITERATE_INIT_T
 	LOGICAL T_MIN_BA_EXTRAP
+	LOGICAL INTERP_T_ON_R_GRID
 !
 ! Used to limit the temperature while iterating on T.
 !
@@ -259,6 +270,7 @@
 ! Method to handle N moment  (N_ON_J, MIXED, or G_ONLY)
 !
 	CHARACTER(LEN=6)  N_TYPE
+	CHARACTER(LEN=10) H_CHK_OPTION
 !
 ! These insert extra points into the grid when solving for the radition field.
 ! These insertions are done internally, and do not directly effect the returned
@@ -277,6 +289,7 @@
 	CHARACTER(LEN=6)  METH_SOL
 	CHARACTER(LEN=10) CMF_FORM_OPTIONS		!Used for formal solution.
 	CHARACTER(LEN=10) NEG_OPAC_OPTION
+	CHARACTER(LEN=12) TWO_PHOTON_METHOD
 !
 ! Specifies method used to compute optical depth.
 !
@@ -521,6 +534,10 @@
 	REAL*8 XRAY_EMISS_1,XRAY_EMISS_2
 	REAL*8 VSMOOTH_XRAYS
 !
+	REAL*8 ALLOWED_XRAY_FLUX_ERROR       !Fractional error allowed before X-ray emissivties are scaled 
+        REAL*8 DESIRED_XRAY_LUM              !Desired X-ray luminosity (> 0.1 keV)
+	LOGICAL SCALE_XRAY_LUM               !Indicates whether the X-ray emissivities will be scaled automatically.
+!
 	REAL*8 NU_XRAY_END
 	REAL*8 DELV_XRAY
 !
@@ -547,6 +564,7 @@
 	LOGICAL THK_LINE
 	LOGICAL INCL_INCID_RAD
 !
+	LOGICAL LTE_MODEL
 	LOGICAL SETZERO
 	lOGICAL DO_POP_SCALE
 	LOGICAL TRAPFORJ
@@ -554,5 +572,6 @@
         LOGICAL SOBOLEV
         LOGICAL VERBOSE_OUTPUT
 	LOGICAL WRITE_RATES
+	LOGICAL WRITE_JH
 !
 	END MODULE CONTROL_VARIABLE_MOD

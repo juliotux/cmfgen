@@ -19,10 +19,14 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered: 19-Apr-2016 -- Added plot of dT/T and conserved L on same plot.
+!                            Large dT/T (i.e., > 0.1) are a major reason
+!                            why the "conserved" luminosity is not conserved.
 ! Altered: 19-Mar-2014 -- Inserted HJ_LUM to handle static relativistic models.
 ! Cleaned: 06-Nov-2011
 !
 	REAL*8, ALLOCATABLE :: R(:)
+	REAL*8, ALLOCATABLE :: T(:)
 	REAL*8, ALLOCATABLE :: V(:)
 	REAL*8, ALLOCATABLE :: SIGMA(:)
 	REAL*8, ALLOCATABLE :: POPS(:,:)
@@ -33,9 +37,11 @@
 	REAL*8, ALLOCATABLE :: MECH(:)
 	REAL*8, ALLOCATABLE :: ADI(:)
 	REAL*8, ALLOCATABLE :: DJDT(:)
+	REAL*8, ALLOCATABLE :: dT_ON_T(:)
 	REAL*8, ALLOCATABLE :: RAD_DECAY(:)
 	REAL*8, ALLOCATABLE :: TOTAL(:)
 	REAL*8, ALLOCATABLE :: CHANGE(:)
+	REAL*8, ALLOCATABLE :: WRK_VEC(:)
 !
 	REAL*8 SPEED_OF_LIGHT
 	REAL*8 T1
@@ -48,6 +54,7 @@
         INTEGER IREC,NITSF,RITE_N_TIMES,LAST_NG
 	LOGICAL WRITE_RVSIG,NEWMOD
 	LOGICAL PLT_AGAINST_DEPTH_INDX
+	LOGICAL PLT_AGAINST_T
 	LOGICAL HJ_NOT_ZERO
 !
 	INTEGER ND
@@ -85,16 +92,19 @@
 	IOS=0
 	ALLOCATE (R(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (V(ND),STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE (T(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (XAXIS(ND),STAT=IOS)
 !
 	IF(IOS .EQ. 0)ALLOCATE (LUM(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (HJ_LUM(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (MECH(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (DJDT(ND),STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE (dT_ON_T(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (ADI(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (RAD_DECAY(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (TOTAL(ND),STAT=IOS)
 	IF(IOS .EQ. 0)ALLOCATE (CHANGE(ND),STAT=IOS)
+	IF(IOS .EQ. 0)ALLOCATE (WRK_VEC(ND),STAT=IOS)
 	IF(IOS .NE. 0)THEN
 	  WRITE(6,*)'Error -- unable to allocate vectors in PLT_CMF_LUM'
 	  WRITE(6,*)'Error is ',IOS
@@ -102,7 +112,8 @@
 	END IF
 !
 	LUM=0.0D0; HJ_LUM=0.0D0; MECH=0.0D0; DJDT=0.0D0; ADI=0.0D0
-	RAD_DECAY=0.0D0; TOTAL=0.0D0; CHANGE=0.0D0
+	RAD_DECAY=0.0D0; TOTAL=0.0D0; CHANGE=0.0D0; T=0.0D0; WRK_VEC=0.0D0
+	HJ_NOT_ZERO=.FALSE.
 !
 	OPEN(UNIT=LU_RD,FILE='RVTJ',STATUS='OLD',ACTION='READ',IOSTAT=IOS)
 	  IF(IOS .EQ. 0)THEN
@@ -113,6 +124,10 @@
 	    READ(LU_RD,*)(R(I),I=1,ND)
 	    READ(LU_RD,'(A)')STRING
 	    READ(LU_RD,*)(V(I),I=1,ND)
+	    DO WHILE(INDEX(STRING,'Temperature') .EQ. 0)
+	      READ(LU_RD,'(A)')STRING
+	    END DO
+	    READ(LU_RD,*)(T(I),I=1,ND)
 	  END IF
 	CLOSE(UNIT=LU_RD)
 	IF(IOS .NE. 0)THEN
@@ -125,6 +140,7 @@
 	    WRITE(6,*)'Unable to read R, V, etc from SCRTEMP'
 	    STOP
 	  END IF
+	  T(1:ND)=POPS(NT,1:ND)
 	END IF
 !
 	DO I=1,ND
@@ -140,6 +156,13 @@
 	    XAXIS(I)=I
 	  END DO
 	  XLABEL='Depth index'
+	END IF
+!
+	IF(T(1) .NE. 0.0D0)THEN
+	  DO I=2,ND
+	    dT_ON_T(I)=(T(I)-T(I-1))/T(I-1)
+	  END DO
+	  dT_ON_T(1)=dT_ON_T(2)
 	END IF
 !
 	OPEN(UNIT=20,FILE='OBSFLUX',STATUS='OLD',ACTION='READ')
@@ -187,6 +210,16 @@
 	CALL DP_CURVE(ND,XAXIS,TOTAL)
 	CALL GRAMON_PGPLOT(XLABEL,'Luminosity (L\d'//char(09)//'\u)',' ',' ')
 !
+	WRITE(6,*)' '
+	WRITE(6,'(3A)')PG_PEN(2),'                        dT/T is plotted in red',DEF_PEN
+	WRITE(6,'(3A)')PG_PEN(3),' The "conserved" luminosity is plotted in blue',DEF_PEN
+	WRITE(6,'(3A)')PG_PEN(3),' The "conserved" luminosity has been scaled to 0.1 at the outer boundary',DEF_PEN
+	WRITE(6,*)' '
+	WRK_VEC=0.1*TOTAL/TOTAL(2)
+	CALL DP_CURVE(ND,XAXIS,dT_ON_T)
+	CALL DP_CURVE(ND,XAXIS,WRK_VEC)
+	CALL GRAMON_PGPLOT(XLABEL,'Scaled cons. L; dT/T',' ',' ')
+	
 	WRITE(6,*)' '
 	WRITE(6,*)' Plotting the corrections at each depth'
 	WRITE(6,*)' '

@@ -128,7 +128,7 @@
 	  END IF
 	END DO
 !
-! Handle those ioization stages with more than 1 level present.
+! Handle those ionization stages with more than 1 level present.
 !
 	DO ID=1,NION
 	  IF( ATM(ID)%XzV_PRES .AND. 
@@ -144,8 +144,6 @@
 	      FIX_N=-10
 	      LOC_IMP=.FALSE.
 	    END IF
-	    IF(FIRST_MATRIX .AND. DIAG_BAND)CNT(LOC_EQ)=0
-!
 !
 ! Determine whether this depth is to be held fixed, and if so
 ! update depth counter.
@@ -158,6 +156,7 @@
 	      IF( T1/POP_SPECIES(DEPTH_INDX,SPECIES_LNK(ID)) .GT. 1.0D-15 )FIX_N=-10
 	    END IF
 	    LOC_EQ=ATM(ID)%EQXzV
+	    IF(FIRST_MATRIX .AND. DIAG_BAND)CNT(LOC_EQ)=0
 	    IF(DIAG_BAND .AND. FIX_N .GT. 0)CNT(LOC_EQ)=CNT(LOC_EQ)+1
 !
 ! Zero requested equations.

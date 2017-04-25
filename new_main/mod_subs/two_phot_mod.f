@@ -4,8 +4,9 @@
 ! equations) and BA matrices can be updated.
 !
 	MODULE TWO_PHOT_MOD
-	  INTEGER N_TWO
+	INTEGER N_TWO
 !
+! Altered 19-Aug-2015: Extra variables added to improve two photon opacity calculation (cur_hmi, 8-Jul-2015).
 ! Created 26-Jun-1998
 !
 ! Reaction data
@@ -60,20 +61,26 @@
 !
 	  REAL*8, ALLOCATABLE :: DOWN_RATE_TWO(:,:)
 	  REAL*8, ALLOCATABLE :: UP_RATE_TWO(:,:)
+	  REAL*8, ALLOCATABLE :: PHOT_OC_TWO(:,:)
 !
           INTEGER, ALLOCATABLE :: ION_ID_TWO(:)
           INTEGER, ALLOCATABLE :: ION_LOW_LEV_TWO(:)
           INTEGER, ALLOCATABLE :: ION_UP_LEV_TWO(:)
           INTEGER, ALLOCATABLE :: LOW_LEV_TWO(:)
           INTEGER, ALLOCATABLE :: UP_LEV_TWO(:)
+          INTEGER, ALLOCATABLE :: LST_FREQ_INDX_TWO(:)
 !	  
 	  LOGICAL, ALLOCATABLE :: TWO_PHOT_AVAILABLE(:)
+	  LOGICAL, ALLOCATABLE :: TWO_PHOT_COEF_FIXED(:)
 !
 ! Use to indicate thate data arrays need to be initialized. This is
 ! reset to FALSE in STEQ_BA_TWO_PHOT.
 !
 	  LOGICAL INITIALIZE_TWO
 	  LOGICAL DO_TWO_PHOT
+!
+	  CHARACTER(LEN=12) :: TWO_METHOD=' '
+	  CHARACTER(LEN=11) TWO_PHOT_FORMAT_DATE
 !
 	END MODULE TWO_PHOT_MOD
 !
@@ -105,6 +112,7 @@
 	INTEGER I,J,L
 	CHARACTER*132 STRING
 !
+	TWO_PHOT_FORMAT_DATE=' '
 	IF(INCL_TWO_PHOT)THEN
 	  DO_TWO_PHOT=.TRUE.
 	ELSE
@@ -132,6 +140,12 @@
 	  DO WHILE(L .EQ. 0 .AND. IOS .EQ. 0)
 	    READ(LUIN,'(A)',IOSTAT=IOS)STRING
 	    L=INDEX(STRING,'!Number of 2-photon transitions')
+	    I=INDEX(STRING,'!Format date')
+	    IF(I .NE. 0)THEN
+	      STRING=ADJUSTL(STRING)
+	      I=INDEX(STRING,'  ')
+	      TWO_PHOT_FORMAT_DATE=STRING(1:I)
+	    END IF
 	  END DO
 	  IF(IOS .NE. 0)THEN
 	    WRITE(LUER,*)'Error in RD_TWO_PHOT'
@@ -153,6 +167,7 @@
 	    ALLOCATE (A_UP_NAME_TWO(N_TWO))
 	    ALLOCATE (N_COEF_TWO(N_TWO))
 	    ALLOCATE (COEF_TWO(N_TWO,MAX_COEF))
+	    ALLOCATE (TWO_PHOT_COEF_FIXED(N_TWO))
 	    INITIALIZE_TWO=.TRUE.
 	  END IF
 !
@@ -161,6 +176,7 @@
 	    A_UP_NAME_TWO(:)=' '
 	    COEF_TWO(:,:)=0.0D0
 	  END IF
+	  TWO_PHOT_COEF_FIXED(:)=.FALSE.
 !
 ! Read in 2-photon transition data.
 !

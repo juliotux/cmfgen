@@ -4,6 +4,7 @@
 !
 	PROGRAM REVISE_RVSIG
 	USE GEN_IN_INTERFACE
+	USE MOD_COLOR_PEN_DEF
 	IMPLICIT NONE
 !
 ! Altered 24-Oct-2013: Added VEL_TYPE=3 so that can do a velocity law with 2 components.
@@ -24,6 +25,10 @@
 	REAL*8 V(NMAX)
 	REAL*8 SIGMA(NMAX)
 !
+	REAL*8 RTMP(NMAX)
+	REAL*8 OLD_TAU(NMAX)
+	REAL*8 TAU_SAV(NMAX)
+!
 	REAL*8 TMP_R(NMAX)
 	REAL*8 X1(NMAX)
 	REAL*8 X2(NMAX)	
@@ -43,6 +48,7 @@
 	REAL*8 V_MAX
 	REAL*8 V_MIN 
 !
+	REAL*4 XVAL,YVAL
 	REAL*8 R_TRANS
 	REAL*8 V_TRANS
 	REAL*8 dVdR_TRANS
@@ -53,6 +59,7 @@
 	REAL*8 OLD_MDOT
 	REAL*8 TOP,BOT 
 	REAL*8 dTOPdR,dBOTdR 
+	REAL*8 ALPHA
 	INTEGER TRANS_I
 	INTEGER VEL_TYPE
 !
@@ -65,10 +72,18 @@
 	INTEGER I,J,K
 	INTEGER I_ST,I_END
 	INTEGER N_HEAD
+	INTEGER IOS
+	INTEGER PGCURS
+!
+	LOGICAL ROUND_ERROR
+	LOGICAL RD_MEANOPAC
+	LOGICAL CURSERR
+	LOGICAL REPLOT
 !
         CHARACTER*30 UC
         EXTERNAL UC
 !
+	CHARACTER(LEN=1) CURSVAL
 	CHARACTER(LEN=10) OPTION
 	CHARACTER(LEN=80) OLD_RVSIG_FILE
 	CHARACTER(LEN=80) NEW_RVSIG_FILE
@@ -114,6 +129,56 @@
 
 	CALL GEN_IN(OPTION,'Enter option for revised RVSIG file')
 	OPTION=UC(TRIM(OPTION))
+!
+! Read in optical depth scale. Needed for RTAU and TAU options. Also used
+! for checking purposes (if available) for some other options.
+!
+! We use TAU_SAV for dTAU, and is used to increase the precision of the TAU
+! scale (as insufficient digits may be print out).
+!
+	IF(OPTION .EQ. 'SPP')THEN
+	  ROUND_ERROR=.FALSE.
+	  OPEN(UNIT=20,FILE='MEANOPAC',STATUS='OLD',ACTION='READ',IOSTAT=IOS)
+	    IF(IOS .EQ. 0)THEN
+	      READ(20,'(A)')STRING
+	      DO I=1,ND
+	        READ(20,*)RTMP(I),J,OLD_TAU(I),TAU_SAV(I)
+	        J=MAX(I,2)
+	        T1=R(J-1)-R(J)
+	        IF( ABS(RTMP(I)-R(I))/T1 .GT. 2.0D-03 .AND. .NOT. ROUND_ERROR)THEN
+	          WRITE(6,*)' '
+	          WRITE(6,*)'Possible eror with MEANOPAC -- inconsistent R grid'
+	          WRITE(6,*)'Error could simply be a lack of sig. digits in MEANOPAC'
+	          WRITE(6,*)' RMO(I)=',RTMP(I)
+	          WRITE(6,*)'   R(I)=',R(I)
+	          WRITE(6,*)' R(I+1)=',R(I+1)
+	          ROUND_ERROR=.TRUE.
+	          CALL GEN_IN(ROUND_ERROR,'Continue as only rounding error?')
+	          IF(.NOT. ROUND_ERROR)STOP
+	        END IF
+	      END DO
+	      DO I=8,1,-1
+                OLD_TAU(I)=OLD_TAU(I+1)-TAU_SAV(I)
+              END DO
+	      RD_MEANOPAC=.TRUE.
+	    ELSE
+	      RD_MEANOPAC=.FALSE.
+	    END IF
+	    IF(ROUND_ERROR .AND. RD_MEANOPAC)THEN
+	      RTMP(1:ND)=R(1:ND)
+	    END IF 
+	  CLOSE(UNIT=20)
+	END IF
+!
+	IF(OPTION .EQ. 'SPP')THEN
+	  WRITE(6,'(A)')' '
+	  WRITE(6,'(A)')'This option takes a plane-parallel model and oututs a spherical model'
+	  WRITE(6,'(A)')'The MEANOPAC from the plane-parallel model is required'
+	  WRITE(6,'(A)')'The VADAT file is also required'
+	END IF
+!
+	  
+!
 	IF(OPTION .EQ. 'NEW_ND')THEN
 	  WRITE(6,'(A)')' '
 	  WRITE(6,'(A)')'This option allows a new R grid to be output'
@@ -485,6 +550,9 @@
 	  V_TRANS=4.0D0
 	  CALL GEN_IN(NEW_RSTAR,'New radius')
 	  CALL GEN_IN(V_TRANS,'Connection velocity in km/s')
+	  CALL GEN_IN(OLD_MDOT,'Old mass-loss rate in Msun/yr')
+	  MDOT=OLD_MDOT
+	  CALL GEN_IN(MDOT,'New mass-loss rate in Msun/yr')
 !
 	  WRITE(6,'(A)')
 	  WRITE(6,'(A)')'Type 1: W(r).V(r) = 2V(t) + (Vinf-2V(t))*(1-r(t)/r))**BETA'
@@ -501,12 +569,18 @@
 !
 ! Find conection velocity and index.
 !
+	  TRANS_I=0
 	  DO I=1,ND_OLD
 	    IF(V_TRANS .LE. OLD_V(I) .AND. V_TRANS .GE. OLD_V(I+1))THEN
 	      TRANS_I=I
 	      EXIT
 	    END IF
 	  END DO
+	  IF(TRANS_I .EQ. 0)THEN
+	    WRITE(6,'(/,1X,A)')'Error V_TRANS is outside range'
+	    WRITE(6,'(1X,3(A,ES15.8,3X))')'V_TRANS=',V_TRANS,'OLD_V(1)=',OLD_V(1),'V(ND_OLD)=',OLD_V(ND_OLD)
+	  END IF
+
 	  IF( OLD_V(TRANS_I)-V_TRANS .GT. V_TRANS-OLD_V(TRANS_I+1))TRANS_I=TRANS_I+1
 	  V_TRANS=OLD_V(TRANS_I)
 	  R(1:ND)=OLD_R(1:ND_OLD)+(NEW_RSTAR-OLD_R(ND_OLD))
@@ -517,7 +591,7 @@
 !
 	  T1=R(ND)/OLD_R(ND_OLD)
 	  DO I=TRANS_I,ND
-	    V(I)=OLD_V(I)/T1/T1
+	    V(I)=MDOT*OLD_V(I)/T1/T1/OLD_MDOT
 	    SIGMA(I)=(OLD_SIGMA(I)+1.0D0)*R(I)/OLD_R(I)-1.0D0
 	  END DO
 	  V_TRANS=V(TRANS_I)
@@ -573,6 +647,7 @@
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  END IF
+!
 	ELSE IF(OPTION .EQ. 'MDOT')THEN
 !
 	  ND=ND_OLD
@@ -597,7 +672,7 @@
 	  WRITE(6,'(A)')
 !
 	  VEL_TYPE=2
-	  CALL GEN_IN(VEL_TYPE,'Velocity law to be used: 1 or 2')
+	  CALL GEN_IN(VEL_TYPE,'Velocity law to be used: 1, 2,3 or 4')
 !
 ! Find conection velocity and index.
 !
@@ -669,32 +744,107 @@
 	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
-	  ELSE IF(VEL_TYPE .EQ. 3)THEN
+	  ELSE IF(VEL_TYPE .EQ. 3 .OR. VEL_TYPE .EQ. 4)THEN
 !
 	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
 	    WRITE(6,*)'  Transition radius is',R_TRANS
 	    WRITE(6,*)'Transition velocity is',V_TRANS
 	    WRITE(6,*)'       Scale height is',SCALE_HEIGHT
+	    ALPHA=2.0D0
+	    IF(VEL_TYPE .EQ. 4)ALPHA=3.0D0
 	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
 	    DO I=1,TRANS_I-1
 	      T1=R_TRANS/R(I)
 	      T2=1.0D0-T1
 	      T3=BETA+(BETA2-BETA)*T2
-	      TOP = (VINF-2.0D0*V_TRANS) * T2**T3
-	      BOT = 1.0D0 + exp( (R_TRANS-R(I))/SCALE_HEIGHT )
+	      TOP = (VINF-ALPHA*V_TRANS) * T2**T3
+	      BOT = 1.0D0 + (ALPHA-1.0D0)*exp( (R_TRANS-R(I))/SCALE_HEIGHT )
 
 !NB: We drop a minus sign in dBOTdR, which is fixed in the next line.
 
-	      dTOPdR = (VINF - 2.0D0*V_TRANS) * BETA * T1 / R(I) * T2**(T3-1.0D0) +
+	      dTOPdR = (VINF - ALPHA*V_TRANS) * BETA * T1 / R(I) * T2**(T3-1.0D0) +
 	1                  T1*TOP*(BETA2-BETA)*(1.0D0+LOG(T2))/R(I)
-	      dBOTdR=  exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
+	      dBOTdR=  (ALPHA-1.0D0)*exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
 !
-	      TOP = 2.0D0*V_TRANS + TOP
+	      TOP = ALPHA*V_TRANS + TOP
 	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
 	      V(I) = TOP/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  END IF
+!
+	ELSE IF(OPTION .EQ. 'CUR')THEN
+!
+	  WRITE(6,'(A)')BLUE_PEN
+	  WRITE(6,*)'Use ''r'' to replace a data point'
+	  WRITE(6,*)'Use ''a'' to add a data point'
+	  WRITE(6,*)'Use ''d'' to delete a data point'
+	  WRITE(6,*)'Use ''e'' to exit'
+	  WRITE(6,'(A)')DEF_PEN
+!
+	  CALL DP_CURVE(ND_OLD,OLD_R,OLD_V)
+ 	  CALL GRAMON_PGPLOT('R/R\d*\u','V(km/s)',' ',' ')
+	  WRITE(6,'(A)')'Cursor now available to modify data points'
+	  ND=ND_OLD
+	  R(1:ND)=OLD_R(1:ND); V(1:ND)=OLD_V(1:ND)
+!
+	  DO WHILE(1 .EQ. 1)
+	    DO WHILE(1 .EQ. 1)
+	      CURSERR = PGCURS(XVAL,YVAL,CURSVAL)
+	      WRITE(6,*)XVAL,YVAL
+	      IF(CURSVAL .EQ. 'e' .OR. CURSVAL .EQ. 'E')EXIT
+	      IF(CURSVAL .EQ. 'r' .OR. CURSVAL .EQ. 'R')THEN
+	        T1=XVAL
+	        TMP_R(1:ND)=ABS(R(1:ND)-XVAL)
+	        I=MINLOC(TMP_R(1:ND),IONE)
+	        V(I)=YVAL
+	        WRITE(6,*)'Replaced V for R=',R(I)
+	      ELSE IF(CURSVAL .EQ. 'd' .OR. CURSVAL .EQ. 'D')THEN
+	        T1=XVAL
+	        TMP_R(1:ND)=ABS(R(1:ND)-T1)
+	        I=MINLOC(TMP_R(1:ND),IONE)
+	        R(I:ND-1)=R(I+1:ND)
+	        V(I:ND-1)=V(I+1:ND)
+	        ND=ND-1
+	        WRITE(6,*)'Deleted R=',R(I),' from grid'
+	      ELSE IF(CURSVAL .EQ. 'a' .OR. CURSVAL .EQ. 'A')THEN
+	        DO I=1,ND-1
+	          IF( (R(I)-XVAL)*(R(I+1)-XVAL) .LT. 0 )THEN
+	            DO J=ND,I+1,-1
+                      R(J+1)=R(J)
+                      V(J+1)=V(J)
+	            END DO
+	            R(I+1)=XVAL; V(I+1)=YVAL
+	            ND=ND+1
+	            WRITE(6,*)'Add R=',R(I),' to grid'
+	            EXIT
+	          END IF
+	        END DO
+	      ELSE
+	        WRITE(6,*)RED_PEN
+	        WRITE(6,*)'Error - use r(eplace), a(dd), d(elete), e'
+	        WRITE(6,*)DEF_PEN
+	      END IF
+	    END DO
+	    CALL GEN_IN(REPLOT,'Replot to see revision to V')
+	    IF(REPLOT)THEN
+	      CALL DP_CURVE(ND_OLD,OLD_R,OLD_V)
+	      CALL DP_CURVE(ND,R,V)
+ 	      CALL GRAMON_PGPLOT('R/R\d*\u','V(km/s)',' ',' ')
+	    ELSE
+	      EXIT
+	    END IF
+	  END DO
+!
+! Compute SIGMA
+!
+	  ALLOCATE (COEF(ND,4))
+	  CALL MON_INT_FUNS_V2(COEF,V,R,ND)
+	  DO I=1,ND
+	    SIGMA(I)=COEF(I,3)
+	    SIGMA(I)=R(I)*SIGMA(I)/V(I)-1.0D0
+	  END DO
+	  DEALLOCATE (COEF)
 !
 	ELSE IF(OPTION .EQ. 'PLOT')THEN
 	  ND=ND_OLD 
@@ -751,9 +901,11 @@
 	T1=R(ND)
 	R(1:ND)=R(1:ND)/T1
 	WRITE(6,*)'Plotting V versus R/R*'
+	CALL DP_CURVE(ND_OLD,OLD_R,OLD_V)
 	CALL DP_CURVE(ND,R,V)
 	CALL GRAMON_PGPLOT('R/R\d*\u','V(km/s)',' ',' ')
 	WRITE(6,*)'Plotting Sigma versus R/R*'
+	CALL DP_CURVE(ND_OLD,OLD_R,OLD_SIGMA)
 	CALL DP_CURVE(ND,R,SIGMA)
 	CALL GRAMON_PGPLOT('R/R\d*\u','SIGMA',' ',' ')
 !

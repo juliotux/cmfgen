@@ -4,8 +4,12 @@
 	USE MOD_USR_HIDDEN
 	USE MOD_WR_STRING
 	USE MOD_LEV_DIS_BLK
+	USE MOD_COLOR_PEN_DEF
 	IMPLICIT NONE
 !
+! Altered: 19-Jun-2016 - Bug fix. Routine was returning to zero cross section for NU > NU(edge)
+!                           when ED_VAL was non zero (i.e., level dissolution switched on).
+!                           Level dissolution only used when plotting individual cross-sections.
 	INTEGER NMAX
 	INTEGER NF_MAX
 	INTEGER ND
@@ -25,6 +29,7 @@
 	REAL*8 FREQ_RES
 	REAL*8 EDGE_FREQ
 	REAL*8 ED_VAL
+	REAL*8 MIN_ED,MAX_ED
 	REAL*8 T1,T2,T3
 	REAL*8 EXC_EN
 	REAL*8 DIS_CONST
@@ -43,6 +48,7 @@
 	LOGICAL DIE_REG
 !
 	INTEGER, PARAMETER :: IZERO=0
+	INTEGER, PARAMETER :: IONE=1
 	INTEGER, PARAMETER :: T_OUT=6
 	LOGICAL,PARAMETER :: L_FALSE=.FALSE.
 	LOGICAL DO_EV
@@ -130,15 +136,19 @@
 	ED_VAL=0.0D0
 	WRITE(T_OUT,'(A)')' '
 	WRITE(T_OUT,'(A)')' Input non-zero Ne for level-dissolution.'
+	WRITE(T_OUT,'(A)')' ED is resticted to the range covered by the model atmosphere.'
+	WRITE(T_OUT,'(A)')' Closest model atmospere value is used'
 	WRITE(T_OUT,'(A)')' '
 	IF(PHOT_ID .EQ. 1)CALL USR_OPTION(ED_VAL,'ED_VAL','0.0D0','Approximate Ne value')
 	IF(ED_VAL .GT. 0)THEN
-	  IF(ED_VAL .LT. ED(1))THEN
-	    ED_VAL=ED(1)
-	    CNT=1
-	  ELSE IF(ED_VAL .GT. ED(ND))THEN
-	    ED_VAL=ED(ND)
-	    CNT=ND
+	  MIN_ED=MINVAL(ED)
+	  MAX_ED=MAXVAL(ED)	
+	  IF(ED_VAL .LT. MIN_ED)THEN
+	    ED_VAL=MIN_ED
+	    CNT=MINLOC(ED,IONE)
+	  ELSE IF(ED_VAL .GT. MAX_ED)THEN
+	    ED_VAL=MAX_ED
+	    CNT=MAXLOC(ED,IONE)
 	  ELSE
 	    DO J=1,ND-1
 	     IF(ED_VAL .GT. ED(J) .AND. ED_VAL .LE. ED(J+1))THEN
@@ -148,7 +158,6 @@
 	     END IF
 	    END DO
 	  END IF
-	  WRITE(T_OUT,'(A,ES10.2)')'Photoionization cross-section evaluated at Ne=',ED_VAL
 	END IF
 !
 	FREQ_RES=MIN(3000.0D0,VSM_DIE_KMS)/2.0D0
@@ -162,8 +171,13 @@
 	      WRITE(T_OUT,*)'Invalid level ID for this species'
 	      RETURN
 	    ELSE
-	      WRITE(T_OUT,*)'                    Level is: ',ATM(ID)%XzVLEVNAME_F(I)
-	      WRITE(T_OUT,*)'Ionization energy to g.s. is: ',ATM(ID)%EDGEXzV_F(I)
+	      WRITE(T_OUT,*)RED_PEN
+	      WRITE(T_OUT,*)'Level is: ',ATM(ID)%XzVLEVNAME_F(I)
+	      WRITE(T_OUT,'(A,F11.8)')'Ionization energy to g.s. (in 10^15 Hz) is: ',ATM(ID)%EDGEXzV_F(I)
+	      IF(ED_VAL .NE. 0.0D0)THEN
+	        WRITE(T_OUT,'(A,ES10.2)')' Photoionization cross-section evaluated at Ne=',ED(CNT)
+	      END IF
+	      WRITE(T_OUT,*)DEF_PEN
 	    END IF
 	    FLAG=.FALSE.				!Don't return edge value.
 	    IF(ED_VAL .NE. 0.0D0)FLAG=.TRUE.
@@ -175,7 +189,7 @@
 	    CALL USR_HIDDEN(FREQ_MAX,'FREQ_MAX',DEFAULT,'Maximum frequency in units of 10^15 Hz')
 	    DO WHILE(FREQ .LT. FREQ_MAX)
 	      CALL SUB_PHOT_GEN(ID,CROSS,FREQ,ATM(ID)%EDGEXzV_F,ATM(ID)%NXzV_F,PHOT_ID,FLAG)
-	      IF(FLAG .AND. FREQ .LT. FREQ_MAX)THEN
+	      IF(FLAG .AND. FREQ .LT. ATM(ID)%EDGEXzV_F(I))THEN
 	        T1=ATM(ID)%ZXzV**3
 	        T2=SQRT(3.289395*ATM(ID)%ZXzV*ATM(ID)%ZXzV/(ATM(ID)%EDGEXzV_F(I)-FREQ))
 	        IF(T2 .GT. 2*ATM(ID)%ZXzV)THEN

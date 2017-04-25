@@ -208,7 +208,7 @@
 	    X=DLOG10(X)
 	    T1=10**(  CROSS_A(1)+X*( CROSS_A(2) + X*(CROSS_A(3) +
 	1               X*CROSS_A(4)) ) + LG10_CONV_FAC  )
-	    IF(U .GT. CROSS_A(5))T1=T1*(CROSS_A(LMIN+5)/U)**2
+	    IF(U .GT. CROSS_A(5))T1=T1*(CROSS_A(5)/U)**2
 	    PHOT(ML)=T1
 	  END DO
 !

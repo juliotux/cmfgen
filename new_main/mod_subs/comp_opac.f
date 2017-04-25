@@ -116,7 +116,13 @@
 !
 ! Add in 2-photon emissivity and opacity.
 !
-	  CALL TWO_PHOT_OPAC(ETA,CHI,POPS,T,CONT_FREQ,ND,NT)
+	  IF(LST_DEPTH_ONLY)THEN
+	    CALL TWO_PHOT_OPAC_V3(ETA,CHI,POPS,T,CONT_FREQ,'LTE',ND,NT)
+	  ELSE IF(COMPUTE_EDDFAC .AND. TWO_PHOTON_METHOD .EQ. 'USE_RAD')THEN
+	    CALL TWO_PHOT_OPAC_V3(ETA,CHI,POPS,T,CONT_FREQ,'OLD_DEFAULT',ND,NT)
+	  ELSE
+	    CALL TWO_PHOT_OPAC_V3(ETA,CHI,POPS,T,CONT_FREQ,TWO_PHOTON_METHOD,ND,NT)
+	  END IF
 !
 ! Compute X-ray opacities and emissivities due to K (& L) shell ionization. In all cases
 ! it is assumed that 2 electrons are ejected. The K (& L) shell cross-sections are

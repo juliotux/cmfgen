@@ -234,6 +234,7 @@
 	      ROSSMEAN(I)=4.0D0*CLUMP_FAC(I)*T1*(T(I)**5)/ROSSMEAN(I)
 	    END DO
 !
+	    CALL WRITV(T,ND,'Current temperature',88)
 	    CALL WRITV(ROSSMEAN,ND,'Rosseland Mean Opacity',88)
 ! 
 !

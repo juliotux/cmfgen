@@ -232,7 +232,7 @@
 	  STOP
 	END IF
 !
-	WRITE(80,'(/,/,X,A)')'Final Tau Grid'
+	WRITE(80,'(/,/,1X,A)')'Final Tau Grid'
 	WRITE(80,'(A,4(9X,A))')'Index',' Tau','dTau'
 	T1=10.0D0; T1=LOG(10.0D0)
 	DO I=1,ND_TMP-1

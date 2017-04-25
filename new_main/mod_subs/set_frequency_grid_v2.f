@@ -50,6 +50,7 @@
 	REAL*8 NU_MAX_OBS
 	REAL*8 NU_MIN_OBS
 	REAL*8 T1,T2
+	REAL*8 C_KMS
 !
 	INTEGER I,J,K
 	INTEGER ID
@@ -70,6 +71,7 @@
         REAL*8 OPLIN,EMLIN
 !
 	LUER=ERROR_LU()
+	C_KMS=1.0D-05*SPEED_OF_LIGHT()
 !
 !
 ! 
@@ -187,9 +189,10 @@
 	1             DOP_PROF_LIMIT,VOIGT_PROF_LIMIT,
 	1             V_PROF_LIMIT,MAX_PROF_ED,SET_PROF_LIMS_BY_OPACITY)
 !
-	          WRITE(134,'(A,T10,A,T20,3ES15.4)')VEC_SPEC(ML),PROF_TYPE(ML),
-	1                  0.2998D+04/VEC_STRT_FREQ(ML),VEC_VDOP_MIN(ML),
-	1                  3.0D+05*(VEC_STRT_FREQ(ML)/VEC_FREQ(ML)-1.0D0)
+	          T1=0.01D0*C_KMS/VEC_FREQ(ML)
+	          WRITE(134,'(A,T10,A,T25,2I5,2F20.8,2ES15.4)')VEC_SPEC(ML),PROF_TYPE(ML),MNL,MNUP,
+	1                  T1,LAMVACAIR(VEC_FREQ(ML)),VEC_VDOP_MIN(ML),
+	1                  C_KMS*(VEC_STRT_FREQ(ML)/VEC_FREQ(ML)-1.0D0)
 	        END IF
 	      END DO
 	    END DO
@@ -453,8 +456,8 @@
 !	1                  VEC_FREQ(ML),VEC_STRT_FREQ(ML),NU(LINE_END_INDX_IN_NU(ML))
 !	END DO
 !
-	WRITE(LUER,'(A,T40,I6)')' Number of line frequencies is:',N_LINE_FREQ
-	WRITE(LUER,'(A,T40,I6)')' Number of frequencies is:',NCF
+	WRITE(LUER,'(A,T40,I7)')' Number of line frequencies is:',N_LINE_FREQ
+	WRITE(LUER,'(A,T40,I7)')' Number of frequencies is:',NCF
 	WRITE(LUER,*)' '
 !
 ! Redefine frequency quadrature weights.

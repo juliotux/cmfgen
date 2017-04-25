@@ -95,6 +95,7 @@
           stop ' stopped in recom_opacity'
         endif
 !
+	TOT_REC=0.0D0
 	DO I=1,NPHOT
 	  REC(I)=0.0D0
 	END DO

@@ -13,15 +13,14 @@ C
 	1       WRITE(47,'(//,1X,A,I3)')'Iteration No',ITERATION_NO
 C
 	IF(MOM_ERR_CNT .NE. 0)THEN
-	  WRITE(47,'(/,1X,A)')
-	1         'Error in MOM_J_CMF for the following frequencies:'
-	  WRITE(47,'(1X,1P5E14.6)')(MOM_ERR_ON_FREQ(I),I=1,MOM_ERR_CNT)
+	  WRITE(47,'(/,A)')' Error in MOM_J_CMF for the following frequencies:'
+	  WRITE(47,'(A,I5)')' Number of frequencies for which error occurs: ',MOM_ERR_CNT
+	  WRITE(47,'(1X,5ES14.6)')(MOM_ERR_ON_FREQ(I),I=1,MIN(MOM_ERR_CNT,N_ERR_MAX))
 	END IF
 C
 	IF(FG_ERR_CNT .NE. 0)THEN
-	  WRITE(47,'(/,1X,A)')
-	1         'Error in FG_J_CMF for the following frequencies:'
-	  WRITE(47,'(1X,4(1PE14.6,0P,A,I2,A))')
+	  WRITE(47,'(/,A)')' Error in FG_J_CMF for the following frequencies:'
+	  WRITE(47,'(1X,4(ES14.6,A,I2,A))')
 	1      (FG_ERR_ON_FREQ(I),'(',FG_ERR_TYPE(I),')',I=1,FG_ERR_CNT)
 	END IF
 C

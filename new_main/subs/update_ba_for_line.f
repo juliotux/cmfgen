@@ -13,6 +13,7 @@
 	USE RADIATION_MOD
 	IMPLICIT NONE
 !
+! Altered: 04-Oxt-2016 : Now call VSEBYJ_MULTI_V8 and VSEBYJ_X_V7.
 ! Altered: 06-Feb-2010 : Now call VSEBYJ_MULTI_V7.
 !
         INTEGER ND
@@ -138,14 +139,14 @@
 	        ID_SAV=ID
 	        IF(ATM(ID)%XzV_PRES)THEN
 	          DO J=1,ATM(ID)%N_XzV_PHOT
-	            CALL VSEBYJ_MULTI_V7(ID_SAV,
+	            CALL VSEBYJ_MULTI_V8(ID_SAV,
 	1             ATM(ID)%WSXzV(1,1,J), ATM(ID)%dWSXzVdT(1,1,J),
 	1             ATM(ID)%XzV, ATM(ID)%XzVLTE, ATM(ID)%dlnXzVLTE_dlnT, 
 	1             ATM(ID)%NXzV,
 	1             ATM(ID+1)%XzV, ATM(ID+1)%LOG_XzVLTE,
 	1             ATM(ID+1)%dlnXzVLTE_dlnT, ATM(ID+1)%NXzV,
 	1             ATM(ID)%XzV_ION_LEV_ID(J),ED,T,
-	1             JREC,dJRECdt,JPHOT,NUM_BNDS,ND,DST,DEND)
+	1             JREC,dJRECdt,JPHOT,FIXED_T,NUM_BNDS,ND,DST,DEND)
 	          END DO
 	        END IF
 	      END DO
@@ -160,11 +161,11 @@
 	      CALL TUNE(1,'BA_XRAY_UP')
 	      DO ID=1,NUM_IONS-1
 	        IF(ATM(ID)%XzV_PRES .AND. ATM(ID+1)%XzV_PRES)THEN
-	          CALL VSEBYJ_X_V6(ID,ATM(ID)%WSE_X_XzV,
+	          CALL VSEBYJ_X_V7(ID,ATM(ID)%WSE_X_XzV,
 	1             ATM(ID)%XzV, ATM(ID)%XzVLTE, ATM(ID)%dlnXzVLTE_dlnT, ATM(ID)%NXzV,
 	1             ATM(ID+1)%XzV_F, ATM(ID+1)%XzVLTE_F, ATM(ID+1)%EDGEXzV_F,
 	1             ATM(ID+1)%NXzV_F,ATM(ID+1)%DXzV,    ATM(ID+2)%EQXzV,
-	1             ED,T,JREC,dJRECdT,JPHOT,
+	1             ED,T,JREC,dJRECdT,JPHOT,FIXED_T,
 	1             ND,NION,DST,DEND)
 	        END IF
 	      END DO
@@ -548,7 +549,7 @@
 	        SCL_FAC=1.0D0
 	      END IF
 !
-!	      IF(NEW_LINE_BA)THEN
+	      IF(.NOT. FIXED_T)THEN
 	        DO L=INDX_BA_METH,ND
 	          K=GET_DIAG(L)
 	          T3=SCL_FAC
@@ -561,8 +562,9 @@
 	          T2=LINE_EMIS_CON(SIM_INDX)*dU_RAT_dT(L,SIM_INDX)*POPS(NUP,L)
 	          BA_T(NT,K,L)=BA_T(NT,K,L) + T3*(T1*JBAR_SIM(L,SIM_INDX) - T2*LINE_QW_SUM(L,SIM_INDX)) 
 	        END DO
-!	      ELSE
+	      END IF
 !
+	      IF(.NOT. FIXED_T)THEN
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(T1,T3,T4,J,K,JJ)
 	        DO L=1,INDX_BA_METH-1
 	          K=GET_DIAG(L)
@@ -582,8 +584,8 @@
 	          END IF
 	        END DO
 !$OMP END PARALLEL DO
+	      END IF
 !
-!	      END IF
 	      CALL TUNE(ITWO,'dBA_LINE')
 !
 ! Must now zero dZ since next time it is used it will be for a new line.

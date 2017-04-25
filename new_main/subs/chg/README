@@ -1,0 +1,10 @@
+5-Dec-2000
+       eval_chg_rates.f
+           Reaction formula for reaction TYPE_CHG=3 fixed
+       steq_ba_chg_exch.f
+           Installed reaction formula for TYPE_CHG=3
+           Installed TVAL so that formula are only used inside the fitting range. 
+       chg_exch_mod.f
+           Removed bug in left justifying strings. Could cause infinite loop when bug
+           in CHG_EXCH_DATA file.
+           Now use / to separate non-unique level names. Only one alternate name is allowed.        

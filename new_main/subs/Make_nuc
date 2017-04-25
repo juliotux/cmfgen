@@ -16,7 +16,7 @@ OBJ = $(LIB)(do_lev_pop_decays.o)\
       $(LIB)(eval_rad_decay_v1.o)\
       $(LIB)(out_sn_pops_v3.o)\
       $(LIB)(rd_sn_data.o)\
-      $(LIB)(rd_nuc_decay_data.o)
+      $(LIB)(rd_nuc_decay_data_v2.o)
 
 all : $(LIB) 
 	cp -f $(INSTALL_DIR)perm_mod_file jnk.mod

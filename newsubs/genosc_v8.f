@@ -30,6 +30,7 @@
 	1              LUIN,LUOUT,FILNAME)
 	IMPLICIT NONE
 !
+! Altered 19-May-2015 - Added '17-Jun-2014' as a valid format date (9-Jun-2015). 
 ! Altered 23-Dec-2004 - Check on ENERGY level ordering, and name matching when
 !                          reading in transitions included.
 ! Altered 21-Nov-2000 - Changed to V8
@@ -153,7 +154,7 @@
 	    IF(L1 .NE. 0)THEN
 	      STRING=ADJUSTL(STRING)
 	      FORMAT_DATE(1:11)=STRING(1:11)
-	      IF(FORMAT_DATE .NE. '17-Oct-2000')THEN
+	      IF(FORMAT_DATE .NE. '17-Oct-2000' .AND. FORMAT_DATE .NE. '17-Jun-2014')THEN
 	        WRITE(LUER,*)'Error in GENOSC_V8: reading ',TRIM(FILNAME)
 	        WRITE(LUER,*)'Invalid format date: ',TRIM(FORMAT_DATE)
 	        STOP
@@ -266,7 +267,7 @@
 	    LOCNAME(I)=LEVNAME(I)
 !
 	    IOS=0
-	    IF(FORMAT_DATE .EQ. '17-Oct-2000')THEN
+	    IF(FORMAT_DATE .EQ. '17-Oct-2000' .OR. FORMAT_DATE .EQ.  '17-Jun-2014')THEN
 	      READ(STRING(L1+1:),*,IOSTAT=IOS)STAT_WT(I),FEDGE(I),T1,T2,T3,LEV_ID,
 	1                         ARAD(I),GAM2(I),GAM4(I)
 	      IF(ABS(LEV_ID) .NE. I)THEN

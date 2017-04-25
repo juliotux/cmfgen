@@ -9,6 +9,7 @@
 	1            INBCNEW,IC,THK,INNER_BND_METH,NC,ND,NP,METHOD)
 	IMPLICIT NONE
 !
+! Altered 15-Jan-2015: Added check to make sure there are no negative intensities.
 ! Altered 28-May-2013: J is now returned in XM.
 ! Altered 07-Jun-2010: Changed to THOMAS_RH to handle later stages of SN.
 !                        Replaced DIF variable by INNER_BND_METH.
@@ -28,19 +29,21 @@
 !                         HBCNEW.
 ! Created 24-FEB-1987
 !
-	INTEGER NC,ND,NP,I,NI,LS
+	INTEGER NC,ND,NP,I,J,NI,LS
 	REAL*8 TA(ND),TB(ND),TC(ND),XM(ND),R(ND),Z(ND)
 	REAL*8 NEWRJ(ND),NEWRK(ND),DTAU(ND),dCHIdR(ND)
 	REAL*8 SOURCE(ND),CHI(ND),AQW(ND,NP),AQW3(ND,NP),P(NP)
 !
 	INTEGER, PARAMETER :: IONE=1
+	INTEGER LU,LUER,ERROR_LU
+	EXTERNAL ERROR_LU
 !
 	REAL*8 DBB,DBC,IBOUND,TOR,HBC_J,HBC_S,INBCNEW,IC,E1,E2,E3
 	LOGICAL THK
 	CHARACTER(LEN=6) METHOD
 	CHARACTER(LEN=*) INNER_BND_METH
 !
-        IF( INNER_BND_METH .NE. 'DIFFUSION' .AND.
+	 IF( INNER_BND_METH .NE. 'DIFFUSION' .AND.
 	1   INNER_BND_METH .NE. 'SCHUSTER' .AND.
 	1   INNER_BND_METH .NE. 'HOLLOW' .AND.
 	1   INNER_BND_METH .NE. 'ZERO_FLUX' )THEN
@@ -82,8 +85,6 @@
 ! Compute Z and the optical depth scale DTAU for this imapct parameter.
 !
 	  IF(NI .GT. 1)THEN
-!	    CALL ZALONGP(R,Z,P(LS),NI)
-!	    CALL NORDTAU(DTAU,CHI,Z,R,dCHIdr,NI)
 	    DO I=1,NI
 	      Z(I)=DSQRT( (R(I)-P(LS))*(R(I)+P(LS)) )
 	    END DO
@@ -151,8 +152,24 @@
 	    END IF
 !
 	    XM(2)=IBOUND*E1+SOURCE(2)*E2+SOURCE(1)*E3
-            XM(1)=0.5D0*(IBOUND+XM(2)*E1+SOURCE(1)*E2+SOURCE(2)*E3)
+	     XM(1)=0.5D0*(IBOUND+XM(2)*E1+SOURCE(1)*E2+SOURCE(2)*E3)
 	  END IF
+!
+	  DO I=1,NI
+	    IF(XM(I) .LT. 0.0D0)THEN
+	      LUER=ERROR_LU()
+	      CALL GET_LU(LU,'FQCOMP_IBC_V2')
+	      WRITE(LUER,*)'Error in FQCOM_IBC_V2-- -ve intensities'
+	      WRITE(LUER,*)'See unit LU'
+	      WRITE(LU,*)'LS=',LS
+	      WRITE(LU,'(6(10X,A))')'    XM','     Z','   CHI','dCHIdR','DTAU','SOURCE'
+	      DTAU(NI)=0.0D0   !Set to zero as not used and not set.
+	      DO J=1,NI
+	        WRITE(LU,'(6ES16.8)')XM(J),Z(J),CHI(J),dCHIdR(J),DTAU(J),SOURCE(J)
+	      END DO
+	      STOP
+	    END IF
+	  END DO
 !
 ! Update the FA and FB matrices (see notes).
 !

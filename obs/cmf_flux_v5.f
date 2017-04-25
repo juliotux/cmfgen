@@ -13,6 +13,8 @@
 	USE MOD_USR_OPTION
 	IMPLICIT NONE
 !
+! Altered: 18-May-2015 : Changed GAM2, GAM4 to C4 and C6 (quadratic and Van der Waals 
+!                          interacton constants)(09-Jun-2105).
 ! Altered: 17-Mar-2003: SCRAT & SCRATREC are now initialized.
 ! Altered: 03-Mar-2000: Variable type ATM installed to simplify handling
 !	                   of multiple species.
@@ -64,7 +66,7 @@
 	INTEGER LUER
 	INTEGER ERROR_LU
 	EXTERNAL ERROR_LU
-	CHARACTER(LEN=12), PARAMETER :: PRODATE='27-Jan-2014' 
+	CHARACTER(LEN=12), PARAMETER :: PRODATE='17-Oct-2016'
 !
 	DATA BLANK/' '/
 !
@@ -393,8 +395,15 @@
 	CLOSE(LU)
 !
 ! Read in other parameters from batch file. These must be in order.
+! Using a STRIN to read ONLY_OBS_LINES allows me to preserve backward 
+! compatibility, while adding the new variable ONLY_UNOBS)_LINES.
 !
-	CALL RD_LOG(ONLY_OBS_LINES,'ONLY_OBS_LINES',T_IN,LUER,'Observed lines only?')
+	CALL RD_CHAR(STRING,'ONLY_OBS_LINES',T_IN,LUER,'Observed lines only?')
+	STRING=ADJUSTL(STRING)
+	ONLY_OBS_LINES=.FALSE.; ONLY_UNOBS_LINES=.FALSE.
+	IF(STRING(1:1) .EQ. 'T' .OR. STRING(1:2) .EQ. '.T')ONLY_OBS_LINES=.TRUE.
+	IF(STRING(1:3) .EQ. 'OBS')ONLY_OBS_LINES=.TRUE.
+	IF(STRING(1:5) .EQ. 'UNOBS')ONLY_UNOBS_LINES=.TRUE.
 !
 	FILENAME=TRIM(DIR_NAME)//'MODEL_SPEC'
 	CALL GEN_ASCI_OPEN(LUIN,FILENAME,'OLD',' ','READ',IZERO,IOS)
@@ -489,8 +498,8 @@
 	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%DXzV(ND),STAT=IOS)         ; ATM(ID)%DXzV(:)=0.0D0
 	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GXzV_F(NF),STAT=IOS)
 	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%ARAD(NF),STAT=IOS)
-	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GAM2(NF),STAT=IOS)
-	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%GAM4(NF),STAT=IOS)
+	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%C4(NF),STAT=IOS)
+	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%C6(NF),STAT=IOS)
 	        IF(IOS .EQ. 0)ALLOCATE (ATM(ID)%OBSERVED_LEVEL(NF),STAT=IOS)
 	        IF(IOS .NE. 0)THEN
 	          WRITE(LUER,*)'Error in CMF_FLUX'
@@ -569,18 +578,22 @@
 	DO ID=NUM_IONS,1,-1
 	  IF(ATM(ID)%XzV_PRES)THEN
 	    FILENAME=TRIM(ION_ID(ID))//'_F_OSCDAT'
-	    CALL GENOSC_V8(ATM(ID)%AXzV_F,  ATM(ID)%EDGEXzV_F,
+	    CALL GENOSC_V9(ATM(ID)%AXzV_F,  ATM(ID)%EDGEXzV_F,
 	1          ATM(ID)%GXzV_F, ATM(ID)%XzVLEVNAME_F, 
-	1          ATM(ID)%ARAD,ATM(ID)%GAM2,ATM(ID)%GAM4,
+	1          ATM(ID)%ARAD,ATM(ID)%C4,ATM(ID)%C6,
 	1          ATM(ID)%OBSERVED_LEVEL,T1,ATM(ID)%ZXzV,
 	1          ATM(ID)%NEW_XzV_OSCDATE, ATM(ID)%NXzV_F, I,
-	1          GF_ACTION,GF_CUT,GF_LEV_CUT,MIN_NUM_TRANS,ONLY_OBS_LINES,
+	1          GF_ACTION,GF_CUT,GF_LEV_CUT,MIN_NUM_TRANS,
+	1          ONLY_OBS_LINES,ONLY_UNOBS_LINES,
 	1          LUIN,LU_TMP,FILENAME)
 	    IF(ATM(ID)%XzV_OSCDATE .NE. ATM(ID)%NEW_XzV_OSCDATE)THEN
 	       WRITE(T_OUT,*)'Warning --- invalid date for ',ION_ID(ID)
 	       WRITE(T_OUT,*)'Old oscilator date:',ATM(ID)%XzV_OSCDATE
 	       WRITE(T_OUT,*)'New oscilator date:',ATM(ID)%NEW_XzV_OSCDATE
 	    END IF
+	    FILENAME=TRIM(ION_ID(ID))//'_AUTO_DATA'
+	    CALL ADD_AUTO_RATES(ATM(ID)%ARAD,ATM(ID)%EDGEXzV_F,ATM(ID)%GXzV_F,
+	1              ATM(ID)%XzVLEVNAME_F,ATM(ID)%NXzV_F,FILENAME)
 !
 	    FILENAME=TRIM(ION_ID(ID))//'_F_TO_S'
 	    CALL RD_F_TO_S_IDS_V2(ATM(ID)%F_TO_S_XzV,ATM(ID)%INT_SEQ_XzV,

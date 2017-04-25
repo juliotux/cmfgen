@@ -18,8 +18,9 @@
 	1              ACCURACY,DO_TIME_VAR,TIME_SEQ_NO,COMPUTED,ND,NC,NP,NT)
 	IMPLICIT NONE
 !
+! Altered 01-Sep-2016: TIME_SEQ_NO changed from integer to real.
 ! Altered 14-Nov-2014: Changed to V4 and installed COMPUTED in call.
-! Altered 04-Nov-2012; WORK was not being set before evaluating f.
+! Altered 04-Nov-2012: WORK was not being set before evaluating f.
 ! Altered 28-Nov-2011: REDUCTION_FATOR reduced to 10, and BAD_J_COUNTER now only updated
 !                          per iteration, not per bad depth. WORK is now set to zero
 !                          before jumping to compute "f" on the first iteraton step. The
@@ -39,7 +40,6 @@
 	INTEGER ND
 	INTEGER NP
 	INTEGER NT
-	INTEGER TIME_SEQ_NO
 !
 	REAL*8 RJ(ND)			!Mean intensity (computed and returned)
 	REAL*8 RSQ_HFLUX(ND)            !r^2 . Flux
@@ -58,6 +58,7 @@
 	REAL*8 LUMINOSITY               !Luminosity at inner boundary in Lsun.
 	REAL*8 IC                       !Not used
 	REAL*8 ACCURACY			!Convergence accuracy for computing f.
+	REAL*8 TIME_SEQ_NO              !Does not need to be an integer
 	LOGICAL COMPUTED		!Indicates whether grey solution was successfully computed
 	LOGICAL DIFF_APPROX		!Use a diffusion approximation (as opposed to a Schuster core)
 	CHARACTER(LEN=6) METHOD

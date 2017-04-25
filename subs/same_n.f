@@ -83,13 +83,11 @@ C
 	IF(L1 .NE. 0)THEN
 	  ENDN=L1-1
 	  STN=ENDN
-	  IF(STN .GT. 1 .AND. LEV1(STN-1:STN-1) .GT. '0' .AND.
-	1           LEV1(STN-1:STN-1) .LT. '9')THEN
-	      STN=STN-1
+	  IF(STN .GT. 1)THEN
+	    IF(LEV1(STN-1:STN-1) .GT. '0' .AND. LEV1(STN-1:STN-1) .LT. '9')STN=STN-1
 	  END IF
-	  IF(STN .GT. 1 .AND. LEV1(STN-1:STN-1) .GT. '0' .AND.
-	1           LEV1(STN-1:STN-1) .LT. '9')THEN
-	      STN=STN-1
+	  IF(STN .GT. 1)THEN
+	    IF(LEV1(STN-1:STN-1) .GT. '0' .AND. LEV1(STN-1:STN-1) .LT. '9')STN=STN-1
 	  END IF
 	  RETURN
 	END IF

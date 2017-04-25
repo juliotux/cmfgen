@@ -28,7 +28,9 @@
 	USE STEQ_DATA_MOD
 	IMPLICIT NONE
 !
-! Altered 23-Sep-2005 " Bug fix for dT term in computation of BA.
+! Altered 28-Aug-2015 : Altered to allow levels VERY close (but below isolated atom threshold)
+!                          to autoionize.
+! Altered 23-Sep-2005 : Bug fix for dT term in computation of BA.
 ! Altered 13-Sep-2002 : Bug fix & cooling term added.
 !                       DIECOOL included in call hence changed to V2
 !                       STEQ(EQION, ) was not being computed.
@@ -80,24 +82,21 @@
 !
 	PLNCKS_CONST=6.6261965D-12         !H*1.0E+15  (1.0E+15 due to times frequency)
 !
-! Define integer variables for population VARAIABLE for ease of programming.
-!
-	IBEG_AUTO=0
-	DO I=1,N_F
-	  IF(FEDGE_F(I) .LT. 0.0D0)THEN
-	    IBEG_AUTO=I
-	    EXIT
-	  END IF
-	END DO
-	IF(IBEG_AUTO .EQ. 0)RETURN
-!
 ! The autoionization probabilities are depth independent, and hence can be
 ! read in at the beginning.
 !
         INQUIRE(FILE=AUTO_FILE,EXIST=AUTO_FILE_EXISTS)
         IF(AUTO_FILE_EXISTS)THEN
           CALL RD_AUTO_V1(AUTO,FEDGE_F,G_F,LEVNAME_F,N_F,AUTO_FILE)
-        ELSE
+	  IBEG_AUTO=0
+	  DO I=1,N_F
+	    IF(AUTO(I) .GT. 0.0D0)THEN
+	      IBEG_AUTO=I
+	      EXIT
+	    END IF
+	  END DO
+	  IF(IBEG_AUTO .EQ. 0)RETURN
+        ELSE IF(FEDGE_F(N_F) .LT. 0.0D0)THEN
           LUER=ERROR_LU()
           WRITE(LUER,*)' '
           WRITE(LUER,*)'Warning: possible error in STEQ_AUTO_V1'
@@ -106,6 +105,8 @@
           WRITE(LUER,'(A,A)')' AUTO_FILE is ',TRIM(AUTO_FILE)
           WRITE(LUER,*)' '
           RETURN
+	ELSE
+	  RETURN
         END IF
 !
         EQION=N_S+1			!Ion equation

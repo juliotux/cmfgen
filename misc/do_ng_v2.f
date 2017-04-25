@@ -134,7 +134,7 @@
 !
 	ND_ST=1
 	ND_END=ND
-	NBAND=1
+	NBAND=ND
 	IT_STEP=1
 	N_ITS_TO_RD=4
 !
@@ -164,7 +164,7 @@
 	    IF(ITS_PER_NG .NE. 4 .AND. ITS_PER_NG .NE. 8)WRITE(T_OUT,*)'Error: ITS_PER_NG must be 4 or 8'
 	  END DO
           N_ITS_TO_RD=ITS_PER_NG
-	  DO_REGARDLESS=.FALSE.
+	  DO_REGARDLESS=.TRUE.
 	  WRITE(T_OUT,'(/,A)')' The next parameter indicates the number of depths treated simultaneously'
 	  WRITE(T_OUT,'(A)')' The acceleration starts in blocks from the inner boundary'
 	  CALL GEN_IN(NBAND,'Band width for NG acceleration')
@@ -192,7 +192,6 @@
 	  IT_STEP=1
 	  N_ITS_TO_AV=1
 	  CALL GEN_IN(N_ITS_TO_RD,'Number of iterations to read')
-	  CALL GEN_IN(SCALE_FAC,'Exponent (N) to power scale (i.e., (1+T1)**N last correction if r<1')
 	  CALL GEN_IN(ND_ST,'Only do NG acceleration for the depth in .GE. ND_ST')
 	  CALL GEN_IN(ND_END,'Only do NG acceleration for the depth in .LE. ND_END')
 	  CALL GEN_IN(N_ITS_TO_AV,'Number of iterations to avergae')
@@ -322,8 +321,19 @@
 	      END DO
 	    END IF
 	    T1=(RDPOPS(IVAR,J,2)-RDPOPS(IVAR,J,3))/(RDPOPS(IVAR,J,1)-RDPOPS(IVAR,J,2))
-	    WRITE(6,*)'r1=',T1,'Depth=',J
-	    IF(T1 .GT. 1.0)THEN
+	    WRITE(6,*)'r = Old Cor./ New Cor =',T1,'Depth=',J
+	  END DO
+	  CALL GEN_IN(SCALE_FAC,'Exponent (N) to power scale (i.e., (1+T1)**N last correction if r<1')
+	  DO J=ND_ST,ND_END
+	    T1=(RDPOPS(IVAR,J,2)-RDPOPS(IVAR,J,3))/(RDPOPS(IVAR,J,1)-RDPOPS(IVAR,J,2))
+	    IF(T1 .LT. -1.0)THEN
+	      DO I=1,NT
+	        T2=(RDPOPS(I,J,1)-RDPOPS(I,J,2))/(T1-1.0D0)
+	        IF(T2 .GT. RDPOPS(I,J,1))T2=RDPOPS(I,J,1)
+	        IF(T2 .LT. -0.5D0*RDPOPS(I,J,1))T2=-0.5D0*RDPOPS(I,J,1)
+	        BIG_POPS(I,J)=RDPOPS(I,J,1)+T2
+	      END DO
+	    ELSE IF(T1 .GT. 1.0)THEN
 	      IF(T1 .LT. 1.010D0)T1=1.010D0
 	      DO I=1,NT
 	        T2=(RDPOPS(I,J,1)-RDPOPS(I,J,2))/(T1-1.0D0)

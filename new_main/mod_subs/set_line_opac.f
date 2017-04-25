@@ -19,6 +19,7 @@
 	USE LINE_MOD
         IMPLICIT NONE
 !
+! Altered 20-May-2014 : Fixed bug affecting Griem stark profiles -- wrong charge was being set to SET_PROF_V5.
 ! Incorporated 2-Jan-2014: Changes for depth depndent line profiles.
 ! Altered 05-Apr-2011 : L_STAR_RATIO and U_STAR_RATIO now computed using XzVLTE_F_ON_S (29-Nov-2010).
 !                         Done to facilitate use of lower temperaturs.
@@ -366,17 +367,17 @@
 	  DO SIM_INDX=1,MAX_SIM
 	    IF(RESONANCE_ZONE(SIM_INDX))THEN
 	      J=SIM_LINE_POINTER(SIM_INDX); I=FREQ_INDX
-	      ID=VEC_ID(J); T1=ATM(ID)%ZXzV+1; T3=0.0D0
+	      ID=VEC_ID(J); T3=0.0D0
 	      CALL SET_PROF_V5(TA,NU,I,
 	1               LINE_ST_INDX_IN_NU(J),LINE_END_INDX_IN_NU(J),
 	1               ED,TB,TC,T,VTURB_VEC,ND,
 	1               PROF_TYPE(J),PROF_LIST_LOCATION(J),
 	1               VEC_FREQ(J),VEC_MNL_F(J),VEC_MNUP_F(J),
-	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,
+	1               AMASS_SIM(SIM_INDX),ATM(ID)%ZXzV,VEC_ARAD(J),T3,
 	1               TDOP,AMASS_DOP,VTURB,MAX_PROF_ED,
 	1               END_RES_ZONE(SIM_INDX),NORM_PROFILE,7)
 	      LINE_PROF_SIM(1:ND,SIM_INDX)=TA(1:ND)
-	      IF(VEC_SPEC(J)(1:1) .EQ. 'H')THEN
+	      IF(VERBOSE_OUTPUT .AND. VEC_SPEC(J)(1:1) .EQ. 'H')THEN
 	        WRITE(135,'(A,T10,2ES14.5,2I4,3E12.4)')PROF_TYPE(J),VEC_FREQ(J),
 	1            3.0D+05*(NU(I)/VEC_FREQ(J)-1.0D0),
 	1            VEC_MNL_F(J),VEC_MNUP_F(J),TA(1),TA(40),TA(ND)

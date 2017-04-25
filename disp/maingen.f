@@ -15,6 +15,10 @@
 	USE MOD_COLOR_PEN_DEF
 	IMPLICIT NONE
 !
+! Altered  01-MAr-2016 : Adjusted PLNID -- only compute continuum opacity every 1009 km/s.
+!                          (Results in considerable speed up [1-Feb-2016]).
+! Altered  09-Jun-2015 : Added PLT_PRFS to call.
+!                          Altered DTDP option.
 ! Altered  07-Jul-2011 : Included commands to look at f, and Mdot in "shell" models.
 ! Altered  15-Mar-2011 :  Section for plotting photoionization cross-sections
 !                           removed to subroutine. Can now plot all ground-state
@@ -135,6 +139,7 @@
 	LOGICAL GREY_WITH_V_TERMS
 	LOGICAL GREY_REL
 	LOGICAL PLANE_PARALLEL_NOV
+	LOGICAL FLUSH_FILE
 !
 	REAL*8 XV(N_PLT_MAX),XNU(N_PLT_MAX)
 	REAL*8 YV(N_PLT_MAX),ZV(N_PLT_MAX),WV(N_PLT_MAX)
@@ -169,7 +174,7 @@
 	REAL*8 C_KMS
 !
 	CHARACTER(LEN=6) METHOD
-	CHARACTER(LEN=6) TYPE_ATM
+	CHARACTER(LEN=10) TYPE_ATM
 	CHARACTER(LEN=10) INNER_BND_METH
 !
 	REAL*8, ALLOCATABLE :: CHI_PAR(:,:)
@@ -212,6 +217,7 @@
 	LOGICAL RADIAL_TAU
 !
 	INTEGER I,J,K,L
+	INTEGER IMIN,IMAX
 	INTEGER ISPEC,ID
 	INTEGER NLF,ML
 	INTEGER IOS,NFREQ,R_INDX
@@ -233,15 +239,17 @@
 	REAL*8 NU_ST,NU_EN
 	REAL*8 FREQ_RES,FREQ_MAX
 	REAL*8 T1,T2,T3,T4
+	REAL*8 EK_EJECTA
 	REAL*8 TMP_ED
 	REAL*8 TAU_LIM
+	REAL*8 DEPTH_LIM
 	REAL*8 TEMP,TSTAR,NEW_RSTAR,NEW_VSTAR
 	REAL*8 VSM_DIE_KMS
 	REAL*8 DIST_KPC
 !
 	INTEGER NPINS,NCX,NDX,NPX
 	INTEGER ND_TMP
-	REAL*8 FREQ,FL
+	REAL*8 FREQ,FL,FL_SAVE
 	REAL*8 TAU_SOB
 	REAL*8  TMP_GION
 	EQUIVALENCE (FREQ,FL)
@@ -286,6 +294,7 @@
 	REAL*8 RED_EXT
 	REAL*8 VDOP_FG_FRAC
 	REAL*8 VDOP_MOM_FRAC
+	CHARACTER*30 TWO_PHOT_OPTION
 	CHARACTER*30 FREQ_INPUT
 	CHARACTER*10 SOL_OPT
 	CHARACTER*10 FG_SOL_OPT
@@ -387,10 +396,27 @@
 !
 	TYPE_ATM='P'
 	T1=LOG(MASS_DENSITY(5)/MASS_DENSITY(1))/LOG(R(1)/R(5))
-	WRITE(TYPE_ATM(2:6),'(F5.2)')T1
 	WRITE(6,'(A)')RED_PEN
-	WRITE(6,'(A)')' For optical depth calculations we will assume a power density distribution'
-	WRITE(6,'(A,F5.2)')' at the outer boundary. Density exponent for atmosphere is ',T1
+	IF(T1 .LT. 2)THEN
+	  WRITE(6,'(A)')' Power for density law variation at outer boudary is shallower than r^{-n} where n=2'
+	  WRITE(6,'(A)')' Shown below is the power based on depths 1 and I'
+	  WRITE(6,*)' '
+	  DO I=2,MIN(15,ND)
+	    WRITE(6,'(X,I4,ES12.3)')I,LOG(MASS_DENSITY(I)/MASS_DENSITY(1))/LOG(R(1)/R(I))
+	  END DO
+	  CALL USR_OPTION(T1,'POW','2','Power for rhj propto r^{-n}')
+	  WRITE(6,*)' '
+	END IF
+!
+	IF(T1 .LT. 100)THEN
+	  WRITE(TYPE_ATM(2:6),'(F5.2)')T1
+	  WRITE(6,'(A)')' For optical depth calculations we will assume a power density distribution'
+	  WRITE(6,'(A,F5.2)')' at the outer boundary. Density exponent for atmosphere is ',T1
+	ELSE
+	  WRITE(TYPE_ATM(2:9),'(ES8.2)')T1
+	  WRITE(6,'(A)')' For optical depth calculations we will assume a power density distribution'
+	  WRITE(6,'(A,ES8.2)')' at the outer boundary. Density exponent for atmosphere is ',T1
+	END IF
 	WRITE(6,'(A)')DEF_PEN
 !
 ! If the grey temperature is available in CMFGEN, we don't need to (although we can with the
@@ -535,6 +561,19 @@
 !
 	CALL COMP_LEV_DIS_BLK(ED,POPION,T,LEVEL_DISSOLUTION,ND)
 !
+! Set 2-photon data with current atomic models and populations.
+!
+        DO ID=1,NUM_IONS-1
+          I=ID
+          CALL SET_TWO_PHOT_DISP_V3(ION_ID(ID), ID,
+	1       ATM(ID)%XzVLTE_F,        ATM(ID)%NXzV_F,
+	1       RONE,                    ATM(ID)%XzVLEVNAME_F,
+	1       ATM(ID)%EDGEXzV_F,       ATM(ID)%GXzV_F,
+	1       RONE,                    ATM(ID)%NXzV_F,  ND,
+	1       ATM(ID)%ZXzV,            IONE,   ATM(ID)%XzV_PRES)
+        END DO
+!
+!
 ! Compute LTE populations
 !
 	INCLUDE 'EVAL_LTE_FULL.INC'
@@ -577,6 +616,7 @@
 	    END DO
 	  END IF
 	END DO
+	WRITE(6,*)'Total number of line transition is',ML
 !
 !
 ! 
@@ -1264,16 +1304,26 @@
 !
 	ELSE IF(XOPT .EQ. 'XMASS')THEN
 !
+	  CALL USR_OPTION(FLAG,'MDIR','T','Integrate inwards from outer boundary')
 	  DO I=1,ND
 	    ZETA(I)=4.0D0*PI*1.0D+30*MASS_DENSITY(I)*R(I)*R(I)*CLUMP_FAC(I)
 	  END DO
 	  CALL TORSCL(TA,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
-	  WRITE(6,*)'Mass in integrated from outer boudary.'
-	  WRITE(6,*)'Normalizing mass (in Msun) is',TA(ND)/1.989D+33
-	  DO I=1,ND
-	    XV(I)=DLOG10(TA(I)/TA(ND))
-	  END DO
-	  XAXIS='Log Mass Fraction'
+	  IF(FLAG)THEN
+	    WRITE(6,*)'Mass in integrated from outer boudary.'
+	    WRITE(6,*)'Normalizing mass (in Msun) is',TA(ND)/1.989D+33
+	    DO I=1,ND
+	      XV(I)=DLOG10(TA(I)/TA(ND))
+	    END DO
+	    XAXIS='Log Mass Fraction'
+	  ELSE
+	    WRITE(6,*)'Mass in integrated from inner boudary.'
+	    WRITE(6,*)'Total mass (in Msun) is',TA(ND)/1.989D+33
+	    DO I=1,ND
+	      XV(I)=(TA(ND)-TA(I))/1.989D+33
+	    END DO
+	    XAXIS='Mass (Msun)'
+	  END IF
 	  XAXSAV=XAXIS
 !
 	ELSE IF(XOPT .EQ. 'XFLUX')THEN
@@ -1315,8 +1365,13 @@
 	  ELSE IF(TYPE_ATM .EQ. 'POW')THEN
 	    TYPE_ATM='P'
 	    T1=LOG(MASS_DENSITY(5)/MASS_DENSITY(1))/LOG(R(1)/R(5))
-	    WRITE(TYPE_ATM(2:6),'(F5.2)')T1
-	    WRITE(6,'(A,F5.2)')'Density exponent for atmospheres is ',T1
+	    IF(T1 .LT. 100)THEN
+	      WRITE(TYPE_ATM(2:6),'(F5.2)')T1
+	      WRITE(6,'(A,F5.2)')'Density exponent for atmospheres is ',T1
+	    ELSE
+	      WRITE(TYPE_ATM(2:9),'(ES8.2)')T1
+	      WRITE(6,'(A,ES8.2)')'Density exponent for atmospheres is ',T1
+	    END IF
 	  ELSE
 	    TYPE_ATM=' '
 	    WRITE(T_OUT,*)'Atmosphere is assumed to have a wind'
@@ -2174,9 +2229,14 @@
 !
 	ELSE IF(XOPT .EQ. 'YMDOT')THEN
 	  T1=4.0D+25*PI*365.25D0*24.0D0*3600.0D0/MASS_SUN()
+!	  WRITE(6,*)T1
+!	  WRITE(6,*)MASS_DENSITY(1),CLUMP_FAC(1),R(1),V(1)
 	  DO I=1,ND
+	    WRITE(26,*)T1*MASS_DENSITY(I)*CLUMP_FAC(I)*R(I)*R(I)*V(I)
 	    YV(I)=LOG10( T1*MASS_DENSITY(I)*CLUMP_FAC(I)*R(I)*R(I)*V(I) )
 	  END DO
+	  WRITE(6,'(A,ES14.4,A)')'Mass loss rate is ',10**(YV(1)),' Msun/yr'
+	  WRITE(6,'(A,ES14.4,A)')'     Log(Mdot) is ',YV(1)
 	  YAXIS='Mass Loss rate(Msun/yr)'
 	  CALL DP_CURVE(ND,XV,YV)
 !
@@ -2241,15 +2301,37 @@
 	  END DO
 	  CALL TORSCL(XM,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
 !
-	  DO I=1,ND-1
-	    J=MIN(I+1,ND)
-	    DO K=I+1,ND
-	      IF(LOG10(R(I)/R(J)) .GT. T4)EXIT
-	      J=K
-	    END DO
-	    YV(I)=(TA(J)-TA(I))*(TA(J)-TA(I))/(ZV(J)-ZV(I))/(XM(J)-XM(I))
+	  CALL DETERM_CLUM_POS(MASS_DENSITY,R,ND,TC,K)
+	  J=1
+	  IF(K .GT. 2)THEN
+	    L=(TC(2)-TC(1))/2
+	  ELSE
+	    L=1
+	    WRITE(6,*)'L=',L
+	  END IF
+	  DO I=1,ND-5
+	    IMIN=MAX(1,I-L)
+	    IMAX=MIN(ND,I+L)
+	    YV(I)=(TA(IMAX)-TA(IMIN))*(TA(IMAX)-TA(IMIN))/(ZV(IMAX)-ZV(IMIN))/(XM(IMAX)-XM(IMIN))
+	    IF(I .GT. TC(K)+L/2)THEN
+	      DO J=I,ND-1
+	        IMAX=J+1; IMIN=J
+	        YV(J)=(TA(IMAX)-TA(IMIN))*(TA(IMAX)-TA(IMIN))/(ZV(IMAX)-ZV(IMIN))/(XM(IMAX)-XM(IMIN))
+	      END DO
+	      YV(ND)=1.0D0
+	      EXIT
+	    END IF
 	  END DO
-	  YV(ND)=1.0D0
+!
+!	  DO I=1,ND-1
+!	    J=MIN(I+1,ND)
+!	    DO K=I+1,ND
+!	      IF(LOG10(R(I)/R(J)) .GT. T4)EXIT
+!	      J=K
+!	    END DO
+!	    YV(I)=(TA(J)-TA(I))*(TA(J)-TA(I))/(ZV(J)-ZV(I))/(XM(J)-XM(I))
+!	  END DO
+!	  YV(ND)=1.0D0
 !
 	  YAXIS='Clumping factor'
 	  CALL DP_CURVE(ND,XV,YV)
@@ -2261,7 +2343,7 @@
 	  END DO
 	  CALL TORSCL(TA,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
 	  YAXIS='M(\dsun\u)'
-	  WRITE(6,'(A,ES9.2,A)')'Mass of envelope (ejecta) is',TA(ND),' Msun'
+	  WRITE(6,'(A,ES10.3,A)')'Mass of envelope (ejecta) is',TA(ND),' Msun'
 	  CALL DP_CURVE(ND,XV,TA)
 !
 	ELSE IF(XOPT .EQ. 'IMASS')THEN
@@ -2372,7 +2454,15 @@
 ! Compute dlnT/dlnP for comparison with adiabatic temperature gradient.
 !
 	ELSE IF(XOPT .EQ. 'DTDP')THEN
-	  TA(1:ND)=DLOG( (ED(1:ND)+POP_ATOM(1:ND))*T(1:ND) )
+	  T1=1.0D+04*BOLTZMANN_CONSTANT()
+	  TA(1:ND)=T1*(ED(1:ND)+POP_ATOM(1:ND))*T(1:ND)
+	  ELEC=.TRUE.
+	  CALL USR_OPTION(ELEC,'RP','T','Include radiation pressure')
+	  IF(ELEC)THEN
+	    T1=1.0D+16*STEFAN_BOLTZ()/SPEED_OF_LIGHT()
+	    TA(1:ND)=TA(1:ND)+T1*(T(1:ND)**4)
+	  END IF
+	  TA(1:ND)=DLOG( TA(1:ND) )
 	  TB(1:ND)=DLOG( T(1:ND) )
 	  CALL DERIVCHI(TC,TB,TA,ND,'LINMON')
 	  YV(1:ND)=TC(1:ND)
@@ -2395,7 +2485,7 @@
 	  CALL DP_CURVE(ND,XV,YV)
 !
 	ELSE IF(XOPT .EQ. 'EK')THEN
-	  CALL USR_OPTION(ELEC,'INTEG','T','Integrate kinetic energy?')
+	  CALL USR_OPTION(ELEC,'INTEG','T','Integrate thermal kinetic energy?')
 	  YV(1:ND)=1.5D+04*(ED(1:ND)+POP_ATOM(1:ND))*T(1:ND)*BOLTZMANN_CONSTANT()
 	  IF(ELEC)THEN
 	    YV(1:ND)=3.280D-03*YV(1:ND)*R(1:ND)*R(1:ND)  !(4*PI*Dex(+30)/L(sun)
@@ -2415,17 +2505,20 @@
 	  T1=4.0D+16*STEFAN_BOLTZ()/SPEED_OF_LIGHT()
 	  YV(1:ND)=T1*(T(1:ND)**4)
 	  IF(ELEC)THEN
-	    YV(1:ND)=3.280D-03*YV(1:ND)*R(1:ND)*R(1:ND)  !(4*PI*Dex(+30)/L(sun)
+	    YV(1:ND)=4.0D+30*PI*YV(1:ND)*R(1:ND)*R(1:ND)  !(*PI*Dex(+30) !/L(sun)
 	    CALL LUM_FROM_ETA(YV,R,ND)
 	    DO I=ND-1,1,-1
 	      YV(I)=YV(I+1)+YV(I)
 	    END DO
-	    YAXIS='E(rad)(s.L\dsun\u)'
+	    YAXIS='Log E(rad)'
+	    WRITE(6,'(A,ES14.4,A)')'Total radiation density ',YV(1),' s.Lsun'
+	    YV(1:ND-1)=DLOG10(YV(1:ND-1))
+	    CALL DP_CURVE(ND-1,XV,YV)
 	  ELSE
-	    YV(1:ND)=DLOG10(YV(1:ND))
 	    YAXIS='Log E\drad\u(ergs\u \dcm\u-3)'
+	    YV(1:ND)=DLOG10(YV(1:ND))
+	    CALL DP_CURVE(ND,XV,YV)
 	  END IF
-	  CALL DP_CURVE(ND,XV,YV)
 !
 	ELSE IF(XOPT .EQ. 'EI')THEN
 	  CALL USR_OPTION(ELEC,'INTEG','T','Integrate intenal energy?')
@@ -2486,6 +2579,30 @@
 	  CALL DP_CURVE(ND,XV,TB)
 	  CALL DP_CURVE(ND,XV,TC)
 	  YAXIS='\gr\u-1\d|dPdR|'
+!
+	ELSE IF(XOPT .EQ. 'BEK')THEN
+	  YV(1:ND)=0.5D+10*MASS_DENSITY(1:ND)*V(1:ND)*V(1:ND)
+	  YV(1:ND)=4*PI*1.0D+30*YV(1:ND)*R(1:ND)*R(1:ND)
+	  CALL LUM_FROM_ETA(YV,R,ND)
+	  DO I=ND-1,1,-1
+	    YV(I)=YV(I+1)+YV(I)
+	  END DO	
+	  EK_EJECTA=YV(1)
+	  WRITE(6,*)RED_PEN
+	  WRITE(6,'(A,ES10.3,A)')' Kinetic energy of ejecta is ',EK_EJECTA,' ergs'
+	  YAXIS='Log EK(ergs\u \dcm\u-3)'
+	  YV(1:ND-1)=DLOG10(YV(1:ND-1))
+	  CALL DP_CURVE(ND-1,XV,YV)
+!
+	  T1=4.0D+30*PI/MASS_SUN()
+	  DO I=1,ND
+	    ZETA(I)=T1*MASS_DENSITY(I)*CLUMP_FAC(I)*R(I)*R(I)
+	  END DO
+	  CALL TORSCL(TA,ZETA,R,TB,TC,ND,METHOD,TYPE_ATM)
+	  WRITE(6,'(A,F9.4,A)')' Mass of envelope (ejecta) is',TA(ND),' Msun'
+	  T1=SQRT(2.0D0*EK_EJECTA/TA(ND)/MASS_SUN())/1.0D+05
+	  WRITE(6,'(A,F10.2,A)')' SQRT(Mean square velocity) is ',T1,' km/s',DEF_PEN
+!
 !
 !
 	ELSE IF(XOPT .EQ. 'RONV')THEN
@@ -2717,36 +2834,48 @@
 	    YAXIS='Filling Factor'
 	  END IF
 	  CALL DP_CURVE(ND,XV,YV)
+	ELSE IF(XOPT .EQ. 'PROF')THEN
+	  CALL PLT_PROFS()
 !
 !
 !
-
 	ELSE IF(XOPT .EQ. 'LNID')THEN
 !
 	  WRITE(T_OUT,'(A)')' '
-	  WRITE(T_OUT,'(A)')'Create line ID file for stars with weak winds.'
+	  WRITE(T_OUT,'(A)')' Create line ID file for stars with weak winds.'
+	  WRITE(T_OUT,'(A)')' The list is created based on the line optical depth at a give Tau(e.s.)'
+	  WRITE(T_OUT,'(A)')' Use XTAUC and TAUC option to find Tau(e.s) at Tau(cont)=2/3'
+	  WRITE(T_OUT,'(A)')' Use PLNID for plane-parallel models'
+	  WRITE(T_OUT,'(A)')' PLNID may also work better for O stars with weak winds'
 	  WRITE(T_OUT,'(A)')' '
 	  DO I=1,ND
 	    ESEC(I)=6.65D-15*ED(I)
 	  END DO
           CALL TORSCL(TA,ESEC,R,TB,TC,ND,METHOD,TYPE_ATM)
+	  CALL USR_OPTION(TAU_VAL,'TAUES','0.67D0',
+	1          'Electron scattering optical depth at whch line optical depth is evaluated')
+	  CALL USR_OPTION(VTURB,'VTURB','10.0','Turbulent velcity for line profile (units km/s)?')
 !
 	  DO I=1,ND
 	    J=I
-	    IF(TA(I) .GT. 0.67)THEN
+	    IF(TA(I) .GT. TAU_VAL)THEN
 	      EXIT
 	    END IF
 	  END DO
-	  DPTH_INDX=I-1
+	  DPTH_INDX=J
 !
 	  DEFAULT='0.01'
-	  CALL USR_OPTION(TAU_LIM,'TAU',DEFAULT,'Line optical deth at tau_c=2/3')
+	  CALL USR_OPTION(TAU_LIM,'TAU',DEFAULT,'We only output lines with Tau > ?')
+	  CALL USR_OPTION(FLAG,'ADD','F','Add transition name to output file?')
 !
-          WRITE(T_OUT,'(1X,A,1P,E14.6)')'    R(I)/R*=',R(DPTH_INDX)/R(ND)
-          WRITE(T_OUT,'(1X,A,1P,E14.6)')'       V(I)=',V(DPTH_INDX)
-          WRITE(T_OUT,'(1X,A,1P,E14.6)')'       T(I)=',T(DPTH_INDX)
-          WRITE(T_OUT,'(1X,A,1P,E14.6)')'      ED(I)=',ED(DPTH_INDX)
+	  WRITE(T_OUT,'(/,A,/)')' Values at depth just exceeeding requested TAU(e.s)'
+          WRITE(T_OUT,'(1X,A,1P,E14.6)')'     R(I)/R*=',R(DPTH_INDX)/R(ND)
+          WRITE(T_OUT,'(1X,A,1P,E14.6)')'        V(I)=',V(DPTH_INDX)
+          WRITE(T_OUT,'(1X,A,1P,E14.6)')'        T(I)=',T(DPTH_INDX)
+          WRITE(T_OUT,'(1X,A,1P,E14.6)')'       ED(I)=',ED(DPTH_INDX)
+          WRITE(T_OUT,'(1X,A,1P,E14.6)')'TAU(e.s.)(I)=',TA(DPTH_INDX)
 !
+	  WRITE(T_OUT,'(A)')' '
 	  DEFAULT=WR_STRING(LAM_ST)
 	  CALL USR_OPTION(LAM_ST,'LAMST',DEFAULT,FREQ_INPUT)
 	  DEFAULT=WR_STRING(LAM_EN)
@@ -2777,11 +2906,13 @@
 	    NUP=N_LINE_FREQ
 	  END IF
 !
+! We use T4 for the interpolation to the requested optical depth.
+!
+	  T4=(TAU_VAL-TA(DPTH_INDX-1))/(TA(DPTH_INDX)-TA(DPTH_INDX-1))
 	  DO LINE_INDX=NL,NUP
 	    MNL_F=VEC_MNL_F(LINE_INDX)
 	    MNUP_F=VEC_MNUP_F(LINE_INDX)
 	    FL=VEC_FREQ(LINE_INDX)
-	    I=DPTH_INDX
 !
 	    IF(ANG_TO_HZ/FL .GT. LAM_ST .AND. ANG_TO_HZ/FL .LT. LAM_EN)THEN
 	      DO ID=1,NUM_IONS
@@ -2792,13 +2923,15 @@
 	            T1=ATM(ID)%W_XzV_F(MNUP_F,I)/ATM(ID)%W_XzV_F(MNL_F,I)
 	            CHIL(I)=OPLIN*VEC_OSCIL(LINE_INDX)*( T1*ATM(ID)%XzV_F(MNL_F,I)-
 	1               ATM(ID)%GXzV_F(MNL_F)*ATM(ID)%XzV_F(MNUP_F,I)/ATM(ID)%GXzV_F(MNUP_F) )
-	            CHIL(I)=MAX(1.0D-15*CHIL(I)/(FL/2.998D+04)/SQRT(PI),1.0D-10)
+	            T2=12.86D0*SQRT( T(I)/AT_MASS(SPECIES_LNK(ID))+(VTURB/12.86D0)**2 )/C_KMS
+	            CHIL(I)=MAX(1.0D-15*CHIL(I)/FL/T2/SQRT(PI),1.0D-10)
 	          END DO
                   CALL TORSCL_V2(TA,CHIL,R,TB,TC,DPTH_INDX,'ZERO',TYPE_ATM,L_FALSE)
-	          TAU_SOB=TA(DPTH_INDX)
+	          TAU_SOB=T4*TA(DPTH_INDX)+(1.0D0-T4)*TA(DPTH_INDX-1)
+	          STRING=' ';  IF(FLAG)STRING=VEC_TRANS_NAME(LINE_INDX)
 	          IF(TAU_SOB .GT. TAU_LIM)THEN
-	            WRITE(73,'(A,3ES14.5,3X,F3.0,I6)')ION_ID(ID),ANG_TO_HZ/FL,
-	1                                                TAU_SOB,ANG_TO_HZ/FL,1.0,2
+	            WRITE(73,'(A,3ES14.5,3X,F3.0,I6,5X,A)')ION_ID(ID),ANG_TO_HZ/FL,
+	1                                TAU_SOB,ANG_TO_HZ/FL,1.0,2,TRIM(STRING)
 	          END IF
 	        END IF
 	      END DO
@@ -2807,6 +2940,117 @@
 	  CLOSE(UNIT=73)
 ! 
 !
+! Designed for use with plane-parallel models. We compute the central intesnity of
+! each line to deduce line-identifcations.
+!
+	ELSE IF(XOPT .EQ. 'PLNID')THEN
+!
+	  WRITE(T_OUT,'(A)')' '
+	  WRITE(T_OUT,'(A)')' Create line ID file for plane-paraillel models'
+	  WRITE(T_OUT,'(A)')' The list is created based on an estimate of the central line intensity'
+	  WRITE(T_OUT,'(A)')' The procedure may also work for most O stars -- especially those with weak winds'
+	  WRITE(T_OUT,'(A)')' '
+	  CALL USR_OPTION(VTURB,'VTURB','10.0','Turbulent velcity for line profile (units km/s)?')
+!
+	  DEFAULT='0.01'
+	  CALL USR_OPTION(DEPTH_LIM,'DEPTH',DEFAULT,
+	1        'Output lines whose central depth from the continuum is > LIMIT')
+	  CALL USR_OPTION(FLAG,'ADD','F','Add transition name to output file?')
+!
+	  WRITE(T_OUT,'(A)')' '
+	  DEFAULT=WR_STRING(LAM_ST)
+	  CALL USR_OPTION(LAM_ST,'LAMST',DEFAULT,FREQ_INPUT)
+	  DEFAULT=WR_STRING(LAM_EN)
+	  CALL USR_OPTION(LAM_EN,'LAMEN',DEFAULT,FREQ_INPUT)
+	  DEFAULT='LINE_ID'
+	  CALL USR_OPTION(FILENAME,'FILE',DEFAULT,'Output file for line IDs')
+	  CALL GEN_ASCI_OPEN(73,FILENAME,'UNKNOWN',' ',' ',IZERO,IOS)
+	  CALL USR_HIDDEN(FLUSH_FILE,'FLUSH','F','Flush outout immediately?')
+!
+! MNL_F (MNUP_F) denotes the lower (upper) level in the full atom.
+!
+! Determine index range encompassing desired wavelength range.
+!
+	  NU_ST=ANG_TO_HZ/LAM_ST
+	  IF(NU_ST .LT. VEC_FREQ(1))THEN
+	    NL=GET_INDX_DP(NU_ST,VEC_FREQ,N_LINE_FREQ)
+	    IF(VEC_FREQ(NL) .GT. NU_ST)NL=NL+1
+	  ELSE
+	    NL=1
+	  END IF
+!
+	  NU_EN=ANG_TO_HZ/LAM_EN
+	  IF(NU_EN .GT. VEC_FREQ(N_LINE_FREQ))THEN
+	    NUP=GET_INDX_DP(NU_EN,VEC_FREQ,N_LINE_FREQ)
+	    IF(VEC_FREQ(NUP) .LT. NU_EN)NUP=NUP-1
+	  ELSE
+	    NUP=N_LINE_FREQ
+	  END IF
+	  WRITE(6,*)' '
+	  WRITE(6,*)'Number of line transitions in the interval is',NUP-NL+1
+!
+	  FL_SAVE=0.0D0
+	  DO LINE_INDX=NL,NUP
+	    MNL_F=VEC_MNL_F(LINE_INDX)
+	    MNUP_F=VEC_MNUP_F(LINE_INDX)
+	    FL=VEC_FREQ(LINE_INDX)
+!
+! Since the opacities are sequentially computed, we dont need to compute them 
+! at all frequencies. At present we simply compute them every 1000 km/s.
+! This saves considerable computing time.
+!
+	    IF( 2.998D+05*ABS(FL_SAVE-FL)/FL .GT. 1000.0D0)THEN
+	      FL_SAVE=FL
+	      INCLUDE 'OPACITIES.INC'
+!
+! Compute DBB and DDBBDT for diffusion approximation. DBB=dB/dR
+! and DDBBDT= dB/dTR .
+!
+	      T1=HDKT*FL/T(ND)
+	      T2=1.0D0-EMHNUKT(ND)
+	      DBB=TWOHCSQ*( FL**3 )*T1*DTDR/T(ND)*EMHNUKT(ND)/(T2**2)
+	      IF(.NOT. DIF)DBB=0.0D0
+!
+! Adjust the opacities and emissivities for the influence of clumping.
+!
+	      DO I=1,ND
+	        ETA(I)=ETA(I)*CLUMP_FAC(I)
+	        CHI(I)=CHI(I)*CLUMP_FAC(I)
+	        ESEC(I)=ESEC(I)*CLUMP_FAC(I)
+	        CHI_RAY(I)=CHI_RAY(I)*CLUMP_FAC(I)
+	        CHI_SCAT(I)=CHI_SCAT(I)*CLUMP_FAC(I)
+	      END DO
+	    END IF
+!
+! ID must be set here as it modified by OPACITIES.INC
+!
+	    ID=VEC_ION_INDX(LINE_INDX)
+	    GLDGU=ATM(ID)%GXzV_F(MNL_F)/ATM(ID)%GXzV_F(MNUP_F)
+	    DO I=1,ND
+	      T1=ATM(ID)%W_XzV_F(MNUP_F,I)/ATM(ID)%W_XzV_F(MNL_F,I)
+	      CHIL(I)=OPLIN*ATM(ID)%AXzV_F(MNL_F,MNUP_F)*(T1*ATM(ID)%XzV_F(MNL_F,I)-GLDGU*ATM(ID)%XzV_F(MNUP_F,I) )
+	      ETAL(I)=EMLIN*FREQ*ATM(ID)%AXzV_F(MNUP_F,MNL_F)*ATM(ID)%XzV_F(MNUP_F,I)
+	      T2=12.86D0*SQRT( T(I)/AT_MASS(SPECIES_LNK(ID))+(VTURB/12.86D0)**2 )/C_KMS
+	      T2=1.0D-15/FL/T2/SQRT(PI)
+	      CHIL(I)=MAX(T2*CHIL(I)*CLUMP_FAC(I),1.0D-10)
+	      ETAL(I)=ETAL(I)*T2*CLUMP_FAC(I)
+	    END DO
+	    CALL GET_FLUX_DEFICIT(T2,R,ETA,CHI,CHI_RAY,CHI_SCAT,ESEC,ETAL,CHIL,FL,DBB,ND)
+!
+	    IF(ABS(T2).GT. DEPTH_LIM)THEN
+	      STRING=' ';  IF(FLAG)STRING=VEC_TRANS_NAME(LINE_INDX)
+	      T1=ANG_TO_HZ/FL
+	      IF(.NOT. ATM(ID)%OBSERVED_LEVEL(MNL_F) .OR. .NOT. ATM(ID)%OBSERVED_LEVEL(MNUP_F))T1=-T1
+	      WRITE(73,'(A,3ES14.5,3X,F3.0,I6,5X,A)')ION_ID(ID),T1,
+	1                               T2,ANG_TO_HZ/FL,1.0,2,TRIM(STRING)
+	      IF(FLUSH_FILE)FLUSH(UNIT=73)
+	    END IF
+	    IF(MOD(LINE_INDX-NL,MAX(10,(NUP-NL)/10)) .EQ. 0)THEN
+	      WRITE(6,'(A,I7,A,I7,A)')' Done',LINE_INDX-NL+1,' of ',NUP-NL+1,' lines'
+	    END IF
+	  END DO
+	  CLOSE(UNIT=73)
+!
 ! Section to allow various line optical deph and wavelength distributions to be examined.
 !
 ! 1. POW: Plots the # of lines in Log(Tau) or Log(Line strength) space. Each uniform logarithmic bin
@@ -3538,6 +3782,22 @@
 	  GREY_COMP=.FALSE.
 !
 ! 
+	ELSE IF(XOPT .EQ. 'XCOOL')THEN
+!
+	   WRITE(6,*)' '
+	   WRITE(6,*)' Compares X-ray cooling time and flow times assuming smooth flow'
+	   WRITE(6,*)' '
+!
+! The factor 0.375 = 1.5/4 (3/2 kT and 4 for the shock compression).
+!
+	   T2=BOLTZMANN_CONSTANT()
+	    DO I=1,ND
+	      TA(I)=0.375D0*T2*(ED(I)+POP_ATOM(I))*1.0D+28/ED(I)/POP_ATOM(I)/CLUMP_FAC(I)
+	      TB(I)=1.0D+05*R(I)/V(I)
+	    END DO
+	    CALL DP_CURVE(ND,XV,TA)
+	    CALL DP_CURVE(ND,XV,TB)
+	    YAXIS='t\dX\u(T/10\u6\d)(\gL/10\u22\d) s; t(flow)'
 	ELSE IF(XOPT .EQ.'XRAY')THEN
 	  XRAYS=.NOT. XRAYS
 	  IF(XRAYS)THEN
@@ -4672,6 +4932,13 @@
 	    END IF
 	  END DO
 !
+!	ELSE IF(XOPT .EQ. 'NONT')THEN
+!          DO ID=1,NUM_IONS
+!            IF(XSPEC .EQ. UC(ION_ID(ID)))THEN
+!	       CALL DISP_BETHE_APPROX_V5(Q,NL,NUP,XKT,dXKT_ON_XKT,NKT,ID,DPTH_INDX)
+!	    END IF
+!	  END DO
+!
 	ELSE IF(XOPT .EQ. 'COL' .OR. XOPT .EQ. 'CRIT')THEN
 	  TMP_ED=1.0D0
 	  CALL USR_OPTION(T1,'T','1.0','Input T')
@@ -5047,6 +5314,79 @@ c
 	    CALL DP_CURVE(ND,XV,YV)
 	    YAXIS='Log \gx(cm\u-1\d)'
 	  END IF
+!
+	ELSE IF(XOPT .EQ. 'TWOOP')THEN
+	  CALL USR_OPTION(LAM_ST,'LAMST','911.0D0',FREQ_INPUT)
+	  CALL USR_OPTION(LAM_EN,'LAMEN','9000.0D0',FREQ_INPUT)
+	  IF(KEV_INPUT)THEN
+	    LAM_ST=LAM_ST*KEV_TO_HZ
+	    LAM_EN=LAM_EN*KEV_TO_HZ
+	  ELSE IF(ANG_INPUT)THEN
+	    LAM_ST=ANG_TO_HZ/LAM_ST
+	    LAM_EN=ANG_TO_HZ/LAM_EN
+	  END IF
+	  CALL USR_OPTION(NFREQ,'NPTS','-100','+ve lin. spacing, -ve log')
+!
+	  IF(NFREQ .LT. 0)THEN
+	    LINX=.FALSE.
+	    NFREQ=-NFREQ
+	    T1=LOG(LAM_EN/LAM_ST)/(NFREQ-1)
+	    DO I=1,NFREQ
+	      XNU(I)=EXP( LOG(LAM_ST)+(I-1)*T1 )
+	    END DO
+	  ELSE
+	    LINX=.TRUE.
+	    T1=(LAM_EN-LAM_ST)/(NFREQ-1)
+	    DO I=1,NFREQ
+	      XNU(I)=LAM_ST+(I-1)*T1
+	    END DO
+	  END IF
+!
+	  DO I=1,NUM_IONS
+	    IF(XSPEC .EQ. UC(ION_ID(I)))THEN
+	      ID=I
+	      EXIT
+	    END IF
+	  END DO
+	  DEFAULT='LTE'
+	  CALL USR_OPTION(TWO_PHOT_OPTION,'OPT','LTE','Two photon option: LTE, NOSTIM, RAD, and OLD_DEF')
+!
+	  XAXSAV=XAXIS
+	  CALL USR_OPTION(ELEC,'OPAC','F','Plot opacity instead of emissivity?')
+	  DO ML=1,NFREQ
+	    ETA(1:ND)=0.0D0; CHI(1:ND)=0.0D0
+	    CALL TWO_PHOT_OPAC_DISP_V3(ETA,CHI,ATM(ID)%XzV_F,T,XNU(ML),TWO_PHOT_OPTION,ID,ND,ATM(ID)%NXzV_F)
+	    IF(ELEC)THEN
+	      YV(ML)=CHI(1)
+	      WV(ML)=CHI(ND/2)
+	      ZV(ML)=CHI(ND)
+	    ELSE
+	      YV(ML)=ETA(1)
+	      WV(ML)=ETA(ND/2)
+	      ZV(ML)=ETA(ND)
+	    END IF
+	  END DO
+	  IF(ELEC)THEN
+	    YAXIS='Opacity'
+	  ELSE
+	    YAXIS='Emissivity'
+	  END IF
+!
+	  CALL USR_OPTION(ELEC,'PHOT','F','Plot photon emission rate instead of emissivity?')
+	  IF(ELEC)THEN
+	    DO ML=1,NFREQ
+	      T1=4.0D0*PI/6.626D-27/1.0D+15/XNU(ML)/1.0D+10
+	      YV(ML)=YV(ML)*T1/ATM(ID)%XzV_F(2,1)
+	      WV(ML)=WV(ML)*T1/ATM(ID)%XzV_F(2,ND/2)
+	      ZV(ML)=ZV(ML)*T1/ATM(ID)%XzV_F(2,ND)
+	    END DO
+	    YAXIS='# of photons/s/Hz'
+	  END IF
+!
+	  XAXIS='\gv(10\u15\d Hz)'
+	  CALL DP_CURVE(NFREQ,XNU,YV)
+	  CALL DP_CURVE(NFREQ,XNU,WV)
+	  CALL DP_CURVE(NFREQ,XNU,ZV)
 !
 ! Estimate the effective absorbative optical depth scale for Gamma-rays.
 !
@@ -5562,7 +5902,7 @@ c
 	        YV(I)=-30.0
 	      END IF
 	    END DO
-	    YAXIS='\gt\dstat\u'
+	    YAXIS='Log(\gt\dstat\u)'
 	  ELSE
 	    DO I=1,ND
 	      YV(I)=CHIL(I)*R(I)*2.998E-10/FREQ/V(I)
@@ -5573,7 +5913,7 @@ c
 	        YV(I)=-20.0
 	      END IF
 	    END DO
-	    YAXIS='\gt\dSob\u'
+	    YAXIS='Log(\gt\dSob\u)'
 	  END IF
 	  CALL DP_CURVE(ND,XV,YV)
 !

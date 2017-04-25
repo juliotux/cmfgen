@@ -9,6 +9,7 @@
 	1            INBC,THK,INNER_BND_METH,ND,METHOD)
 	IMPLICIT NONE
 !
+! Altered 15-Jan-2015 - Added check for -ve intensities. 
 ! Altered 07-Jun-2010 - Changed to V2. Changed DIF to INNER_BND_METH.
 ! Altered 24-May-1996 - Call to DP_ZERO deleted; IONE isnatlled in THOMAS call.
 ! Created 12-JUN-1991 - Based on JFEAUNEW. HBC replaced by HBC_J and HBC_S.
@@ -111,6 +112,14 @@
 ! Find the solution
 !
 	CALL THOMAS(TA,TB,TC,RJ,ND,IONE)
+!
+	IF(MINVAL(RJ) .LE. 0)THEN
+	  WRITE(6,*)'Error in FQCOMP_IBC -- -ve mean intensities'
+	  DO I=1,ND
+	     WRITE(6,'(I4,6ES14.6)')I,RJ(I),CHI(I),DTAU(I),ZETA(I),THETA(I),F(I),Q(I)
+	  END DO
+	  STOP
+	END IF
 !
 	RETURN
 	END

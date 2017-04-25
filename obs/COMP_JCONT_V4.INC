@@ -2,8 +2,11 @@
 ! Program section to compute the continuum intensity. Opacities must have
 ! previuosly been evaluated.
 !
+! Altered 22-Apr-2015 - Added USE_DR4JDT option. Changed to MOM_J_DDT_V3
+! Altered 09-Jun-2015 - The frequency in EDDFACTOR etc now only have to be accurate to 1 part in 1.0D-14.
+!                          (after Ralph Sutherland, although % comparison.)
 ! Altered 14-mar-2013 - When useing EDDINGTON we now call jfeau_ibc_v2.f and fqcomp_ibc_v2.f.
-!                          These handle a hollow core/zero flux inner bundary condition.
+!                          These handle a hollow core/zero flux inner boundary condition.
 ! Altered 10-Apr-2011 - Bug fix: HFLUX_AT_OB and HFLUX_AT_IB were not
 !                         being correctly set for normal wind calculation. Only
 !                         effects  output to FLUX_FILE.
@@ -70,7 +73,7 @@
 	  IF(FIRST_FREQ)WRITE(LUER,*)'Setting flux for hollow core in CMF_FLUX_SUB_V5'
 	END IF
 !
-! Switch to using CHI_CLUMP, ETA_CLUMP, and ESEC_CLUMP in case the model 
+! Switch to using CHI_CLUMP, ETA_CLUMP, and ESEC_CLUMP in case the model
 ! has clumping.
 !
 	CHI_CLUMP(1:ND)=CHI(1:ND)*CLUMP_FAC(1:ND)
@@ -80,7 +83,7 @@
 	CHI_SCAT_CLUMP(1:ND)=CHI_SCAT(1:ND)*CLUMP_FAC(1:ND)
 !
 ! 
-!                            
+!
 	IF(CONT_VEL .AND. USE_FIXED_J)THEN
 	  IF(ACCURATE)THEN
 	    CALL RD_CONT_J_OBS(RJEXT,FL,FREQ_INDX,FIRST_FREQ,
@@ -113,7 +116,7 @@
 	ELSE IF(.NOT. CONT_VEL .AND. THIS_FREQ_EXT)THEN
 !
 ! Solve for the mean intensity J . We can either solve for J with or without
-! Eddington factors. Generally use Eddington factors when there is many 
+! Eddington factors. Generally use Eddington factors when there is many
 ! grid points.
 !
 	  CALL TUNE(IONE,'JFEAUEXT')
@@ -134,11 +137,11 @@
 	    END DO
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJEXT(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of mean intensity'
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - 1 incorrect reading of mean intensity'
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
-	      STOP                
+	      STOP
 	    END IF
 	  END IF
 !
@@ -178,10 +181,10 @@
 	      L=L+1
 	      IF(L .GT. 15)THEN
 	         WRITE(LUER,*)'Possible error converging f - T1 is',T1
-	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION 
+	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION
 	      	 INACCURATE=.FALSE.
 	      END IF
-	
+
 	    END DO
 !
 ! Put accurate calculation of J on old grid.
@@ -216,7 +219,7 @@
 	1                      NDEXT,CHI_CLUMP,CHI_RAY_CLUMP,CHI_SCAT_CLUMP,ND)
 !
 ! NB: CHI_PREV is used to refer to the continuum opacity at the previous
-! frequency. Is does not need to be multiplied by CLUMP_FAC, as it is 
+! frequency. Is does not need to be multiplied by CLUMP_FAC, as it is
 ! compared directly to CHI_CONT. Since it is used for describing the
 ! variation in chi from one frequency to the next, we also do not need to
 ! use the extended vectors.
@@ -260,10 +263,10 @@
 	    END IF
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJEXT(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - 2 incorrect reading of'//
 	1                  ' the mean intensity'
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP
 	    END IF
@@ -273,10 +276,10 @@
 !
 	  IF(.NOT. COHERENT_ES)THEN
 	    READ(LU_ES,REC=ACCESS_F)(RJEXT_ES(I),I=1,NDEXT),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - 3 incorrect reading of'//
 	1                ' the mean intensity'
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP
 	    END IF
@@ -341,8 +344,8 @@
 ! RSQHNU/TB not needed as computed by MOM routines.
 !	     CALL UNGRID(RSQHNU,ND,TB,NDEXT,POS_IN_NEW_GRID)
 !
-! We assume Rayleigh scattering, when present, is coherent in the CMF. 
-! NB: We have to pass a non zero CHI_RAY_EXT to MOM_J_CMF_V6, since it is 
+! We assume Rayleigh scattering, when present, is coherent in the CMF.
+! NB: We have to pass a non zero CHI_RAY_EXT to MOM_J_CMF_V6, since it is
 ! interpolated in the LOG plane.
 !
 	     IF(COHERENT_ES)THEN
@@ -373,21 +376,21 @@
 	       HFLUX_AT_OB=HBC_CMF(1)*RJ(1)-HBC_CMF(2)
 	       IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
 	     ELSE IF(USE_DJDT_RTE)THEN
-	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
-	      CALL MOM_J_DDT_V2(TA,CHIEXT,TB,
+	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V4'
+	      CALL MOM_J_DDT_V4(TA,CHIEXT,TB,
 	1              VEXT,REXT,FEDD,RJEXT,RSQHNU,XM,                  !Use XM for DJDt_TERM,
 	1              HFLUX_AT_IB,HFLUX_AT_OB,
 	1              VDOP_VEC_EXT,DELV_FRAC_MOM,FL,dLOG_NU,DBB,
-	1              INNER_BND_METH,OUTER_BND_METH,
+	1              H_CHK_OPTION,INNER_BND_METH,OUTER_BND_METH,
 	1              METHOD,COHERENT_ES,FIRST_FREQ,NEW_FREQ,
-	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NCEXT,NPEXT,NDEXT,NCF)
+	1              INCL_DJDT_TERMS,USE_DR4JDT,DJDT_RELAX_PARAM,NCEXT,NPEXT,NDEXT,NCF)
 
              ELSE IF(USE_J_REL)THEN
-	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_JREL_V7 with accurate grid'
-	       CALL MOM_JREL_V7(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
+	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_JREL_V8 with accurate grid'
+	       CALL MOM_JREL_V8(TA,CHIEXT,TB,VEXT,SIGMAEXT,REXT,
 	1             RJEXT,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,
-	1             VDOP_VEC_EXT,DELV_FRAC_MOM,FL,dLOG_NU,DBB,IB_STAB_FACTOR,
-	1             INNER_BND_METH,OUTER_BND_METH,
+	1             VDOP_VEC_EXT,DELV_FRAC_MOM,FL,dLOG_NU,DBB,H_CHK_OPTION,
+	1             IB_STAB_FACTOR,INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,L_TRUE,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,NDEXT)
                  IF(LST_ITERATION)THEN
@@ -432,7 +435,7 @@
 	      IF(L .LT. 20 .OR. COMPUTE_EDDFAC)THEN
 	        T1=0.0D0
 	        DO I=1,NDEXT
-	          T1=MAX(ABS(FOLD(I)-FEDD(I)),T1)        
+	          T1=MAX(ABS(FOLD(I)-FEDD(I)),T1)
 	          FOLD(I)=FEDD(I)
 	        END DO
 	        IF(T1 .GT. ACC_EDD_FAC)INACCURATE=.TRUE.
@@ -440,7 +443,7 @@
 !
 	      IF(L .GT. 10)THEN
 	         WRITE(LUER,*)'Possible error converging f - T1 is',T1
-	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION 
+	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION
 	      	 INACCURATE=.FALSE.
 	      END IF
 	    END DO
@@ -481,7 +484,7 @@
 	    IF(T1 .NE. 0)T1=200.0D0*(RJ(1)-TC(1))/T1
 	    T2=ABS(RJ(ND))+ABS(TC(NDEXT))
 	    IF(T2 .NE. 0)T2=200.0D0*(RJ(ND)-TC(NDEXT))/T2
-	    IF(FIRST_FREQ)THEN                 
+	    IF(FIRST_FREQ)THEN
 	      OPEN(UNIT=LU_JCOMP,STATUS='UNKNOWN',FILE='J_COMP')
 	      WRITE(LU_JCOMP,'(A)')' '
 	      WRITE(LU_JCOMP,'(A)')'Comparison of J at Outer and Inner',
@@ -538,7 +541,7 @@
 	        TA(1:NDEXT)=ETAEXT(1:NDEXT)+ESECEXT(1:NDEXT)*RJEXT_ES(1:NDEXT)+
 	1           CHI_RAY_EXT(1:NDEXT)*RJEXT(1:NDEXT)
 	      END IF
-!                             
+!
 ! NB Using TA for ETA, U for P_OBS (temporay measure), I for NP_OBS.
 !
 	      CALL TUNE(IONE,'CMF_FORM_SOL')
@@ -613,10 +616,10 @@
 	    END IF
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJ(I),I=1,ND),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - 4 incorrect reading of'//
 	1                  ' the mean intensity'
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP
 	    END IF
@@ -626,10 +629,10 @@
 !
 	  IF(.NOT. COHERENT_ES)THEN
 	    READ(LU_ES,REC=ACCESS_F)(RJ_ES(I),I=1,ND),T1
-	    IF(T1 .NE. FL)THEN
-	      WRITE(LUER,*)'Error - incorrect reading of'//
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - 5 incorrect reading of'//
 	1                ' the mean intensity'
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP
 	    END IF
@@ -675,7 +678,7 @@
 	1                  VDOP_VEC,DELV_FRAC_FG,REXT_FAC,
 	1                  METHOD,FIRST_FREQ,NEW_FREQ,NC,NP,ND)
 	       INBC=0.0D0
-	     ELSE 
+	     ELSE
 	        IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling FG_J_CMF_V12'
 	        CALL FG_J_CMF_V12(TA,CHI_CLUMP,CHI_SCAT_CLUMP,V,SIGMA,R,P,
 	1                  TC,FEDD,AQW,HQW,KQW,NQW,HMIDQW,NMIDQW,
@@ -688,8 +691,8 @@
 	     CALL TUNE(ITWO,'FG_J_CMF')
 !
 ! We assume that the Rayleig scattering component is coherent.
-! Only the e.s. component may be incoherent. NB: We have to pass 
-! a non zero CHI_RAY to MOM_J_CMF_V6, since it is interpolated 
+! Only the e.s. component may be incoherent. NB: We have to pass
+! a non zero CHI_RAY to MOM_J_CMF_V6, since it is interpolated
 ! in the LOG plane.
 !
 	     IF(COHERENT_ES)THEN
@@ -721,21 +724,21 @@
                IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
 !
 	    ELSE IF(USE_DJDT_RTE)THEN
-	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V2'
-	      CALL MOM_J_DDT_V2(TA,CHI_CLUMP,TB,
+	      IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_J_DDT_V3'
+	      CALL MOM_J_DDT_V4(TA,CHI_CLUMP,TB,
 	1              V,R,FEDD,RJ,RSQHNU,XM,                    !Use TC for DJDt_TERM,
 	1              HFLUX_AT_IB,HFLUX_AT_OB,
 	1              VDOP_VEC,DELV_FRAC_MOM,FL,dLOG_NU,DBB,
-	1              INNER_BND_METH,OUTER_BND_METH,
+	1              H_CHK_OPTION,INNER_BND_METH,OUTER_BND_METH,
 	1              METHOD,COHERENT_ES,FIRST_FREQ,NEW_FREQ,
-	1              INCL_DJDT_TERMS,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
+	1              INCL_DJDT_TERMS,USE_DR4JDT,DJDT_RELAX_PARAM,NC,NP,ND,NCF)
 
              ELSE IF(USE_J_REL)THEN
 	       IF(FG_COUNT .EQ. 1)WRITE(LUER,*)'Calling MOM_JREL_V7'
-	       CALL MOM_JREL_V7(TA,CHI_CLUMP,TB,V,SIGMA,R,
+	       CALL MOM_JREL_V8(TA,CHI_CLUMP,TB,V,SIGMA,R,
 	1             RJ,RSQHNU,HFLUX_AT_IB,HFLUX_AT_OB,VDOP_VEC,DELV_FRAC_MOM,
-	1             FL,dLOG_NU,DBB,IB_STAB_FACTOR,
-	1             INNER_BND_METH,OUTER_BND_METH,
+	1             FL,dLOG_NU,DBB,H_CHK_OPTION,
+	1             IB_STAB_FACTOR,INNER_BND_METH,OUTER_BND_METH,
 	1             METHOD,L_TRUE,N_TYPE,
 	1             INCL_ADVEC_TERMS_IN_TRANS_EQ,INCL_REL_TERMS,FIRST_FREQ,ND)
                IF(LST_ITERATION)THEN
@@ -759,7 +762,7 @@
 	1              N_TYPE,METHOD,L_TRUE,IONE,
 	1              FIRST_FREQ,NEW_FREQ,NC,NP,ND)
                IF(.NOT. DIF)HFLUX_AT_OB=0.5D0*IC*(0.5D0+INBC)-INBC*RJ(ND)
-               HFLUX_AT_IB=HBC_CMF(1)*RJ(1)
+               HFLUX_AT_OB=HBC_CMF(1)*RJ(1)
 	     END IF
 	     CALL TUNE(ITWO,'MOM_J_CMF')
 !
@@ -779,7 +782,7 @@
 	      IF(L .LT. 20 .OR. COMPUTE_EDDFAC)THEN
 	        T1=0.0D0
 	        DO I=1,ND
-	          T1=MAX(ABS(FOLD(I)-FEDD(I)),T1)        
+	          T1=MAX(ABS(FOLD(I)-FEDD(I)),T1)
 	          FOLD(I)=FEDD(I)
 	        END DO
 	        IF(T1 .GT. ACC_EDD_FAC)INACCURATE=.TRUE.
@@ -787,7 +790,7 @@
 !
 	      IF(L .GT. 10)THEN
 	         WRITE(LUER,*)'Possible error converging f - T1 is',T1
-	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION 
+	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION
 	      	 INACCURATE=.FALSE.
 	      END IF
 	    END DO
@@ -843,7 +846,7 @@
      	        TA(1:ND)=ETA_CLUMP(1:ND)+ESEC_CLUMP(1:ND)*RJ_ES(1:ND) +
 	1                                  CHI_RAY_CLUMP(1:ND)*RJ(1:ND)
 	      END IF
-!                             
+!
 ! NB Using TA for ETA, U for P_OBS (temporay measure), I for NP_OBS.
 !
 	      CALL TUNE(IONE,'CMF_FORM_SOL')
@@ -871,7 +874,7 @@
 	    IF(T1 .NE. 0)T1=200.0D0*(RJ(1)-TC(1))/T1
 	    T2=ABS(RJ(ND))+ABS(TC(ND))
 	    IF(T2 .NE. 0)T2=200.0D0*(RJ(ND)-TC(ND))/T2
-	    IF(FIRST_FREQ)THEN                 
+	    IF(FIRST_FREQ)THEN
 	      OPEN(UNIT=LU_JCOMP,STATUS='UNKNOWN',FILE='J_COMP')
 	      WRITE(LU_JCOMP,'(A)')' '
 	      WRITE(LU_JCOMP,'(A)')'Comparison of J at Outer and Inner',
@@ -907,9 +910,9 @@
 	    END DO
 	  ELSE
 	    READ(LU_EDD,REC=ACCESS_F)(RJ(I),I=1,ND),T1
-	    IF(T1 .NE. FL)THEN        
-	      WRITE(LUER,*)'Error - incorrect reading of Mean Intensity' 
-	      WRITE(LUER,*)'Frequency is ',FL,'Old Frequency is ',T1
+	    IF(ABS(T1-FL)/FL .GT. 1.0D-14)THEN
+	      WRITE(LUER,*)'Error - incorrect reading of Mean Intensity'
+	      WRITE(LUER,*)'Intensity is ',FL,'Old Intensity is ',T1
 	      WRITE(LUER,*)'Error occurred in '//SECTION
 	      STOP
 	    END IF
@@ -947,15 +950,15 @@
 	          FOLD(I)=FEDD(I)
 	        END DO
 	        IF(T1 .GT. ACC_EDD_FAC)INACCURATE=.TRUE.
-	      END IF       
+	      END IF
 !
 	      L=L+1
 	      IF(L .GT. 15)THEN
 	         WRITE(LUER,*)'Possible error converging f - T1 is',T1
-	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION 
+	         WRITE(LUER,*)'Frequency is ',FL,' in section '//SECTION
 	      	 INACCURATE=.FALSE.
 	      END IF
-	
+
 	    END DO
 !
 	    DO I=1,ND

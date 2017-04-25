@@ -65,7 +65,11 @@
 !
 ! Add in 2-photon emissivity and opacity.
 !
-	  CALL TWO_PHOT_OPAC(ETA,CHI,POPS,T,CONT_FREQ,ND,NT)
+	  IF(COMPUTE_EDDFAC .AND. TWO_PHOTON_METHOD .EQ. 'USE_RAD')THEN
+	    CALL TWO_PHOT_OPAC_V3(ETA,CHI,POPS,T,CONT_FREQ,'OLD_DEFAULT',ND,NT)
+	  ELSE
+	    CALL TWO_PHOT_OPAC_V3(ETA,CHI,POPS,T,CONT_FREQ,TWO_PHOTON_METHOD,ND,NT)
+	  END IF
 !
 ! Compute X-ray opacities and emissivities (at local electron temp).
 !
@@ -102,8 +106,8 @@
 ! LTE and is given by
 !                     ETA/(2hv^3/c^2)
 ! we can adjust CHI and ETA so that the condition of constant photoionization
-! cross-section is met. This adjustment automatically ensures that ETA/CHI 
-! gives the Planck function in LTE. 
+! cross-section is met. This adjustment automatically ensures that ETA/CHI
+! gives the Planck function in LTE.
 !
 	  T1=(FL/CONT_FREQ)**3
 	  T2=TWOHCSQ*(CONT_FREQ**3)
@@ -127,38 +131,80 @@
 ! local electron temperature.
 !
 	IF(XRAYS)THEN
-!	  IF(FILL_VEC_SQ(1) .EQ. 0)THEN
+
+	  IF(FF_XRAYS)THEN
+
+! Since T_SHOCK is depth indpendent, Z^2 * (the free-free Gaunt factors)
+! are depth independent.
+!
+! We use T3 for the Electron density. We asume H, He, and C are fully ionized
+! in the X-ray emitting plasma. All other species are assumed to have Z=6.0
+!
 	    DO I=1,ND
-	      FILL_VEC_SQ(I)=4.0*FILL_FAC_XRAYS*FILL_FAC_XRAYS*
-	1                   EXP(-V_SHOCK/V(I))
+	      ZETA(I)=0.D0	 !Zeta is temporary
 	    END DO
-!	  END IF
+	    IF((T_SHOCK_1.GT.0.0D0).AND.(FILL_FAC_XRAYS_1.GT.0.D0))THEN
+	      T1=CHIFF*TWOHCSQ*(FILL_FAC_XRAYS_1**2)*
+	1                    EXP(-HDKT*CONT_FREQ/T_SHOCK_1)/SQRT(T_SHOCK_1)
+	      T2=1.0D0 ; TA(1)=GFF(CONT_FREQ,T_SHOCK_1,T2)
+	      T2=2.0D0 ; TA(2)=4.0D0*GFF(CONT_FREQ,T_SHOCK_1,T2)
+	      T2=6.0D0 ; TA(3)=36.0D0*GFF(CONT_FREQ,T_SHOCK_1,T2)
+	      DO I=1,ND
+	        T2=TA(1)*POP_SPECIES(I,1)+TA(2)*POP_SPECIES(I,2) +
+	1         TA(3)*(POP_ATOM(I)-POP_SPECIES(I,1)-POP_SPECIES(I,2))
+	        T3=POP_SPECIES(I,1)+POP_SPECIES(I,2) +
+	1          6.0D0*(POP_ATOM(I)-POP_SPECIES(I,1)-POP_SPECIES(I,2))
+	        ZETA(I)=ZETA(I)+T1*T2*T3*EXP(-V_SHOCK_1/V(I))	 !Zeta is temporary
+              END DO
+	    END IF
+	    IF((T_SHOCK_2 .GT. 0.0D0).AND.(FILL_FAC_XRAYS_2.GT.0.D0))THEN
+	      T1=CHIFF*TWOHCSQ*(FILL_FAC_XRAYS_2**2)*
+	1                    EXP(-HDKT*CONT_FREQ/T_SHOCK_2)/SQRT(T_SHOCK_2)
+	      T2=1.0D0 ; TA(1)=GFF(CONT_FREQ,T_SHOCK_2,T2)
+	      T2=2.0D0 ; TA(2)=4.0D0*GFF(CONT_FREQ,T_SHOCK_2,T2)
+	      T2=6.0D0 ; TA(3)=36.0D0*GFF(CONT_FREQ,T_SHOCK_2,T2)
+	      DO I=1,ND
+	        T2=TA(1)*POP_SPECIES(I,1)+TA(2)*POP_SPECIES(I,2) +
+	1       TA(3)*(POP_ATOM(I)-POP_SPECIES(I,1)-POP_SPECIES(I,2))
+	        T3=POP_SPECIES(I,1)+POP_SPECIES(I,2) +
+	1          6.0D0*(POP_ATOM(I)-POP_SPECIES(I,1)-POP_SPECIES(I,2))
+	        ZETA(I)=ZETA(I)+T1*T2*T3*EXP(-V_SHOCK_2/V(I))	 !Zeta is temporary
+            END DO
+	    END IF
+
+	  ELSE
+
 !
-! Since T_SHOCK is depth indpendent, we can compute the free-free
-! Gaunt factors are depth independent.
+! Use X-ray emission as tubulated by a PLASMA code. Emission should  be
+! tabulated per electron and per ion.
 !
-! ####
+	    CALL GET_SCL_XRAY_FLUXES_V1(CONT_FREQ,
+	1              XRAY_EMISS_1,XRAY_EMISS_2,
+	1              NU_EVAL_CONT,NCF,FREQ_INDX,
+	1              VSMOOTH_XRAYS,SECTION)
 !
-	  DO I=1,ND
-	    T2=I
-	    IF(I .GT. 6.0D0)T2=6.0D0
-	    TA(I)=GFF(CONT_FREQ,T_SHOCK,T2)
-	  END DO
-!
-	  T1=CHIFF*TWOHCSQ*EXP(-HDKT*CONT_FREQ/T_SHOCK)/SQRT(T_SHOCK)
-	  DO I=1,ND
-	    T2=0.0D0
-	    DO ID=1,NUM_IONS
-	      IF(ATM(ID)%XzV_PRES)T2=T2+ATM(ID)%ZXzV*ATM(ID)%ZXzV*
-	1                ATM(ID)%DXzV(I)*TA(NINT(ATM(ID)%ZXzV))
+! We use T3 for the Electron density. We asume H, He, and C are fully ionized
+! in the X-ray emitting plasma. All other species are assumed have Z=6.0
+	    DO I=1,ND
+	    T1=0.D0
+	    T2=0.D0
+	    ZETA(I)=0.D0
+	    IF(FILL_FAC_XRAYS_1.GT.0.D0) T1=EXP(-V_SHOCK_1/V(I))*(FILL_FAC_XRAYS_1)**2
+	    IF(FILL_FAC_XRAYS_2.GT.0.D0) T2=EXP(-V_SHOCK_2/V(I))*(FILL_FAC_XRAYS_2)**2
+	    T3=POP_SPECIES(I,1)+2.0D0*POP_SPECIES(I,2)+
+	1            6.0D0*(POP_ATOM(I)-POP_SPECIES(I,1)-POP_SPECIES(I,2))
+	    ZETA(I)=(T1*XRAY_EMISS_1+T2*XRAY_EMISS_2)*T3*POP_ATOM(I)
 	    END DO
-	    ZETA(I)=T1*T2*FILL_VEC_SQ(I)*ED(I)	!Zeta is temporary
-            ETA(I)=ETA(I)+ZETA(I)
-          END DO
-!
+
+	  END IF
+
+	  IF(XRAY_SMOOTH_WIND)ZETA(1:ND)=ZETA(1:ND)*CLUMP_FAC(1:ND)
+	  ETA(1:ND)=ETA(1:ND)+ZETA(1:ND)
+
 	  IF(SECTION .EQ. 'CONTINUUM')THEN
 	    IF(ML .EQ. 1)XRAY_LUM(1:ND)=0.0D0
-	    XRAY_LUM(1:ND)=XRAY_LUM(1:ND)+ZETA(1:ND)*FQW(ML)
+	    TA(1:ND)=ZETA(1:ND)*CLUMP_FAC(1:ND)*FQW(FREQ_INDX)
+	    XRAY_LUM(1:ND)=XRAY_LUM(1:ND)+TA(1:ND)
 	  END IF
 	END IF
 !
@@ -167,10 +213,10 @@
 !
           DO I=1,ND
             IF(ETA(I) .LT. 1.0D-280)ETA(I)=1.0D-280
-          END DO                                   
+          END DO
 !
 ! The continuum source function is defined by:
-!                                              S= ZETA + THETA.J
+!     S= ZETA + THETA.J
 	DO I=1,ND
 	  ZETA(I)=ETA(I)/CHI(I)
 	  THETA(I)=CHI_SCAT(I)/CHI(I)

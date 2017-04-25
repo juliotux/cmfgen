@@ -7,6 +7,7 @@ C
 	1                 FL,DIF,DBB,IC,THICK,DIE,NC,NP,ND,METHOD)
 	IMPLICIT NONE
 C
+C Altered 26-Oct-2014 : We now write ABS(dmuV/dz) so as to handle non-monotonic velocity laws.
 C Altered 19-Nov-1998 : Adapted to allow only 1 or 2 points along a r ray.
 C                         (i.e. so can be run with NP=ND+NC).
 C                         Changes follow SOBJBAR_SIM.
@@ -113,7 +114,7 @@ C
 C NB: GAM is the angle dependent SOBOLEV optical depth.
 C
 	    DO I=1,NI
-	      GAM(I)=GAMH(I)/(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
+	      GAM(I)=GAMH(I)/ABS(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
 	    END DO
 C
 	    IF(DIF .AND. LS .LE. NC)THEN

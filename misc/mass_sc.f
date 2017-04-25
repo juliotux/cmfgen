@@ -175,6 +175,7 @@
 !
 ! Copute the relative fractional populations.
 !
+	  NHE=0.0D0
 	  DO I=1,N
 	    NEW_ABUND(I,J)=NEW_MASS_FRAC(I,J)*MASS/AT_MASS(I)
 	    IF(SYMB(I) .EQ. 'He')NHE=NEW_ABUND(I,J)

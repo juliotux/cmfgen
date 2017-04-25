@@ -10,6 +10,7 @@
 	1                 FL,INNER_BND_METH,DBB,IC,THICK,DIE,NC,NP,ND,METHOD)
 	IMPLICIT NONE
 !
+! Altered 26-Oct-2014 : We now write ABS(dmuV/dz) so as to handle non-monotonic velocity laws.
 ! Altered 07-Jun-2010: Changed to THOMAS_RH to handle later stages of SN.
 !                        Replaced DIF variable by INNER_BND_METH.
 ! Created 24-Oct-2001: Based on SOBEW
@@ -123,7 +124,7 @@
 ! NB: GAM is the angle dependent SOBOLEV optical depth.
 !
 	    DO I=1,NI
-	      GAM(I)=GAMH(I)/(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
+	      GAM(I)=GAMH(I)/ABS(1.0D0+Z(I)*Z(I)/R(I)/R(I)*SIGMA(I))
 	    END DO
 !
 ! Compute optical depth increments.
@@ -285,7 +286,5 @@
 	  FORCE_MULT(I)=FORCE_MULT(I)+GLINE(I)*T1*R(I)*R(I)*CHIL(I)/ESEC(I)
 	END DO
 !
-	WRITE(6,*)'JFLUX=',JFLUX
-	WRITE(6,*)'Called SOBEW_GRAD_V2'
 	RETURN
 	END

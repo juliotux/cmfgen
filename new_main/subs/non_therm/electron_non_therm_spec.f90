@@ -4,6 +4,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered 15-Jun-2016 : NT_ITERATION_COUNTER is now defined in CONTROL_VARIABLE_MOD
 ! Altered 23-Feb-2102 : ASUM was changed to QSUM, since A can be zero for some transition.
 ! Altered 16-Feb-2012 : Cleaned (many prior changes to this date also).
 ! Altered  1-Dec-2011 : Included NON_THERM_IT_CNTRL and NT_OMIT_ION_SCALE.
@@ -92,7 +93,6 @@
 	INTEGER, PARAMETER :: LU_TH=8
 	integer, parameter :: LU_BETHE = 100
 	LOGICAL, SAVE :: FIRST_TIME=.TRUE.
-	INTEGER, SAVE :: NT_ITERATION_COUNTER
 	LOGICAL DO_LOC_CHK
 !
 	LOGICAL INJECT_DIRAC_AT_EMAX

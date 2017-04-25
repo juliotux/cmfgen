@@ -18,6 +18,9 @@ C
 C
 	IMPLICIT NONE
 C
+C Altered 18-Jan-2015 : Added REM_BP (automatic removal of bad pixel).
+C Altered 04-Nov-2015 : Fixed SMC redenning law in optical. Previous formula only
+C                         valid for UV. Joined UV smoothly (at 2950A) to CCM law with R=2.74.
 C Altered 15-Mar-2011 : SMC reddening law added (done by Kathryn Neugent).
 C                       RED option installed -- crude method to get redenning.
 C                       Crude procedure to remove cosmic rays (or spikes) form observed
@@ -31,7 +34,7 @@ C
 C
 C Determines largest single plot that can read in.
 C
-	INTEGER, PARAMETER :: NCF_MAX=1000000
+	INTEGER, PARAMETER :: NCF_MAX=3000000
 C
 C Used to indicate number of data points in BB spectrum
 c
@@ -81,6 +84,7 @@ C
 	REAL*8 DNU
 	REAL*8 BB_FLUX
 	REAL*8 SCALE_FAC
+	REAL*8 XFAC
 	REAL*8 ADD_FAC
 	REAL*8 LAMC
 	REAL*8 RAD_VEL			!Radial velcity in km/s
@@ -91,6 +95,7 @@ C
 	LOGICAL NON_MONOTONIC
 	LOGICAL SMOOTH			!Smooth observational data?
 	LOGICAL CLEAN			!Remove IUE bad pixels?
+	LOGICAL REMOVE_BAD_PIX
 	LOGICAL CLN_CR			!Remove cosmic-ray spikes
 	LOGICAL TREAT_AS_MOD		
 	LOGICAL READ_OBS
@@ -102,6 +107,7 @@ C
 	LOGICAL UNEQUAL
 	LOGICAL LOG_X,LOG_Y
 	CHARACTER*10 Y_PLT_OPT,X_UNIT
+	CHARACTER*80 IS_FILE
 	CHARACTER*80 FILENAME
 	CHARACTER*80 DIRECTORY 
 	CHARACTER*80 XKEY,YKEY
@@ -356,10 +362,11 @@ C
 	  IF(.NOT. LOG_Y)WRITE(T_OUT,*)'Now using Linear Y axis'
 	ELSE IF(X(1:2) .EQ.'YU' .OR. X(1:6) .EQ. 'YUNITS')THEN
 	  CALL USR_OPTION(Y_PLT_OPT,'Y_UNIT',' ',
-	1          'FNU, NU_FNU, FLAM')
+	1          'FNU, NU_FNU, FLAM, LAM_FLAM')
 	  CALL SET_CASE_UP(Y_PLT_OPT,IZERO,IZERO)
 	  IF(Y_PLT_OPT .NE. 'FNU' .AND.
 	1        Y_PLT_OPT .NE. 'NU_FNU' .AND.
+	1        Y_PLT_OPT .NE. 'LAM_FLAM' .AND.
 	1        Y_PLT_OPT .NE. 'FLAM')THEN
 	     WRITE(T_OUT,*)'Invalid Y Plot option: Try again'
 	  END IF
@@ -371,6 +378,14 @@ C
 	  CALL USR_OPTION(FILENAME,'File',' ','Model file')
 	  CALL USR_HIDDEN(OVER,'OVER','F','Overwrite existing model (buffer) data')
 	  CALL USR_HIDDEN(SCALE_FAC,'SCALE','1.0D0',' ')
+	  CALL USR_HIDDEN(XFAC,'XFAC','1.0D0',' ')
+	  CALL USR_HIDDEN(RAD_VEL,'RAD_VEL','0.0D0','Radial velocity(km/s) of star')
+	  IF(XFAC .NE. 1.0D0 .AND. RAD_VEL .NE. 0.0D0)THEN
+	    WRITE(6,*)'Only one of XFAC and RAD_VEL can be changed from their default values of 1 and 0'
+	    GOTO 1
+	  ELSE IF(RAD_VEL .NE. 0.0D0)THEN
+	    XFAC=(1.0D0+1.0D+05*RAD_VEL/C_CMS)
+	  END IF
 	  IF(OVER)THEN
 C
 C This option allows all normal model options to be done on the data
@@ -382,13 +397,17 @@ C
 	       GOTO 1		!Get another option
 	    END IF
 	    OVER=.FALSE.
-	    IF(SCALE_FAC .NE. 1)THEN
-	       CALL GEN_IN(OVER,'Do you really want to scale the data')
+!
+	    IF(SCALE_FAC .NE. 1.0D0 .OR. XFAC .NE. 1.0D0)THEN
+	      OBSF(1:NCF)=OBSF(1:NCF)*SCALE_FAC
+	      NU(1:NCF)=NU(1:NCF)*XFAC
+	      WRITE(T_OUT,*)'Model has been scaled!'
+	    ELSE
+	      WRITE(T_OUT,*)'No scaling done with new model data'
 	    END IF
-	    IF(OVER)OBSF(1:NCF)=OBSF(1:NCF)*SCALE_FAC
+! 
 	    WRITE(T_OUT,*)'New model data replaces old data'
 	    WRITE(T_OUT,*)'No plots done with new model data'
-	    WRITE(T_OUT,*)'No scaling done with new model data'
 	  ELSE
 C
 C This option is now similar to RD_CONT
@@ -399,7 +418,7 @@ C
 	       GOTO 1		!Get another option
 	    END IF
 	    DO I=1,NCF_MOD
-	      XV(I)=NU_CONT(I)
+	      XV(I)=NU_CONT(I)*XFAC
 	      YV(I)=OBSF_CONT(I)*SCALE_FAC
 	    END DO
 	    CALL CNVRT(XV,YV,NCF_MOD,LOG_X,LOG_Y,X_UNIT,Y_PLT_OPT,
@@ -432,21 +451,23 @@ C
 ! This option simply reads in data in XY format. No conversion is done to the data.
 ! Comments (bginning with !) and blank lines are ignored in the data file.
 !
-	ELSE IF(X(1:7) .EQ. 'RXY')THEN
+	ELSE IF(X(1:3) .EQ. 'RXY')THEN
 	  FILENAME=' '
 	  CALL USR_OPTION(FILENAME,'File',' ','Model file')
-	  CALL RD_XY_DATA(NU_CONT,OBSF_CONT,NCF_CONT,NCF_MAX,FILENAME,LU_IN,IOS)
+	  CALL RD_XY_DATA_USR(NU_CONT,OBSF_CONT,NCF_CONT,NCF_MAX,FILENAME,LU_IN,IOS)
 	  CALL USR_HIDDEN(OVER,'OVER','F','Overwrite existing model (buffer) data')
 	  IF(OVER .AND. IOS .EQ. 0)THEN
 	    NCF=NCF_CONT
 	    NU(1:NCF)=NU_CONT(1:NCF)
 	    OBSF(1:NCF)=OBSF_CONT(1:NCF)
+	    WRITE(6,*)'As read in to PLT_SPEC buffer, X will assumed to be NU'
 	  ELSE IF(IOS .EQ. 0)THEN
 	    T1=MAXVAL(OBSF_CONT(1:NCF_CONT))
 	    IF(T1 .GT. 1.0D+38)THEN
 	      WRITE(6,*)'Data exceeds single precision range: Maximum=',T1 
 	      WRITE(6,*)'Necessary to scale data for plotting'
-	      CALL GEN_IN(T1,'Factor to divide data by')
+	      T1=1.0D0
+	      CALL USR_OPTION(T1,'SCL_FAC','1.0D+40','Factor to divide data by')
 	      OBSF_CONT(1:NCF_CONT)=OBSF_CONT(1:NCF_CONT)/T1
 	    END IF
 	    CALL DP_CURVE(NCF_CONT,NU_CONT,OBSF_CONT)
@@ -611,11 +632,13 @@ C
 	  CALL USR_HIDDEN(ADD_FAC,'ADD','0.0D0',' ')
 C
 	  RAD_VEL=0.0D0
-	  CALL USR_HIDDEN(RAD_VEL,'RAD_VEL','0.0D0',
-	1             'Radial velocity (+ve if away)')
+	  CALL USR_HIDDEN(RAD_VEL,'RAD_VEL','0.0D0','Radial velocity of star (+ve if away)')
 C
 	  CLEAN=.FALSE.
 	  CALL USR_HIDDEN(CLEAN,'CLEAN','F',' ')
+C
+	  REMOVE_BAD_PIX=.FALSE.
+	  CALL USR_HIDDEN(REMOVE_BAD_PIX,'REM_BP','F','Remove bad pixels? ')
 C
 	  CLN_CR=.FALSE.
 	  CALL USR_HIDDEN(CLN_CR,'CLN_CR','F','Remove cosmic ray spikes? ')
@@ -639,6 +662,9 @@ C
 	  CALL USR_HIDDEN(OBS_COLS,2,2,'COLS','1,2','Columns with data')
 	  CALL RD_OBS_DATA_V2(XV,YV,NCF_MAX,J,FILENAME,OBS_COLS,IOS)
 	  IF(IOS .NE. 0)GOTO 1		!Get another option
+!
+! Convert from Ang (Vacuum) to Hz.
+!
 	  DO I=1,J
 	    XV(I)=ANG_TO_HZ/XV(I)
 	    YV(I)=YV(I)*SCALE_FAC+ADD_FAC
@@ -646,7 +672,7 @@ C
 C
 	  IF(RAD_VEL .NE. 0)THEN
 	    DO I=1,J
-	     XV(I)=XV(I)*(1.0D0-1.0D+05*RAD_VEL/C_CMS)
+	     XV(I)=XV(I)*(1.0D0+1.0D+05*RAD_VEL/C_CMS)
 	    END DO
 	  END IF
 C
@@ -659,7 +685,29 @@ C
 	    DO I=2,J-1
 	      IF(YV(I) .EQ. 0)THEN
 	        YV(I)=0.5D0*(ZV(I-1)+ZV(I+1))
+	      ELSE IF(YV(I) .LT. -1.0D+10)THEN
+	        YV(I)=0.0D0
 	      END IF
+	    END DO
+	  END IF
+!
+	  IF(REMOVE_BAD_PIX)THEN
+	    DO L=3,J-50,90
+	      T1=0.0D0; T2=0.0D0; T3=0.0D0
+	      DO K=L,MIN(L+99,J)
+	        T1=T1+YV(K)
+	        T2=T2+YV(K)*YV(K)
+	        T3=T3+1
+	      END DO
+	      T1=T1/T3
+	      T2=SQRT( (T2-T3*T1*T1)/(T3-1) )
+	      DO K=L+1,MIN(L+98,J-1)
+	        IF( ABS(YV(K)-T1) .GT. 5.0*T2 .AND.
+	1           ABS(YV(K-1)-T1) .LT. 3.0*T2 .AND.
+	1           ABS(YV(K+1)-T1) .LT. 3.0*T2)THEN
+	           YV(K)=0.5D0*(YV(K-1)+YV(K+1))
+	        END IF
+	      END DO
 	    END DO
 	  END IF
 !
@@ -802,16 +850,16 @@ C
 !
 	  CALL USR_HIDDEN(HI_ABS,'HI_ABS','T','Correct for HI absorption')
 	  CALL USR_HIDDEN(H2_ABS,'H2_ABS','T','Correct for HII absorption')
-	  CALL USR_HIDDEN(V_R,'V_R','0.0d0','Radial Velocity (km/s)')
+	  CALL USR_HIDDEN(V_R,'V_R','0.0D0','Radial Velocity (km/s)')
 	  CALL USR_HIDDEN(WAVE_MIN,'WAVE_MIN','900d0','Minimum Wavelength')
-	  CALL USR_HIDDEN(WAVE_MAX,'WAVE_MAX','1300d0','Maximum Wavelength')
-	  CALL USR_HIDDEN(MIN_RES_KMS,'MIN_RES','2.0D0',
-	1                       'Minimum Model Resolution')
+	  CALL USR_HIDDEN(WAVE_MAX,'WAVE_MAX','3000d0','Maximum Wavelength')
+	  CALL USR_HIDDEN(MIN_RES_KMS,'MIN_RES','2.0D0','Minimum Model Resolution')
+	  CALL USR_HIDDEN(IS_FILE,'IS_FILE','IS_LINE_LIST','File wth list and strengths of IS lines')
 !
-	  CALL UVABS(NU,OBSF,NCF,NCF_MAX,
+	  CALL UVABS_V2(NU,OBSF,NCF,NCF_MAX,
      1              T_IN_K,V_TURB,LOG_NTOT,
      1	            LOG_H2_NTOT,V_R,MIN_RES_KMS,WAVE_MAX,WAVE_MIN,
-     1	            HI_ABS,H2_ABS)
+     1	            HI_ABS,H2_ABS,IS_FILE)
 !
 !
 !
@@ -990,8 +1038,9 @@ C
 	  CALL USR_HIDDEN(V_R,'V_R','0.0d0','Radial Velocity (km/s)')
 	  CALL USR_HIDDEN(WAVE_MIN,'WAVE_MINI','900d0','Minimum Wavelength')
 	  CALL USR_HIDDEN(WAVE_MAX,'WAVE_MAXI','1300d0','Maximum Wavelength')
+	  CALL USR_HIDDEN(IS_FILE,'IS_FILE','IS_LINE_LIST','File wth list and strengths of IS lines')
 !
-	  CALL UVABS(NU,OBSF,NCF,NCF_MAX,
+	  CALL UVABS_V2(NU,OBSF,NCF,NCF_MAX,
      1              T_IN_K,V_TURB,LOG_NTOT,
      1	            LOG_H2_NTOT,V_R,MIN_RES_KMS,WAVE_MAX,WAVE_MIN,
      1	            HI_ABS,H2_ABS)
@@ -1095,7 +1144,7 @@ C
 !
 !
 ! Option to do a least fit CCM redenning Law. The observational data
-! should have been read in using RD_OBS, and must be conatined in one file.
+! should have been read in using RD_OBS, and must be contained in one file.
 !
 	ELSE IF(X(1:3) .EQ. 'RED')THEN
 	  IF(NOBS .EQ. 0)THEN
@@ -1110,6 +1159,19 @@ C
 	ELSE IF(X(1:4) .EQ. 'FLAM' .OR. 
 	1     X(1:4) .EQ. 'WRFL' .OR.  X(1:3) .EQ. 'FNU' .OR.
 	1                X(1:4) .EQ. 'EBMV') THEN
+!
+! If NCF is defined, we use that freuqency grid when computing the extinction curve.
+! Otherwise, we define the grid.
+!
+	  IF(X(1:4) .EQ. 'EBMV' .AND. NCF .EQ. 0)THEN
+	    T1=ANG_TO_HZ/900.0D0; T2=ANG_TO_HZ/5.0E+04
+	    NCF=1000
+	    T2=EXP(LOG(T1/T2)/(NCF-1))
+	    NU(1)=T1
+	    DO I=2,NCF
+	      NU(I)=NU(I-1)/T2
+	    END DO
+	  END IF
 !
 	  CALL USR_OPTION(EBMV_CCM,'EBMV_CCM','0.0D0',
 	1             'CCM E(B-V) to correct for I.S. extinction')
@@ -1265,18 +1327,31 @@ C
 	     DO I=1,NCF
 	        T1=ANG_TO_HZ/NU(I)
 	        T1=(10000.0/T1) !1/Lambda(um)
-	        C1=-4.959
-	        C2=2.264*T1
-	        D=(T1**2)/(((T1**2-4.6**2)**2)+(T1**2))
-	        C3=0.389*D
-	        IF(T1 .LT. 5.9)THEN
-	           F=0
-	        ELSE
-	           F=0.5392*((T1-5.9)**2)+0.05644*((T1-5.9)**3)
-	        END IF
-	        C4=0.461*F
-                AL_D_EBmV(I)=C1+C2+C3+C4+R_EXT
-             END DO
+	        IF(T1 .LT. 1.1)THEN
+	          RAX=0.574*(T1**1.61)
+	          RBX=-0.527*(T1**1.61)
+	          AL_D_EBmV(I)=R_EXT*(RAX+RBX/R_EXT)
+	        ELSE IF(T1. LT. 3.39)THEN
+	          T2=T1-1.82
+	          RAX=1+T2*(0.17699-T2*(0.50447+T2*(0.02427-T2*(0.72085
+	1                +T2*(0.01979-T2*(0.77530-0.32999*T2))))))
+	          RBX=T2*(1.41338+T2*(2.28305+T2*(1.07233-T2*(5.38434
+	1                 +T2*(0.62251-T2*(5.30260-2.09002*T2))))))
+	          AL_D_EBmV(I)=R_EXT*(RAX+RBX/R_EXT)
+	        ELSE 
+	          C1=-4.959
+	          C2=2.264*T1
+	          D=(T1**2)/(((T1**2-4.6**2)**2)+(T1**2))
+	          C3=0.389*D
+	          IF(T1 .LT. 5.9)THEN
+	             F=0
+	          ELSE
+	             F=0.5392*((T1-5.9)**2)+0.05644*((T1-5.9)**3)
+	          END IF
+	          C4=0.461*F
+                  AL_D_EBmV(I)=C1+C2+C3+C4+R_EXT
+               END IF
+	     END DO
           END IF
 	  IF(X(1:4) .EQ. 'EBMV' .AND. EBMV_SMC .NE. 0)THEN
 	     DO I=1,NCF
@@ -1530,7 +1605,7 @@ C
 	     END IF
 	  ELSE
 	    CALL USR_OPTION(NORM_WAVE,'NW',' ',
-	1       'Norm Wave (Angstroms) or Radius (<200Rsun)')
+	1       'Norm Wave (Angstroms) or Radius (<0 [in Rsun])')
 C
 C Rather than choose the full NCF points we adopt a set that extends from
 C NU_MAX to NU_MIN but with a larger spacing.
@@ -1546,7 +1621,7 @@ C
 	       END IF
 	      XV(I)=T1
 	    END DO         
-	    IF(NORM_WAVE .GT. 200.0D0)THEN
+	    IF(NORM_WAVE .GT. 0.0D0)THEN
 	      NORM_FREQ=2.998D+03/NORM_WAVE
 	      DO I=2,NCF
 	        IF(NORM_FREQ .LE. NU(I-1) .AND. NORM_FREQ .GT. NU(I))K=I

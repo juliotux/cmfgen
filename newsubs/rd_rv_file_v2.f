@@ -9,6 +9,7 @@
 !
 	SUBROUTINE RD_RV_FILE_V2(R,V,SIGMA,RMAX,RP,VINF,LUIN,ND,OPTIONS,N_OPT)
 !
+! Altered  19-Aug-2015: Added check that SIMGMA < -1.0D0 (cur_hmi,21-Jun-2015).
 ! Altered  31-Mar-2008: Check on VINF is now set to 10% accuracy. Done as V(1) is normally
 !                         < Vinf as radius grid does not extend to infinity.
 ! Altered  16-Jan-2007: VINF only checked of > 0.1 km/s (not important for pp models)
@@ -60,7 +61,7 @@
 	IF(OPTIONS(1) .EQ. 'RVSIG_COL')THEN
 	  CALL GEN_ASCI_OPEN(LUIN,'RVSIG_COL','OLD',' ','READ',IZERO,IOS)
 	  IF(IOS .NE. 0)THEN
-	    WRITE(LUER,*)'Error in RD_RV_FILE: IOSTAT=',IOS
+	    WRITE(LUER,*)'Error in RD_RV_FILE_V2: IOSTAT=',IOS
 	    WRITE(LUER,*)'Unable to open RVSIG_COL'
 	    STOP
 	  END IF
@@ -70,7 +71,7 @@
 	  END DO
 	  READ(STRING,*)ND_LOC
 	  IF(ND_LOC .NE. ND)THEN
-	    WRITE(LUER,*)'Error in RD_RV_FILE'
+	    WRITE(LUER,*)'Error in RD_RV_FILE_V2'
 	    WRITE(LUER,*)'Routine can''t yet handle a differnet number of depth points'
 	    STOP
 	  END IF
@@ -84,9 +85,26 @@
 	  BACKSPACE(LUIN)
 !
 	  DO I=1,ND
-	    READ(LUIN,*)R(I),V(I),SIGMA(I)
+	    READ(LUIN,*,IOSTAT=IOS)R(I),V(I),SIGMA(I)
+	    IF(IOS .NE. 0)THEN
+	      WRITE(LUER,*)'Error in RD_RV_FILE_V2: IOSTAT=',IOS
+	      WRITE(LUER,*)'Error reading R, V & SIGMA -- check correct # of data values'
+	      STOP
+	    END IF
 	  END DO
 	  CLOSE(LUIN)
+!
+	  DO I=1,ND-1
+	    IF(V(I) .LE. V(I+1) .AND. V(I) .LT. 0.1D0)THEN
+	      SIGMA(I)=-0.999D0
+	      WRITE(6,*)'Warning from RD_RV_FILE_V2'
+	      WRITE(6,*)'Adjusting SIGMA in hydrostatic zone to be monotonic'
+	    ELSE IF(V(I) .LE. V(I+1))THEN
+	      WRITE(LUER,*)'Error in RD_RV_FILE_V2'
+	      WRITE(6,*)'CMFGEN cannot handle a monotonic velocity law'
+	      STOP
+	    END IF
+	  END DO
 !
 ! Now scale to match radius. V is assumed to be fixed on a r/R(ND) scale.
 ! SIGMA does not change with a simple scaling in r.
@@ -94,7 +112,7 @@
 	  T1=R(ND)
 	  R(1:ND)=R(1:ND)*(RP/T1)
 	  IF(ABS(R(1)-RMAX) .GT. 0.1D0*(R(1)-R(2)))THEN
-	    WRITE(LUER,*)'Error in RD_RV_FILE'
+	    WRITE(LUER,*)'Error in RD_RV_FILE_V2'
 	    WRITE(LUER,*)'R(1)/R(ND) must match RMAX/RP'
 	    WRITE(LUER,*)'R(1)/R(ND)=',R(1)/R(ND)
 	    STOP
@@ -107,7 +125,7 @@ C Read data from Alex Dekoter''s program.
 C
 	  CALL GEN_ASCI_OPEN(LUIN,'deKOTER','OLD',' ','READ',IZERO,IOS)
 	  IF(IOS .NE. 0)THEN
-	    WRITE(LUER,*)'Error in RD_RV_FILE: IOSTAT=',IOS
+	    WRITE(LUER,*)'Error in RD_RV_FILE_V2: IOSTAT=',IOS
 	    WRITE(LUER,*)'Unable to open RVSIG_COL'
 	    STOP
 	  END IF
@@ -122,7 +140,7 @@ C
 	  READ(LUIN,*)ND_LOC
 !
 	  IF(ND_LOC .NE. ND-1)THEN
-	    WRITE(LUER,*)'Error in RD_RV_FILE'
+	    WRITE(LUER,*)'Error in RD_RV_FILE_V2'
 	    WRITE(LUER,*)'Routine can''t yet handle a differnet number of depth points'
 	    WRITE(LUER,*)'ND in file should be 1 less than in CMFGEN'
 	    STOP

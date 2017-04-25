@@ -7,6 +7,14 @@
 	USE MOD_COLOR_PEN_DEF
 	IMPLICIT NONE
 !
+! Altered:  01-Mar-2016 : Added XN option to XAR option. This allows Y to be plotted against
+!                          the index I. By default, a new plot is created [24-Feb-2016].
+! Altered:  29-Jun-2015 : Changed RID o check ABS(TAU) which for pp model can -ve.
+! Altered:  22-Apr-2015 : Added FILL option to fill the space between two curves that create a polygon.
+!                           ANS changed to length 4 (from 3)
+! Altered:  17-Feb-2015 : Can now have multi-colored titles.
+! Altered:  22-Jan-2015 : Bug fix. SC option for scrolling changed to SCR.
+!                         SC is reserved for entering strings by cursor
 ! Altered:  14-Jan-2014 : Revised LG option
 ! Altered:  22-Nov-2013 : Added LG option for curve type. This plots the log of the absolute 
 !                           value of the data but indicates where the data is -ve.
@@ -55,6 +63,7 @@
 	REAL*4 SPACING
 !
 	CHARACTER(LEN=2) TYPE_CURVE(MAX_PLTS)
+	REAL*8 VB_BASE(MAX_PLTS)
 !
 	LOGICAL DO_ERROR
 	CHARACTER*5 LOG_AXIS
@@ -77,6 +86,12 @@
 	CHARACTER*1 WHICH_Y_AX(MAX_PLTS)
 	CHARACTER*80 YLABEL_R_AX
 !
+	INTEGER IFILL_PLT1(10)
+	INTEGER IFILL_PLT2(10)
+	INTEGER IFILL_CLR(10)
+	INTEGER NFILL
+	LOGICAL FILL
+!
 	INTEGER, PARAMETER :: N_TITLE=10
 	CHARACTER*80  XLABEL,YLABEL,TITLE(N_TITLE)
 	CHARACTER*(*) XLAB,YLAB,TITL,PASSED_OPT
@@ -98,6 +113,7 @@
 	INTEGER VECPEN(MAXVEC)
 !
 	INTEGER N_LINE_IDS
+	LOGICAL OBSERVED_WAVE(5000)
 	CHARACTER*10 LINE_ID(5000)
 	REAL*4 ID_WAVE(5000)
 	REAL*4 ID_WAVE_OFF(5000)
@@ -109,6 +125,7 @@
 	REAL*4 ID_VEC_BEG
 	REAL*4 ID_VEC_END
 	REAL*4 ID_EXPCHAR
+	REAL*4 CUT_ACCURACY
 	INTEGER ID_LOC
 	INTEGER ID_LOC_PG
 	CHARACTER*10 OMIT_ID(10)
@@ -116,7 +133,7 @@
 	INTEGER N_OMIT_ID
 	INTEGER N_INC_ID
 	LOGICAL AIR_WAVELENGTHS
-	LOGICAL WR_ID
+	LOGICAL WR_ID(5000)
 	LOGICAL DRAW_GAUSS_HARD
 	EXTERNAL LAM_AIR
 	REAL*8 LAM_AIR
@@ -145,7 +162,9 @@
         INTEGER LINE_WGT(MAX_PLTS)
 	INTEGER MARKER_STYLE(MAX_PLTS)
 	LOGICAL HARD,TITONRHS,FIRST,FSTOPEN,DASH,MARK
+	LOGICAL FILE_IS_OPEN
 	LOGICAL INITIALIZE_ON_EXIT
+	LOGICAL, SAVE :: REVERSE_PLOTTING_ORDER=.FALSE.
 !
 ! E, cursor, and continuum parameters.
 !
@@ -155,6 +174,7 @@
 	INTEGER PLOT_ID,CURSERR
 	INTEGER L_CHAN(2)
 	INTEGER, SAVE :: LU_EW=30
+	INTEGER, SAVE :: LU_NORM=31
 	LOGICAL, SAVE :: FIRST_EW=.TRUE.
 	CHARACTER*1 CURSVAL
 	LOGICAL CONTINUUM_DEFINED
@@ -181,7 +201,9 @@
 	REAL*8 CENTRAL_LAM
 	REAL*8 OLD_CENTRAL_LAM
 	REAL*8 C_KMS
+	REAL*8 C_VAL
 	LOGICAL AIR_LAM
+	CHARACTER(LEN=5), SAVE :: VEL_UNIT='km/s'
 !
 ! For XAR and YAR arithmetic options.
 !
@@ -192,7 +214,7 @@
 !
 ! Miscellaneous
 !
-	CHARACTER*3 ANS
+	CHARACTER*4 ANS
 	INTEGER LENGTH
 	INTEGER LAST_DP
 	REAL*4 V1,IT
@@ -206,6 +228,7 @@
 	REAL*4 XVAL_SAV,YVAL_SAV
 	REAL*4, ALLOCATABLE :: TA(:)
 !
+	INTEGER, SAVE :: PEN_OFFSET
 	INTEGER BEG
 	INTEGER Q	!Used for pen color
 !
@@ -214,7 +237,7 @@
 !
 ! Loop variables
 	INTEGER I,J,K,L,CNT,IP,OP
-	INTEGER IP_ST,IP_END
+	INTEGER IP_ST,IP_END,IP_INC
 !
 ! Color variables
 	REAL*4 RED(0:15),BLUE(0:15),GREEN(0:15)
@@ -252,7 +275,7 @@
 	SAVE XCM,ASR
 	SAVE EXPCHAR_SCALE,EXPMARK_SCALE,TICK_FAC_SCALE
 	SAVE RED,BLUE,GREEN
-	SAVE FSTOPEN,PEN_COL,DASH,PRINTER
+	SAVE FSTOPEN,PEN_COL,DASH
 	SAVE MARGINX,MARGINY
 	SAVE PLT_LINE_WGT
 	SAVE LINE_WGT 
@@ -279,6 +302,8 @@
 	C_KMS=1.0D-05*SPEED_OF_LIGHT()
 	LONG_PLOT=.FALSE.
 	LENGTH_OF_HC_PLOT=200.0D0       !cm
+	VB_BASE=-1000
+	FILL=.FALSE.
 !
 	IF(NPLTS .GT. MAXPEN)THEN
 	  WRITE(T_OUT,*)'Error n GRAMON_PLOT -- not enough pen loctions'
@@ -310,8 +335,11 @@
 	  PLT_LINE_WGT=1
           PLT_ST_FILENAME=' '
 	  LINE_WGT(:)=1
+	  PEN_OFFSET=1
+	  IFILL_PLT1=0; IFILL_PLT2=0
 	END IF
 	TITLE(1:N_TITLE)=' '
+	CALL GEN_ASCI_OPEN(LU_NORM,'NORM_FACTORS','UNKNOWN','APPEND',' ',IZERO,IOS)
 !
 	LOG_AXIS=' '
 	XLABEL=XLAB
@@ -409,8 +437,7 @@
 	YMAX_SAV=YMAX; YMIN_SAV=YMIN
 !
 ! Open user set workstation (default is set into the system).
-! We only ask
-! for work-station name if first call to GRAMON.
+! We only ask for work-station name if first call to GRAMON.
 !
 	WRITE(T_OUT,4) XMIN,XMAX
 4	FORMAT(' Abisca limits  :',1P2E14.4)
@@ -450,6 +477,12 @@
           DO I=0,15                  !Get these + def color representations.
             CALL PGQCR(I,RED(I),GREEN(I),BLUE(I))
           END DO
+!
+	  CALL DEFINE_MORE_PENS(MAXPEN)
+	  DO I=26,30
+	    IFILL_CLR(I-25)=I
+	  END DO
+!
 	END IF
 	FSTOPEN=.FALSE.
 	HARD=.FALSE.
@@ -484,15 +517,22 @@
 	  WRITE(T_OUT,*)'B   - Switch error bars on/off'
 	  WRITE(T_OUT,*)'CC  - Change Color setting'
 	  WRITE(T_OUT,*)'CP  - Change Pen (Color Index)'
-	  WRITE(T_OUT,*)'BRD - Switch border potting on (def) or off'
+	  WRITE(T_OUT,*)'RCP - Reset default color pens'
+	  WRITE(T_OUT,*)'GP  - Set default for grey pens'
 	  READ(T_IN,'(A)')ANS				!can use ANS here.
 	  IF(ANS(1:1) .EQ. 'E' .OR. ANS(1:1) .EQ. 'e')GOTO 1000
+!
+	  WRITE(T_OUT,*)'BRD  - Switch border potting on (def) or off'
+	  WRITE(T_OUT,*)'FILL - Color in region between 2 curves'
+	  WRITE(T_OUT,*)'OFF  - Set offsets when plotting multiple plots'
+          WRITE(T_OUT,*)'RPO  - Plot curves in reverse order (switch): does not affect color'
+          WRITE(T_OUT,*)'RID  - Read line ID''s'
+          WRITE(T_OUT,*)'SID  - Change defaults for writing line ID''s'
+	  WRITE(T_OUT,*)' '
 !
 	  WRITE(T_OUT,*)'LX  - Switch between LINEAR/LOG labeling of X axis'
 	  WRITE(T_OUT,*)'LY  - Switch between LINEAR/LOG labeling of Y axis'
 	  WRITE(T_OUT,*)'LXY - Switch between LINEAR/LOG baleling of X and Y axes'
-          WRITE(T_OUT,*)'RID - Read line ID''s'
-          WRITE(T_OUT,*)'SID - Change defaults for writing line ID''s'
 	  WRITE(T_OUT,*)' '
 	  WRITE(T_OUT,*)'VC  - Define line vectors using cursor'
 	  WRITE(T_OUT,*)'VF  - Define line vectors using file input'
@@ -503,6 +543,7 @@
 	  READ(T_IN,'(A)')ANS				!can use ANS here.
 	  IF(ANS(1:1) .EQ. 'E' .OR. ANS(1:1) .EQ. 'e')GOTO 1000
 !
+	  WRITE(T_OUT,*)'LAM - List wavelengths of common lines'
 	  WRITE(T_OUT,*)'VEL - Convert X axis to km/s space'
 	  WRITE(T_OUT,*)'XAR - Simple X axis arithmetic'
 	  WRITE(T_OUT,*)'YAR - Simple Y axis arithmetic'
@@ -546,6 +587,7 @@
 ! retained.
 !
 	ELSE IF(ANS .EQ. 'E')THEN
+	  CLOSE(LU_NORM)
 	  IF(INITIALIZE_ON_EXIT)THEN
 	    DO IP=1,NPLTS
 	      IF(ALLOCATED(CD(IP)%XVEC))DEALLOCATE(CD(IP)%XVEC)
@@ -571,7 +613,7 @@
                     IF(FLAGSTR(I))THEN
                       WRITE(33,17)LOC(I),XSTR(I),YSTR(I),ORIENTATION(I),
 	1                   STR_EXP(I),STR_COL(I),TRIM(STRING(I))
-17	              FORMAT(1X,I1,', ',4(F9.4,','),I3,',',1X,1H',A,1H')
+17	              FORMAT(1X,I1,', ',4(ES12.4,','),I3,',',1X,1H',A,1H')
 	           END IF
 	         END DO
                 CLOSE(UNIT=33)
@@ -835,6 +877,12 @@ C
 	  CALL NEW_GEN_IN(TITONRHS,'TITONRHS')
 	  GOTO 1000
 !
+	ELSE IF(ANS .EQ. 'GL')THEN
+	  CALL NEW_GEN_IN(FILNAME,'FILE')
+	  CALL GET_TITLES(FILNAME,TITLE,N_TITLE)
+	  CALL NEW_GEN_IN(TITONRHS,'TITONRHS')
+	  GOTO 1000
+!
 ! Switch to prevent inialization of data curves on exit from routine.
 ! By default, the plot count is set to zero on exit, and the data is lost on
 ! a new entry to the plotting package.
@@ -854,6 +902,9 @@ C
 	ELSE IF(ANS .EQ. 'CP')THEN
 	  CALL CHANGE_PEN(PEN_COL,MAXPEN,NPLTS)
 	  GOTO 1000
+!
+	ELSE IF(ANS .EQ. 'SFP')THEN
+	  CALL NEW_GEN_IN(PEN_OFFSET,'First colored pen: 0 [black], 1 [red]')
 !
 ! Reset default pen color. Useful after GP option.
 !
@@ -884,7 +935,7 @@ C
             CALL PGQCR(I,RED(I),GREEN(I),BLUE(I))
           END DO
 	  GOTO 1000
-	ELSE IF(ANS .EQ. 'SC')THEN
+	ELSE IF(ANS .EQ. 'SCR')THEN
 	  T1=100; T2=0.2
 	  CALL PGSCRL(T1,T2)
 !
@@ -927,8 +978,8 @@ C
 	  GOTO 1000
 !
 	ELSE IF( ANS .EQ. 'W')THEN
-	    CALL NEW_GEN_IN(LINE_WGT,I,NPLTS,
-	1                'Line Weight:: 1,2 etc')
+	    CALL NEW_GEN_IN(LINE_WGT,I,NPLTS,'Line Weight:: 1,2 etc')
+	    IF(LINE_WGT(1) .LT. 0)LINE_WGT(1:NPLTS)=ABS(LINE_WGT(1))
 	ELSE IF( ANS .EQ. 'WE')THEN
 	  DO IP=1,NPLTS			!Edit individually
 	    CALL NEW_GEN_IN(LINE_WGT(IP),'Line weights (1,...,5)')
@@ -952,9 +1003,11 @@ C
 	    CALL SET_CASE_UP(TYPE_CURVE(IP),IONE,IZERO)
 	    IF( TYPE_CURVE(IP) .NE. 'L' .AND.              !Normal line
 	1       TYPE_CURVE(IP) .NE. 'E' .AND.              !non-monotonic
+	1       TYPE_CURVE(IP) .NE. 'EC' .AND.              !non-monotonic
 	1       TYPE_CURVE(IP) .NE. 'B' .AND.              !Broken
 	1       TYPE_CURVE(IP) .NE. 'I' .AND.              !Invisible
 	1       TYPE_CURVE(IP) .NE. 'V' .AND.              !Verticle lines
+	1       TYPE_CURVE(IP) .NE. 'VB' .AND.             !Verticle lines
 	1       TYPE_CURVE(IP) .NE. 'A' .AND.              !Hist - X vert
 	1       TYPE_CURVE(IP) .NE. 'H' .AND.              !Histogram
 	1       TYPE_CURVE(IP) .NE. 'LG' )THEN             !Log(ABS)
@@ -972,7 +1025,14 @@ C
 	    END IF
 	  END DO
 	  GOTO 1000
-!	    
+!
+	ELSE IF( ANS .EQ. 'RPO')THEN
+	  REVERSE_PLOTTING_ORDER= .NOT. REVERSE_PLOTTING_ORDER
+	  IF(REVERSE_PLOTTING_ORDER)THEN
+	    WRITE(6,*)'Order of ploting will be reversed'
+	  ELSE
+	    WRITE(6,*)'Normal order of ploting will be resumed'
+	  END IF	    
  	ELSE IF( ANS .EQ. 'D')THEN
 	  IF(DASH)THEN
             WRITE(T_OUT,*)'Now all solid line plots '
@@ -1130,8 +1190,8 @@ C
 	      CALL NEW_GEN_IN(STRING(ISTR),'STRING')
 	    END IF
 	  END DO
-	  STR=.TRUE.
 	  GOTO 1000
+	  STR=.TRUE.
 !
 	ELSE IF (ANS .EQ. 'SC')THEN
 	  INIT=.FALSE.          !Strings automatically initialized first time.
@@ -1168,7 +1228,6 @@ C
 	  WRITE(T_OUT,*)'Maximum number of strings is',MAXSTR
 	  GOTO 1000
 !
-!
 	ELSE IF(ANS .EQ. 'LOC')THEN
 	  CALL PGQCS(4,T1,T3)			!T3=Character Height
 	  T3=T3*1.5
@@ -1192,6 +1251,26 @@ C
 	    CALL MON_NUM(T1,T2-T3,YVAL,1,IDY+2)
 	  END DO
 70	  CONTINUE
+!
+	ELSE IF(ANS .EQ. 'SLP')THEN
+	  CALL PGQCS(4,T1,T3)			!T3=Character Height
+	  T3=T3*1.5
+	  T1=XPAR(1)-(XPAR(2)-XPAR(1))/15.0
+	  T2=YPAR(2)+(YPAR(2)-YPAR(1))/15.0
+!
+	  DO WHILE(1 .EQ. 1)
+	    CURSERR = PGCURS(XVAL,YVAL,CURSVAL)
+	    IF(END_CURS(CURSVAL))EXIT
+	    CURSERR = PGCURS(XVAL_SAV,YVAL_SAV,CURSVAL)
+	    IF(END_CURS(CURSVAL))EXIT
+	    Q=VECPEN(1)
+	    CALL PGSCI(IONE)
+	    T3=(YVAL_SAV-YVAL)/(XVAL_SAV-XVAL)
+	    CALL PGMOVE(XVAL,YVAL)
+	    CALL PGDRAW(XVAL_SAV,YVAL_SAV)
+	    WRITE(6,*)'Slope of line is:',T3
+	  END DO
+!
 !
 !
 ! Set Line vectors
@@ -1299,12 +1378,18 @@ C
 	    BACKSPACE(33)
 	    DO WHILE(J+1 .LE. 5000)
 	      READ(33,*,END=1500)LINE_ID(J+1),ID_WAVE(J+1),TAU(J+1),ID_WAVE_OFF(J+1),ID_Y_OFF(J+1)
-	      IF(AIR_WAVELENGTHS)THEN
+	      IF(ID_WAVE(J+1) .LT. 0.0D0)THEN
+	         ID_WAVE(J+1)=ABS(ID_WAVE(J+1))
+	         OBSERVED_WAVE(J+1)=.FALSE.
+	      ELSE
+	         OBSERVED_WAVE(J+1)=.TRUE.
+	      END IF
+	     IF(AIR_WAVELENGTHS)THEN
 	         DP_T1=ID_WAVE(J+1)
 	         ID_WAVE(J+1)=LAM_AIR(DP_T1)
 	      END IF
 	      IF( (ID_WAVE(J+1)-XPAR(1))*(XPAR(2)-ID_WAVE(J+1)) .GT. 0 .AND.
-	1                   TAU(J+1) .GT. TAU_CUT)THEN
+	1                   ABS(TAU(J+1)) .GT. TAU_CUT)THEN
 	         J=J+1
 	         N_LINE_IDS=J
 	      END IF
@@ -1330,12 +1415,18 @@ C
 	  CALL NEW_GEN_IN(ID_SCL,'Factor to scale line location')
 	  CALL NEW_GEN_IN(ID_EXPCHAR,'Factor to scale size of ID')
 	  GOTO 1000
+!
 	ELSE IF(ANS .EQ. 'SID')THEN
 	  CALL NEW_GEN_IN(ID_SCL,'Factor to scale line location')
 	  CALL NEW_GEN_IN(ID_VEC_BEG,'Location to start ID line')
 	  CALL NEW_GEN_IN(ID_VEC_END,'Location to end ID line')
 	  CALL NEW_GEN_IN(ID_EXPCHAR,'Factor to scale size of ID')
 	  N_OMIT_ID=0
+!
+	  WRITE(T_OUT,*)' '
+	  WRITE(T_OUT,*)RED_PEN,'Species name are case sensitive and have no spaces'
+	  WRITE(T_OUT,*)'Use SiIII etc',DEF_PEN
+	  WRITE(T_OUT,*)' '
 	  DO I=1,10
 	    OMIT_ID(I)='ZZ'
 	    CALL NEW_GEN_IN(OMIT_ID(I),'Species ID to OMIT from labels')
@@ -1593,6 +1684,9 @@ C
 	    END DO		!Multiple plots
 	    GOTO 1000
 	  END IF
+	ELSE IF(ANS .EQ. 'EWG')THEN
+	  CALL DO_MANY_EW(TYPE_CURVE,NPLTS,MAX_PLTS)
+!
 	ELSE IF(ANS .EQ. 'LP')THEN
 	  IF(LONG_PLOT)THEN
 	    WRITE(T_OUT,*)'Resuming normal hard copy mode'
@@ -1618,10 +1712,12 @@ C
 	    CALL NEW_GEN_IN(PRINTER,'File and printer: enter ? for list')
 	    BEG=PGOPEN(PRINTER)
 	    FIRST_HARD=.FALSE.
+	    CALL DEFINE_MORE_PENS(MAXPEN)
 	  ELSE
 	    CALL NEW_GEN_IN(HARD_FILE,'Plot file')
 	    PRINTER=TRIM(HARD_FILE)//'/'//HARD_TYPE
 	    BEG=PGOPEN(PRINTER)
+	    CALL DEFINE_MORE_PENS(MAXPEN)		!Pen definitions are not saved.
 	  END IF
 !
 ! Save hard device and set default file name for net plot.
@@ -1890,18 +1986,53 @@ C
 	    END DO
 	  END DO
 ! 
+!
+	ELSE IF(ANS .EQ. 'LAM')THEN
+	  WRITE(6,*)RED_PEN
+	  WRITE(6,'(A,/)')' All wavelengths are vacuum'//BLUE_PEN
+	  CALL WRITE_LINE_LAMBDAS()
+	  WRITE(6,*)DEF_PEN
+	  GOTO 1000
+!
+	ELSE IF (ANS .EQ. 'CUT')THEN          !Recall ANS in always upper case
+	  WRITE(6,'(A)')BLUE_PEN
+	  WRITE(6,'(A)')' This option reduces the number of data points in each curve.'
+	  WRITE(6,'(A)')' It is useful for creating smaller publication quality plots.'//RED_PEN
+	  WRITE(6,'(A)')' This option cannot be undone.'//BLUE_PEN
+	  WRITE(6,'(A)')' A negative cut accuracy does nothing'
+	  WRITE(6,'(A)')' To compare with original data:'
+	  WRITE(6,'(A)')'    Store original data using WP & read after cut with RP, OR'
+	  WRITE(6,'(A)')'    do CUT, NOI, and redo plots'
+	  WRITE(6,'(A)')DEF_PEN
+	  CUT_ACCURACY=0.001D0
+	  CALL NEW_GEN_IN(CUT_ACCURACY,'Fractional accuracy to retain in plots')
+	  IF(CUT_ACCURACY .GT. 0.0)CALL SHRINK_VECTORS(CUT_ACCURACY)
+	  GOTO 1000
+!
+	ELSE IF (ANS .EQ. 'KMS')THEN          !Recall ANS in always upper case
+	  VEL_UNIT='km/s'
+	  WRITE(6,*)'Using km/s for velocity unit'
+	  GOTO 1000
+!
+	ELSE IF (ANS .EQ. 'MMS')THEN
+	  VEL_UNIT='Mm/s'
+	  WRITE(6,*)'Using Mm/s for velocity unit'
+	  GOTO 1000
+!
 ! Convert from Ang to velocity space. Data must have been originally
 ! in Ang. This option can be done many times, as old Ang scale is
 ! restored on each call.
 !
 	ELSE IF (ANS .EQ. 'VEL')THEN
 	  C_KMS=1.0D-05*SPEED_OF_LIGHT()
+	  C_VAL=C_KMS
+	  IF(VEL_UNIT .EQ. 'Mm/s')C_VAL=1.0D-03*C_KMS
 	  CALL NEW_GEN_IN(CENTRAL_LAM,'/\(Ang) [-ve: 10^15 Hz]')
 	  IF(CENTRAL_LAM .LT. 0)THEN
-	    CENTRAL_LAM=1.0D-02*C_KMS/ABS(CENTRAL_LAM)
+	    CENTRAL_LAM=1.0D-02*C_VAL/ABS(CENTRAL_LAM)
 	  ELSE IF(CENTRAL_LAM .GT. 2000)THEN
-	    AIR_LAM=.TRUE.
-            CALL NEW_GEN_IN(AIR_LAM,'Air /\ [only for /\ > 2000A]')
+	    AIR_LAM=.FALSE.
+            CALL NEW_GEN_IN(AIR_LAM,'Wavelength in air?')
 	    IF(AIR_LAM)CENTRAL_LAM=LAM_VAC(CENTRAL_LAM)
 	  END IF
 !
@@ -1911,7 +2042,7 @@ C
 	    DO IP=1,NPLTS
 	      DO J=1,NPTS(IP)
 	        CD(IP)%XVEC(J)=OLD_CENTRAL_LAM*
-	1                         (1.0+CD(IP)%XVEC(J)/C_KMS)
+	1                         (1.0+CD(IP)%XVEC(J)/C_VAL)
 	      END DO
 	    END DO
 	  END IF
@@ -1919,13 +2050,14 @@ C
 ! Puts X-axis in km/s
 !
 	  IF(CENTRAL_LAM .NE. 0)THEN
-	    T1=SPEED_OF_LIGHT()*1.0D-05/CENTRAL_LAM
+	    T1=C_VAL/CENTRAL_LAM
 	    DO IP=1,NPLTS
 	      DO J=1,NPTS(IP)
 	        CD(IP)%XVEC(J)=T1*(CD(IP)%XVEC(J)-CENTRAL_LAM)
 	      END DO
 	    END DO
 	    XLABEL='V(km\d \us\u-1\d)'
+	    IF(VEL_UNIT .EQ. 'Mm/s')XLABEL='V(Mm\d \us\u-1\d)'
 	  ELSE
 	    XLABEL=XLAB
 	  END IF
@@ -1938,7 +2070,8 @@ C
 	ELSE IF (ANS .EQ. 'XAR')THEN
 	  CALL NEW_GEN_IN(XAR_OPERATION,'Operation: *,+,-,/,LG,ALG[=10^x],R[=1/x]')
 	  CALL SET_CASE_UP(XAR_OPERATION,IZERO,IZERO)
-	  IF(XAR_OPERATION .NE. 'LG' .AND. XAR_OPERATION .NE. 'ALG' .AND. XAR_OPERATION .NE. 'R')THEN
+	  IF(XAR_OPERATION .NE. 'LG' .AND. XAR_OPERATION .NE. 'ALG' .AND. 
+	1           XAR_OPERATION .NE. 'XN' .AND. XAR_OPERATION .NE. 'R')THEN
 	    CALL NEW_GEN_IN(XAR_VAL,'Value')
 	  END IF
 	  CALL NEW_GEN_IN(XAR_PLT,'Which plot? (0=ALL,-ve exits)')
@@ -1965,8 +2098,9 @@ C
 	        XLABEL=ADJUSTL(XLABEL)
 	      END IF
 	    ELSE IF(XAR_OPERATION .EQ. 'LG')THEN
+	      T1=TINY(CD(IP)%XVEC(1))
 	      DO J=1,NPTS(IP)
-	        IF(CD(IP)%XVEC(J) .GT. 0)THEN
+	        IF(CD(IP)%XVEC(J) .GT. T1)THEN
 	          CD(IP)%XVEC(J)=LOG10(CD(IP)%XVEC(J))
 	        ELSE
 	          CD(IP)%XVEC(J)=-1000.0
@@ -1991,6 +2125,20 @@ C
 	      ELSE IF(XLABEL .EQ. '\gl(\A)' .AND. T1 .EQ. T2)THEN
 	        XLABEL='\gn(10\u15 \dHz)'
 	      END IF
+	    ELSE IF(XAR_OPERATION .EQ. 'XN')THEN
+	      WRITE(6,*)'Curent plot is',IP
+	      K=0
+	      CALL NEW_GEN_IN(K,'Output plot: 0 adds new plot?')
+	      IF(K .EQ. IP)THEN
+	        K=IP
+	      ELSE IF(K .EQ. 0)THEN
+	        CALL CURVE(NPTS(IP),CD(IP)%XVEC,CD(IP)%DATA)
+	        K=NPLTS
+	      END IF
+	      DO I=1,NPTS(K)
+	        CD(K)%XVEC(I)=I
+	      END DO
+	      TYPE_CURVE(K)=TYPE_CURVE(IP)
 	    ELSE
 	      WRITE(T_OUT,*)'Invalid operation: try again'
 	      GOTO 1000
@@ -1998,12 +2146,29 @@ C
 	  END DO
 	  GOTO 1000
 !
+	ELSE IF (ANS .EQ. 'OFF')THEN
+	  CALL NEW_GEN_IN(YAR_PLT,'Which plot? (0=ALL,-ve exits)')
+	  IP=YAR_PLT
+	  IP_ST=IP; IF(IP .EQ. 0)IP_ST=1
+	  IP_END=IP; IF(IP .EQ. 0)IP_END=NPLTS
+	  IF(IP .LT. 0 .OR. IP .GT. NPLTS)THEN
+	    WRITE(T_OUT,*)'Invalid plot number'
+	    GOTO 1000
+	  END IF
+	  CALL NEW_GEN_IN(YAR_VAL,'Offset')
+	  DO IP=IP_ST,IP_END
+	    CD(IP)%DATA=CD(IP)%DATA+YAR_VAL*(IP-IP_ST)
+	  END DO
+!
 ! Perform simple Y-axis arithmetic.
 !
 	ELSE IF (ANS .EQ. 'YAR')THEN
 	  CALL NEW_GEN_IN(YAR_OPERATION,'Operation: *,+,-,/,LG,R[=1/Y],ALG[=10^y],ABS')
 	  CALL SET_CASE_UP(YAR_OPERATION,IZERO,IZERO)
-	  IF( YAR_OPERATION .NE. 'LG' .AND. 
+	  IF(YAR_OPERATION .EQ. 'MX' .OR. YAR_OPERATION .EQ. 'DX')THEN
+	    YAR_VAL=0.5D0*(XPAR(1)+XPAR(2))
+	    CALL NEW_GEN_IN(YAR_VAL,'X normalization')
+	  ELSE IF( YAR_OPERATION .NE. 'LG' .AND. 
 	1          YAR_OPERATION .NE. 'ABS' .AND. 
 	1          YAR_OPERATION .NE. 'ALG' .AND. 
 	1          YAR_OPERATION(1:1) .NE. 'R')THEN
@@ -2035,8 +2200,9 @@ C
 	        YLABEL=ADJUSTL(YLABEL)
 	      END IF
 	    ELSE IF(YAR_OPERATION .EQ. 'LG')THEN
+	      T1=TINY(CD(IP)%DATA(1))
 	      DO J=1,NPTS(IP)
-	        IF(CD(IP)%DATA(J) .GT. 0)THEN
+	        IF(CD(IP)%DATA(J) .GT. T1)THEN
 	          CD(IP)%DATA(J)=LOG10(CD(IP)%DATA(J))
 	        ELSE
 	          CD(IP)%DATA(J)=-1000.0
@@ -2053,12 +2219,47 @@ C
 	          CD(IP)%DATA(J)=1.0E+37
 	        END IF
 	      END DO
+	    ELSE IF(YAR_OPERATION .EQ. 'MX')THEN
+	      DO J=1,NPTS(IP)
+	       CD(IP)%DATA(J)=CD(IP)%DATA(J)*(CD(IP)%XVEC(J)/YAR_VAL)
+	      END DO
+	    ELSE IF(YAR_OPERATION .EQ. 'DX')THEN
+	      DO J=1,NPTS(IP)
+	        IF(CD(IP)%XVEC(J) .NE. 0.0D0)THEN
+	          CD(IP)%DATA(J)=CD(IP)%DATA(J)/(CD(IP)%XVEC(J)/YAR_VAL)
+	        ELSE
+	          CD(IP)%DATA(J)=1.0E+37
+	        END IF
+	      END DO
 	    ELSE
 	      WRITE(T_OUT,*)'Invalid operation: try again'
 	      GOTO 1000
 	    END IF
 	  END DO
 	  GOTO 1000
+!
+	ELSE IF (ANS .EQ. 'CAX')THEN
+	  CALL NEW_GEN_IN(VAR_PLT1,'Plot that is to be altered')
+	  CALL NEW_GEN_IN(VAR_OPERATION,'Operation: RX, RY, RXY, RYX, SXY') 
+	  CALL SET_CASE_UP(VAR_OPERATION,IZERO,IZERO)
+	  VAR_PLT2=VAR_PLT1
+	  IF(VAR_OPERATION .NE. 'SXY')CALL NEW_GEN_IN(VAR_PLT2,'Plot with new data')
+	  IF(NPTS(VAR_PLT1) .NE. NPTS(VAR_PLT2))THEN
+	  ELSE IF(VAR_OPERATION .EQ. 'RX')THEN
+	     CD(VAR_PLT1)%XVEC=CD(VAR_PLT2)%XVEC
+	  ELSE IF(VAR_OPERATION .EQ. 'RY')THEN
+	     CD(VAR_PLT1)%DATA=CD(VAR_PLT2)%DATA
+	  ELSE IF(VAR_OPERATION .EQ. 'RXY')THEN
+	     CD(VAR_PLT1)%DATA=CD(VAR_PLT2)%XVEC
+	  ELSE IF(VAR_OPERATION .EQ. 'RYX')THEN
+	     CD(VAR_PLT1)%XVEC=CD(VAR_PLT2)%DATA
+	  ELSE IF(VAR_OPERATION .EQ. 'SXY')THEN
+	     DO I=1,NPTS(VAR_PLT1)
+	       T1=CD(VAR_PLT1)%DATA(I)
+	       CD(VAR_PLT1)%DATA(I)=CD(VAR_PLT1)%XVEC(I)
+	       CD(VAR_PLT1)%XVEC(I)=T1
+	     END DO
+	  END IF
 !
 	ELSE IF (ANS .EQ. 'VAR')THEN
 	  CALL NEW_GEN_IN(VAR_PLT1,'Input plot 1?')
@@ -2069,6 +2270,22 @@ C
 	  CALL NEW_GEN_IN(VAR_PLT3,'Output plot?')
 	  TYPE_CURVE(VAR_PLT3)='L'
 	  CALL DO_VEC_OP(VAR_PLT1,VAR_PLT2,VAR_PLT3,.TRUE.,VAR_OPERATION)
+	  GOTO 1000
+!
+	ELSE IF (ANS .EQ. 'FILL')THEN
+	  CALL NEW_GEN_IN(FILL,'Fill enclosed areas?')
+	  IF(FILL)THEN
+	    I=NFILL+1
+	    CALL NEW_GEN_IN(I,'Fill identifier - default is next number')
+	    IF(IFILL_PLT1(I) .EQ. 0)IFILL_PLT1(I)=1
+	    IF(IFILL_PLT2(I) .EQ. 0)IFILL_PLT2(I)=2
+	    CALL NEW_GEN_IN(IFILL_PLT1(I),'Input 1st plot')
+	    CALL NEW_GEN_IN(IFILL_PLT2(I),'Input 2nd plot')
+	    CALL NEW_GEN_IN(IFILL_CLR(I),'Color for fill region')
+	    IF(I .EQ. NFILL+1)NFILL=NFILL+1
+	  ELSE
+	    NFILL=0
+	  END IF
 	  GOTO 1000
 !
 	ELSE IF (ANS .EQ. 'CUM')THEN
@@ -2173,6 +2390,8 @@ C
 	        T1=T1/T2
 	        T3=MEAN/T1
 	        WRITE(T_OUT,*)'Normalization parameter for plot',IP,' is',T3
+	        WRITE(LU_NORM,'(A,I3,A,ES12.4,2X,I3,2ES12.4)')'Normalization parameters for plot',IP,' are',
+	1                          T3,VAR_PLT1,XT(1),XT(2)
 	        DO J=1,NPTS(IP)
 	          CD(IP)%DATA(J)=CD(IP)%DATA(J)*T3
 	        END DO
@@ -2247,9 +2466,9 @@ C
 !
 	CALL PGQVP(2,DXST,DXEND,DYST,DYEND)
 	DASR=(DYEND-DYST)/(DXEND-DXST)
-	IF(ASR .LT. 0) TEMPASR=-1.0/ASR
-	IF(ASR .GT. 0) TEMPASR=ASR
-	IF(ASR .EQ. 0) TEMPASR=DASR
+	TEMPASR=DASR
+	IF(ASR .LT. 0)TEMPASR=-1.0/ASR
+	IF(ASR .GT. 0)TEMPASR=ASR
 !
 	TOTXMM=(DXEND-DXST)
 	TOTYMM=(DYEND-DYST)
@@ -2305,11 +2524,25 @@ C
 !
 ! Draw Graphs
 !
-	DO IP=1,NPLTS
+	IP_ST=1; IP_END=NPLTS; IP_INC=1
+	IF(REVERSE_PLOTTING_ORDER)THEN
+	  IP_ST=NPLTS; IP_END=1; IP_INC=-1
+	END IF
+!
+! We do the FILL option first so that the curves are drawn on TOP.
+!
+	IF(FILL)THEN
+	  DO I=1,NFILL
+	    CALL PGSCI(IFILL_CLR(I))
+	    CALL DO_FILL(XPAR,YPAR,IFILL_PLT1(I),IFILL_PLT2(I),.TRUE.)
+	  END DO
+	END IF
+!
+	DO IP=IP_ST,IP_END,IP_INC
 	  CALL PGSLW(LINE_WGT(IP))
 	  CALL PGSLS(LINE_STYLE(IP))
-	  Q=PEN_COL(IP+1)
-	  CALL PGSCI(Q)     ! START WITH COLOR INDEX 2
+	  Q=PEN_COL(IP+PEN_OFFSET)
+	  CALL PGSCI(Q)     ! START WITH COLOR INDEX 2 when PEN_OFFSET is 1 (default)
 !
 ! Checks whether we are installing a right axis.
 !
@@ -2319,23 +2552,30 @@ C
 !
 	  IF(TYPE_CURVE(IP) .EQ. 'L' .AND. (MARKER_STYLE(IP) .GE. 0 .OR. .NOT. MARK))THEN
 	    CALL PGLINE(NPTS(IP),CD(IP)%XVEC,CD(IP)%DATA)
-	  ELSE IF(TYPE_CURVE(IP) .EQ. 'E' .AND. (MARKER_STYLE(IP) .GE. 0 .OR. .NOT. MARK))THEN
+	  ELSE IF( (TYPE_CURVE(IP) .EQ. 'E' .OR. TYPE_CURVE(IP) .EQ. 'EC') 
+	1              .AND. (MARKER_STYLE(IP) .GE. 0 .OR. .NOT. MARK))THEN
 	    IST=1
 	    IEND=2
-	    T1=CD(IP)%XVEC(NPTS(IP))-CD(IP)%XVEC(1)
+	    T1=CD(IP)%XVEC(NPTS(IEND))-CD(IP)%XVEC(IST)
+	    Q=PEN_COL(IP+PEN_OFFSET)-1
 	    DO WHILE(IEND .LT. NPTS(IP))
 	      DO WHILE(IEND .LT. NPTS(IP))
-	         IF( (CD(IP)%XVEC(IEND)-CD(IP)%XVEC(IEND-1))/T1 
+	         IF( (CD(IP)%XVEC(IEND+1)-CD(IP)%XVEC(IEND))/T1 
 	1                                                   .GE. 0)THEN
 	           IEND=IEND+1
 	         ELSE
 	           EXIT
 	         END IF
 	      END DO
-	      J=IEND-IST
+	      IF(TYPE_CURVE(IP) .EQ. 'EC')THEN
+	        Q=Q+1;
+	        CALL PGSCI(Q)
+	      END IF
+	      J=IEND-IST+1
 	      CALL PGLINE(J,CD(IP)%XVEC(IST),CD(IP)%DATA(IST))
 	      IST=IEND+1
 	      IEND=IST+1
+	      T1=CD(IP)%XVEC(NPTS(IEND))-CD(IP)%XVEC(IST)
 	    END DO
 !
 	  ELSE IF(TYPE_CURVE(IP) .EQ. 'LG')THEN
@@ -2397,6 +2637,16 @@ C
 	      XT(1)=CD(IP)%XVEC(J)
 	      XT(2)=CD(IP)%XVEC(J)
 	      YT(1)=YPAR(1)
+	      YT(2)=CD(IP)%DATA(J)
+	      CALL PGLINE(2,XT,YT)
+	    END DO
+!
+	  ELSE IF(TYPE_CURVE(IP) .EQ. 'VB' .AND. (MARKER_STYLE(IP) .GE. 0 .OR. .NOT. MARK))THEN
+	    CALL NEW_GEN_IN(VB_BASE(IP),'Base level')
+	    DO J=1,NPTS(IP)
+	      XT(1)=CD(IP)%XVEC(J)
+	      XT(2)=CD(IP)%XVEC(J)
+	      YT(1)=VB_BASE(IP)
 	      YT(2)=CD(IP)%DATA(J)
 	      CALL PGLINE(2,XT,YT)
 	    END DO
@@ -2500,17 +2750,19 @@ C
 ! LOC_PG negative.
 !
 	IF(STR)THEN
+	  WRITE(6,*)'Calling Justify'
 	  CALL JUSTIFY_CONVERT_V2(XSTR,YSTR,LOC,LOC_PG,ORIENTATION,FLAGSTR,
      *    XSTRPOS,YSTRPOS,STRING,MAXSTR)
 	  T1=(XSTRPOS(I)-XPAR(1))*(XPAR(2)-XSTRPOS(I))
 	  T2=(YSTRPOS(I)-YPAR(1))*(YPAR(2)-YSTRPOS(I))
 	  DO I=1,MAXSTR
 	    IF(LOC(I) .LT. 0)THEN ; T1=1.0; T2=1.0; END IF
-	    IF(FLAGSTR(I) .AND. T1 .GT. 0 .AND. T2 .GT. 0)THEN
+	    IF(FLAGSTR(I))THEN  ! .AND. T1 .GT. 0 .AND. T2 .GT. 0)THEN
 	      CALL PGSCI(STR_COL(I))
 	      CALL PGSCH(EXPCHAR*STR_EXP(I))
-	      CALL PGPTXT(XSTRPOS(I),YSTRPOS(I),ORIENTATION(I),
-	1                            LOC_PG(I),STRING(I))
+	      WRITE(6,*)'Calling PUT_TEXT'
+!	        CALL PGPTXT(XSTRPOS(I),YSTRPOS(I),ORIENTATION(I),LOC_PG(I),STRING(I))
+	      CALL PUT_TEXT(XSTRPOS(I),YSTRPOS(I),ORIENTATION(I),LOC_PG(I),STRING(I))
 	    END IF
 	  END DO
 	END IF
@@ -2521,15 +2773,38 @@ C
 	  ID_ORIENT=90.0D0
 	  ID_LOC_PG=1.0D0
 !
+	  DO I=1,N_LINE_IDS
+	    WR_ID(I)=.TRUE.
+	    DO J=1,N_OMIT_ID
+	      IF( INDEX(LINE_ID(I),TRIM(OMIT_ID(J))//' ') .NE. 0)THEN
+	        WR_ID(I)=.FALSE.
+	        EXIT
+	      END IF
+	    END DO
+	    DO J=1,N_INC_ID
+	      IF(J .EQ. 1)WR_ID(I)=.FALSE.
+	      IF( INDEX(LINE_ID(I),TRIM(INC_ID(J))//' ') .NE. 0 )THEN
+	        WR_ID(I)=.TRUE.
+	        EXIT
+	      END IF
+	    END DO
+	  END DO
+!
 	  ID_WAVE_OFF(1:N_LINE_IDS)=ID_WAVE(1:N_LINE_IDS)
 	  CALL PGQCS(IFOUR,XCHAR_SIZE,YCHAR_SIZE)
 	  WRITE(T_OUT,*)'XCHAR_SIZE=',XCHAR_SIZE
-	  DO L=1,5
-	    DO I=1,N_LINE_IDS
-	      T1=(ID_WAVE(I)-XPAR(1))*(XPAR(2)-ID_WAVE(2))
-	      IF(T1 .GT. 0)THEN
-	        IF(ID_WAVE_OFF(I)+XCHAR_SIZE .GT. ID_WAVE_OFF(I+1))THEN
-	          ID_WAVE_OFF(I)=ID_WAVE_OFF(I+1)-1.1*XCHAR_SIZE
+	  DO L=1,8
+	    DO I=1,N_LINE_IDS-1
+	      IF(WR_ID(I))THEN
+	        K=I+1
+	        DO WHILE(.NOT. WR_ID(K) .AND. K .LT. N_LINE_IDS)
+	          K=K+1
+	        END DO
+	        T1=(ID_WAVE(I)-XPAR(1))*(XPAR(2)-ID_WAVE(2))
+	        IF(T1 .GT. 0)THEN
+	          IF(ID_WAVE_OFF(I)+XCHAR_SIZE .GT. ID_WAVE_OFF(K))THEN
+	            ID_WAVE_OFF(I)=ID_WAVE_OFF(K)-1.1*XCHAR_SIZE
+	          END IF
 	        END IF
 	      END IF
 	    END DO
@@ -2541,25 +2816,13 @@ C
 	    TMP_STR=' '
 	    WRITE(TMP_STR,'(F12.2)')ID_WAVE(I)
 	    TMP_STR=TRIM(LINE_ID(I))//'-'//ADJUSTL(TMP_STR)
+	    IF(.NOT. OBSERVED_WAVE(I))TMP_STR='*'//TMP_STR
 	    CALL JUSTIFY_CONVERT_V2(ID_WAVE_OFF(I),T1,ID_LOC,ID_LOC_PG,ID_ORIENT,.TRUE.,
 	1                  XSTRPOS(1),YSTRPOS(1),TMP_STR,IONE)
 	    T1=(XSTRPOS(1)-XPAR(1))*(XPAR(2)-XSTRPOS(1))
 	    T2=(YSTRPOS(1)-YPAR(1))*(YPAR(2)-YSTRPOS(1))
 	    IF(T1 .GT. 0 .AND. T2 .GT. 0)THEN
-	      WR_ID=.TRUE.
-	      DO J=1,N_OMIT_ID
-	        IF( INDEX(LINE_ID(I),TRIM(OMIT_ID(J))) .NE. 0 )THEN
-	          WR_ID=.FALSE.
-	          EXIT
-	        END IF
-	      END DO
-	      DO J=1,N_INC_ID
-	        IF(J .EQ. 1)WR_ID=.FALSE.
-	        IF( INDEX(LINE_ID(I),TRIM(INC_ID(J))) .NE. 0 )THEN
-	          WR_ID=.TRUE.
-	        END IF
-	      END DO
-	      IF(WR_ID)THEN
+	      IF(WR_ID(I))THEN
 	        CALL PGSCI(ITWO)
 	        CALL PGSCH(EXPCHAR*ID_EXPCHAR)
 	        CALL PGPTXT(XSTRPOS(1),YSTRPOS(1),ID_ORIENT,ID_LOC_PG,TMP_STR)

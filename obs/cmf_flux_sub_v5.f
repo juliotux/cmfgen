@@ -14,6 +14,13 @@
 	USE MOD_LEV_DIS_BLK
 	IMPLICIT NONE
 !
+! Altered: 21-Sep-2016 : Error corrected -- I was writing out KAPPA from RVTJ rather than the from the CMF_FLUX
+!                           calculaton. Note that the ROSSELAND mean is only correct (at depth) if we compute
+!                           the spectrum over the full frequency range.
+! Altered: 09-Sep-2015 : Changed to C4(line)= ABS(C4[upper]) + ABS(C4[lower) [I was just summing values]
+! Altered: 18-May-2015 : Changed GAM2, GAM4 to C4 and C6 (quadratic and Van der Waals interacton constants).
+!                           C4 is now utilized (read into VEC_C4). C6 is still not used (09-Jun-2015).
+! Altered: 04-Apr-2015 : Changed SET_TWO_PHOT_V2 to _V3.
 ! Altered: 21-Jan-2013 : Change to vectors passed to SET_PRO_V3. Error probably affects IR HeI lines.
 !                           No change top UV/optical spectrum was seen.
 !                        Placed large vectors (dimension with NCF_MAX and NLINE_MAX) in module MOD_FREQ_OBS.
@@ -387,7 +394,7 @@
 !
 ! Parameters, vectors, and arrays for computing the observed flux.
 !
-	INTEGER, PARAMETER :: NST_CMF=10000
+	INTEGER, PARAMETER :: NST_CMF=20000
 	INTEGER NP_OBS_MAX
 	INTEGER NP_OBS
 	INTEGER NC_OBS
@@ -553,6 +560,10 @@
 !
 	CALL RD_XRAY_FITS(LUIN)
 !
+	IF(XRAYS .AND. .NOT. FF_XRAYS)THEN
+	  CALL RD_XRAY_SPEC(T_SHOCK_1,T_SHOCK_2,LUIN)
+	END IF
+!
 ! We now need to compute the populations for the model atom with Super-levels.
 ! We do this in reverse order (i.e. highest ionization stage first) in order
 ! that we the ion density for the lower ionization stage is available for
@@ -697,6 +708,7 @@
 	          VEC_OSCIL(ML)=ATM(ID)%AXzV_F(MNL,MNUP)
 	          VEC_EINA(ML)=ATM(ID)%AXzV_F(MNUP,MNL)
 	          VEC_ARAD(ML)= ATM(ID)%ARAD(MNL)+ATM(ID)%ARAD(MNUP)
+	          VEC_C4(ML)= ABS(ATM(ID)%C4(MNL)) + ABS(ATM(ID)%C4(MNUP))
 	          VEC_TRANS_TYPE(ML)=ATM(ID)%XzV_TRANS_TYPE
 	          VEC_TRANS_NAME(ML)=TRIM(VEC_SPEC(ML))//
 	1             '('//TRIM(ATM(ID)%XzVLEVNAME_F(MNUP))//'-'//
@@ -713,9 +725,15 @@
 	1             CHIL,ED,T,VTURB_VEC,ND,PROF_TYPE(ML),PROF_LIST_LOCATION(ML),
 	1             VEC_FREQ(ML),MNL,MNUP,
 	1             VEC_SPEC(ML),AT_MASS(SPECIES_LNK(ID)), ATM(ID)%ZXzV,
-	1             VEC_ARAD(ML),T2,TDOP,AMASS_DOP,VTURB_FIX,                !2: Garbage at present
+	1             VEC_ARAD(ML),VEC_C4(ML),TDOP,AMASS_DOP,VTURB_FIX,                !2: Garbage at present
 	1             DOP_PROF_LIMIT,VOIGT_PROF_LIMIT,V_PROF_LIMIT,MAX_PROF_ED,
 	1             SET_PROF_LIMS_BY_OPACITY)
+	          IF(ID .EQ. 1)THEN
+	            IF(ATM(ID)%XzVLEVNAME_F(2) .NE. '2___' .AND. INDEX(PROF_TYPE(ML),'DOP') .EQ. 0)THEN
+	              WRITE(LUER,*)'Error in CMF_FLUX -- only Doppler profiles are implemented for split H levels'
+	              STOP
+	            END IF
+	          END IF
 	        END IF
 	      END DO
 	    END DO
@@ -784,6 +802,7 @@
 	CALL SORTDP(N_LINE_FREQ,VEC_FREQ,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_OSCIL,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_ARAD,VEC_INDX,VEC_DP_WRK)
+	CALL SORTDP(N_LINE_FREQ,VEC_C4,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_EINA,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_VDOP_MIN,VEC_INDX,VEC_DP_WRK)
 !
@@ -812,15 +831,13 @@
 	    T2=C_KMS*(VEC_FREQ(ML-1)-VEC_FREQ(ML))/VEC_FREQ(ML)
 	    IF(T2 .GT. C_KMS)T2=C_KMS
 	    IF(T1 .LT. 1.0D+04)THEN
-	      WRITE(LUIN,
-	1      '(1X,I6,2(1X,I6),2X,F10.6,2X,F10.3,2X,F10.2,4X,A)')
+	      WRITE(LUIN,'(1X,I6,2(1X,I6),2X,F10.6,2X,F10.3,2X,F10.2,4X,I7,2X,A12,3X,A)')
 	1         ML,VEC_MNL_F(ML),VEC_MNUP_F(ML),
-	1         VEC_FREQ(ML),T1,T2,TRIM(VEC_TRANS_NAME(VEC_INDX(ML)))
+	1         VEC_FREQ(ML),T1,T2,PROF_LIST_LOCATION(ML),PROF_TYPE(ML),TRIM(VEC_TRANS_NAME(VEC_INDX(ML)))
 	    ELSE             
-	      WRITE(LUIN,
-	1      '(1X,I6,2(1X,I6),2X,F10.6,2X,1P,E10.4,0P,2X,F10.2,4X,A)')
+	      WRITE(LUIN,'(1X,I6,2(1X,I6),2X,F10.6,2X,1P,E10.4,0P,2X,F10.2,4X,I7,2X,A12,3X,A)')
 	1         ML,VEC_MNL_F(ML),VEC_MNUP_F(ML),
-	1         VEC_FREQ(ML),T1,T2,TRIM(VEC_TRANS_NAME(VEC_INDX(ML)))
+	1         VEC_FREQ(ML),T1,T2,PROF_LIST_LOCATION(ML),PROF_TYPE(ML),TRIM(VEC_TRANS_NAME(VEC_INDX(ML)))
 	    END IF
 	  END DO
 	CLOSE(UNIT=LUIN)
@@ -836,6 +853,7 @@
 	CALL SORTDP(N_LINE_FREQ,VEC_FREQ,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_OSCIL,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_ARAD,VEC_INDX,VEC_DP_WRK)
+	CALL SORTDP(N_LINE_FREQ,VEC_C4,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_EINA,VEC_INDX,VEC_DP_WRK)
 	CALL SORTDP(N_LINE_FREQ,VEC_VDOP_MIN,VEC_INDX,VEC_DP_WRK)
 !
@@ -1029,6 +1047,7 @@
 	  NDEXT=ND ; NCEXT=NC; NPEXT=NP
 	  TEXT(1:ND)=T(1:ND)
 	END IF
+        CALL SET_POP_FOR_TWOJ(POS_IN_NEW_GRID,EDD_CONT_REC,LU_EDD,NDEXT)
 !
 ! Allocate arrays and vectors for computing observed fluxes.
 !
@@ -1081,11 +1100,12 @@
 !
 	DO ID=1,NUM_IONS
 	  ID_SAV=ID
-	  CALL SET_TWO_PHOT_V2(TRIM(ION_ID(ID)),ID_SAV,
-	1       ATM(ID)%XzVLTE,   ATM(ID)%NXzV,
-	1       ATM(ID)%XzVLTE_F, ATM(ID)%XzVLEVNAME_F, ATM(ID)%EDGEXzV_F,
-	1       ATM(ID)%GXzV_F,   ATM(ID)%F_TO_S_XzV,   ATM(ID)%NXzV_F, ND,
-	1       ATM(ID)%ZXzV,     ATM(ID)%EQXzV,        ATM(ID)%XzV_PRES)
+	  CALL SET_TWO_PHOT_V3(TRIM(ION_ID(ID)),ID_SAV,
+	1       ATM(ID)%XzVLTE,         ATM(ID)%NXzV,
+	1       ATM(ID)%XzVLTE_F_ON_S,  ATM(ID)%XzVLEVNAME_F, 
+	1       ATM(ID)%EDGEXzV_F,      ATM(ID)%GXzV_F,
+	1       ATM(ID)%F_TO_S_XzV,     ATM(ID)%NXzV_F,     ND,
+	1       ATM(ID)%ZXzV,           ATM(ID)%EQXzV,      ATM(ID)%XzV_PRES)
 	END DO
 !
 	DTDR=(T(ND)-T(ND-1))/(R(ND-1)-R(ND))
@@ -1119,7 +1139,7 @@
 	        COMPUTE_EDDFAC=.TRUE.
 	      END IF
 	    ELSE
-	      WRITE(LUER,'(/,X,A)')'Error opening EDDFACTOR - will compute new F'
+	      WRITE(LUER,'(/,1X,A)')'Error opening EDDFACTOR - will compute new F'
 	        COMPUTE_EDDFAC=.TRUE.
 	    END IF
 	  END IF
@@ -1278,7 +1298,7 @@
 !
 	CALL TUNE(IONE,'ADD_LINE')
 	DO WHILE( LAST_LINE .LT. N_LINE_FREQ .AND.
-	1                ML .EQ. LINE_ST_INDX_IN_NU(LAST_LINE+1) )
+	1                ML .EQ. LINE_ST_INDX_IN_NU(MIN(LAST_LINE+1,N_LINE_FREQ)) )
 !
 ! Have another line --- need to find its storage location.
 !
@@ -1395,7 +1415,7 @@
 ! in the BLANKETING portion of the code.
 !
 	  DO WHILE(LAST_LINE .LT. N_LINE_FREQ.AND.
-	1            VEC_TRANS_TYPE(LAST_LINE+1)(1:4) .NE. 'BLAN')
+	1            VEC_TRANS_TYPE(MIN(LAST_LINE+1,N_LINE_FREQ))(1:4) .NE. 'BLAN')
 	       LAST_LINE=LAST_LINE+1
 	  END DO
 !	   
@@ -1446,7 +1466,7 @@
 	1               ED,TB,TC,T,VTURB_VEC,ND,
 	1               PROF_TYPE(J),PROF_LIST_LOCATION(J),
 	1               VEC_FREQ(J),VEC_MNL_F(J),VEC_MNUP_F(J),
-	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),T3,
+	1               AMASS_SIM(SIM_INDX),T1,VEC_ARAD(J),VEC_C4(J),
 	1               TDOP,AMASS_DOP,VTURB_FIX,MAX_PROF_ED,
 	1               END_RES_ZONE(SIM_INDX),NORM_PROFILE,LUIN)
               LINE_PROF_SIM(1:ND,SIM_INDX)=TA(1:ND)
@@ -1559,9 +1579,11 @@
 !
 ! Compute continuum intensity.
 !
-	  CALL TUNE(IONE,'COMP_JCONT')
-	  INCLUDE 'COMP_JCONT_V4.INC'	
-	  CALL TUNE(ITWO,'COMP_JCONT')
+	  IF(COMPUTE_J)THEN
+	    CALL TUNE(IONE,'COMP_JCONT')
+	    INCLUDE 'COMP_JCONT_V4.INC'	
+	    CALL TUNE(ITWO,'COMP_JCONT')
+	  END IF
 !
 !
 ! Free up LINE storage locations. As we are only computing the line flux,
@@ -1582,7 +1604,8 @@
 !
 !
 	CALL TUNE(IONE,'FLUX_DIST')
-	IF(THIS_FREQ_EXT .AND. .NOT. CONT_VEL)THEN
+	IF(.NOT. COMPUTE_J)THEN
+	ELSE IF(THIS_FREQ_EXT .AND. .NOT. CONT_VEL)THEN
 !
 ! Since ETAEXT is not required any more, it will be used
 ! flux.
@@ -1679,18 +1702,20 @@
 	    INT_dBdT(I)=0.0d0
 	  END DO
 	END IF
-	T1=TWOHCSQ*HDKT*FQW(ML)*(NU(ML)**4)
-	DO I=1,ND		              !(4*PI)**2*Dex(+20)/L(sun)
-	  T2=SOB(I)*FQW(ML)*4.1274D-12
-	  RLUMST(I)=RLUMST(I)+T2
-	  J_INT(I)=J_INT(I)+RJ(I)*FQW(ML)*4.1274D-12
-	  K_INT(I)=K_INT(I)+K_MOM(I)*FQW(ML)*4.1274D-12
-	  FLUXMEAN(I)=FLUXMEAN(I)+T2*CHI(I)
-	  LINE_FLUXMEAN(I)=LINE_FLUXMEAN(I)+T2*(CHI(I)-CHI_CONT(I))
-	  T2=T1*EMHNUKT(I)/(  ( (1.0D0-EMHNUKT(I))*T(I) )**2  )
-	  INT_dBdT(I)=INT_dBdT(I)+T2
-	  ROSSMEAN(I)=ROSSMEAN(I)+T2/CHI(I)
-	END DO
+	IF(COMPUTE_J)THEN
+	  T1=TWOHCSQ*HDKT*FQW(ML)*(NU(ML)**4)
+	  DO I=1,ND		              !(4*PI)**2*Dex(+20)/L(sun)
+	    T2=SOB(I)*FQW(ML)*4.1274D-12
+	    RLUMST(I)=RLUMST(I)+T2
+	    J_INT(I)=J_INT(I)+RJ(I)*FQW(ML)*4.1274D-12
+	    K_INT(I)=K_INT(I)+K_MOM(I)*FQW(ML)*4.1274D-12
+	    FLUXMEAN(I)=FLUXMEAN(I)+T2*CHI(I)
+	    LINE_FLUXMEAN(I)=LINE_FLUXMEAN(I)+T2*(CHI(I)-CHI_CONT(I))
+	    T2=T1*EMHNUKT(I)/(  ( (1.0D0-EMHNUKT(I))*T(I) )**2  )
+	    INT_dBdT(I)=INT_dBdT(I)+T2
+	    ROSSMEAN(I)=ROSSMEAN(I)+T2/CHI(I)
+	  END DO
+	END IF
 	CALL TUNE(ITWO,'FLUX_DIST')
 !
 ! Compute and output line force contributed by each species.
@@ -1754,6 +1779,25 @@
 !
 10000	CONTINUE
 	CALL TUNE(ITWO,'MLCF')
+!
+! NB: We use K here, rather than ACCESS_F, so that we don't corrupt EDDFACTOR if
+!      evaluate EW is set to TRUE.
+! 
+	IF(WRITE_ETA_AND_CHI .AND. (ES_COUNTER .EQ. NUM_ES_ITERATIONS .OR. .NOT. COMPUTE_J))THEN
+	  K=5						!Use for ACCESS_F
+	  I=WORD_SIZE*(ND+1)/UNIT_SIZE
+	  J=82; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'ETA_DATA',J)
+	  J=83; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'CHI_DATA',J)
+	  WRITE(82,REC=EDD_CONT_REC)K,NCF,ND
+	  WRITE(83,REC=EDD_CONT_REC)K,NCF,ND
+	  DO ML=1,NCF
+	    WRITE(82,REC=K-1+ML)(ETA_CMF_ST(I,ML),I=1,ND),NU(ML)
+	    WRITE(83,REC=K-1+ML)(CHI_CMF_ST(I,ML),I=1,ND),NU(ML)
+	  END DO
+	  CLOSE(UNIT=82)
+	  CLOSE(UNIT=83)
+	END IF
+	IF(.NOT. COMPUTE_J)STOP
 !
 	COMPUTE_EDDFAC=.FALSE.
 !
@@ -1780,9 +1824,8 @@
 	       STRING(1:)=STRING(2:)
 	  END DO
 	  STRING='Continuum Frequencies ( '//TRIM(STRING)//' )'
-	  CALL WRITV_V2(OBS_FREQ,N_OBS,ISIX,TRIM(STRING),LU_FLUX)
-	  CALL WRITV_V2(OBS_FLUX,N_OBS,IFOUR,
-	1                    'Observed intensity (Janskys)',LU_FLUX)
+	  CALL WRITV_V2(OBS_FREQ,N_OBS,ISEV,TRIM(STRING),LU_FLUX)
+	  CALL WRITV_V2(OBS_FLUX,N_OBS,IFOUR,'Observed intensity (Janskys)',LU_FLUX)
 	  CALL WRITV(RLUMST,ND,'Luminosity',LU_FLUX)
 	CLOSE(UNIT=LU_FLUX)
 !
@@ -1796,6 +1839,10 @@
 	  END DO
 	  CLOSE(UNIT=82)
 	END IF
+!
+! Output errors that have occurred in MOM_J_CMF
+!
+        I=1; CALL WRITE_J_CMF_ERR(I)
 !
 ! Compute ROSSELAND and FLUX mean opacities. Compute the respective
 ! optical depth scales; TA for the FLUX mean optical depth scale, 
@@ -1828,8 +1875,8 @@
 	  CALL DERIVCHI(dCHIdR,FLUXMEAN,R,ND,METHOD)
         ELSE
 	  dCHIDR(1:ND)=0.0D0
-	  WRITE(LUER,*)'Error in CMF_FLUX_SUB: Check MEANOPAC'
-	  WRITE(LUER,*)'Flux mean opacity has negative values'
+	  WRITE(LUER,*)'Warning from CMF_FLUX_SUB: Check MEANOPAC'
+	  WRITE(LUER,*)'Flux mean opacity has zero or negative values'
 	END IF
         CALL NORDTAU(TB,FLUXMEAN,R,R,dCHIdR,ND)
 !
@@ -1839,16 +1886,14 @@
 	TA(ND)=0.0D0; TB(ND)=0.0D0; TC(ND)=0.0D0; DTAU(ND)=0.0D0
 	CALL GEN_ASCI_OPEN(LU_OPAC,'MEANOPAC','UNKNOWN',' ',' ',IZERO,IOS)
 	  WRITE(LU_OPAC,
-	1  '( ''     R        I   Tau(Ross)   /\Tau   Rat(Ross)'//
+	1  '( ''     R        I    Tau(Ross)   /\Tau   Rat(Ross)'//
 	1  '  Chi(Ross)  Chi(ross)  Chi(Flux)   Chi(es) '//
-	1  '  Tau(Flux)  Tau(es)  Rat(Flux)  Rat(es)'' )' )
-	  IF(R(1) .GE. 1.0D+05)THEN
-	    FMT='( 1X,1P,E10.4,2X,I3,1X,0P,F9.3,1P,2(2X,E8.2),1X,'//
-	1        '4(2X,E9.3),0P,2(2X,F8.2),1P,2(2X,E8.2) )'
-	  ELSE
-	    FMT='( 1X,F10.4,2X,I3,1X,F9.3,1P,2(2X,E8.2),1X,'//
-	1        '4(2X,E9.3),0P,2(2X,F8.2),1P,2(2X,E8.2) )'
-	  END IF
+	1  '  Tau(Flux)  Tau(es)  Rat(Flux)  Rat(es)     Kappa   V(km/s)'' )' )
+	IF(R(1) .GE. 1.0D+05)THEN
+	  FMT='(ES17.10,I4,2ES10.3,ES10.2,4ES11.3,4ES10.2,2ES11.3)'
+	ELSE
+	  FMT='( F17.10,I4,2ES10.3,ES10.2,4ES11.3,4ES10.2,2ES11.3)'
+	END IF
 	  DO I=1,ND
 	    IF(I .EQ. 1)THEN
 	      T1=0.0D0		!Rosseland optical depth scale
@@ -1865,7 +1910,7 @@
 	    END IF
 	    WRITE(LU_OPAC,FMT)R(I),I,T1,TA(I),TC(1),
 	1      ROSSMEAN(I),INT_dBdT(I),FLUXMEAN(I),ESEC(I),
-	1      T2,T3,TC(2),TC(3)
+	1      T2,T3,TC(2),TC(3),1.0D-10*ROSSMEAN(I)/DENSITY(I),V(I)
 	  END DO
 	CLOSE(UNIT=LU_OPAC)
 !
@@ -1878,25 +1923,6 @@
 	1		  FLUXMEAN,ESEC,I,ND)
 !
 ! 
-!
-! NB: We use K here, rather than ACCESS_F, so that we don't corrupt EDDFACTOR if
-!      evaluate EW is set to TRUE.
-! 
-	IF(WRITE_ETA_AND_CHI)THEN
-	  K=5						!Use for ACCESS_F
-	  I=WORD_SIZE*(ND+1)/UNIT_SIZE
-	  J=82; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'ETA_DATA',J)
-	  J=83; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'CHI_DATA',J)
-	  WRITE(82,REC=EDD_CONT_REC)K,NCF,ND
-	  WRITE(83,REC=EDD_CONT_REC)K,NCF,ND
-	  DO ML=1,NCF
-	    WRITE(82,REC=K-1+ML)(ETA_CMF_ST(I,ML),I=1,ND),NU(ML)
-	    WRITE(83,REC=K-1+ML)(CHI_CMF_ST(I,ML),I=1,ND),NU(ML)
-	  END DO
-	  CLOSE(UNIT=82)
-	  CLOSE(UNIT=83)
-	END IF
-!
 ! If requested, convolve J with the electron-scattering redistribution
 ! funtion. K is used for LUIN, and LUOUIT but is not accessed.
 !
@@ -2004,9 +2030,8 @@
 	       STRING(1:)=STRING(2:)
 	  END DO
 	  STRING='Continuum Frequencies ( '//TRIM(STRING)//' )'
-	  CALL WRITV_V2(OBS_FREQ,N_OBS,ISIX,TRIM(STRING),LU_FLUX)
-	  CALL WRITV_V2(OBS_FLUX,N_OBS,IFOUR,
-	1                     'Observed intensity (Janskys)',LU_FLUX)
+	  CALL WRITV_V2(OBS_FREQ,N_OBS,ISEV,TRIM(STRING),LU_FLUX)
+	  CALL WRITV_V2(OBS_FLUX,N_OBS,IFOUR,'Observed intensity (Janskys)',LU_FLUX)
 	CLOSE(UNIT=LU_FLUX)
 !
 ! At present the line EW's are automatically computed when the
@@ -2175,7 +2200,7 @@
 !
 ! Compute continuum opacity and emissivity at the line frequency.
 !
-	INCLUDE 'OPACITIES_V4.INC'
+	INCLUDE 'OPACITIES_V5.INC'
 !
 ! Compute continuum intensity.
 !

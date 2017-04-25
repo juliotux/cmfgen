@@ -16,6 +16,7 @@
 	  REAL*8 PREV_REF_RADIUS
 	  REAL*8 RADIUS_AT_TAU_23
 	  REAL*8 SOUND_SPEED
+	  REAL*8 MOD_SOUND_SPEED
 	  REAL*8 VTURB
 !
 ! The following quantities are used when integrating the hydrostatic equation.

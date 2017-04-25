@@ -11,6 +11,7 @@
 	USE STEQ_DATA_MOD
 	IMPLICIT NONE
 !
+! Altered 01-Sep-2016 : TIME_SEQ_NO changed from integer to real.
 ! Altered 29-Nov-2011 : POPS added to call and changed to V3. IChange hadling of non
 !                         available levels. If a level is not in old model (as 
 !                         indicated by OLD_LEV_POP_AVAIL), we set the D/Dt term to zero.
@@ -23,11 +24,11 @@
 !
 	REAL*8 POPS(NT,ND)
 	REAL*8 RELAXATION_PARAMETER
+	REAL*8 TIME_SEQ_NO
 !
 	INTEGER NUM_BNDS
 	INTEGER ND
 	INTEGER NT
-	INTEGER TIME_SEQ_NO
 !
 	LOGICAL LAMBDA_ITERATION
 	LOGICAL COMPUTE_BA
