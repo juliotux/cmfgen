@@ -102,6 +102,7 @@
 	CHARACTER*80 TMP_STR
 	CHARACTER*6 TO_TEK
 	CHARACTER*2 TO_VT
+	CHARACTER(LEN=10) LAM_OPTION
 	CHARACTER*50 PLT_ID,RD_PLT_ID,PLT_ID_SAV
 !
 ! Vector arrays
@@ -165,6 +166,7 @@
 	LOGICAL FILE_IS_OPEN
 	LOGICAL INITIALIZE_ON_EXIT
 	LOGICAL, SAVE :: REVERSE_PLOTTING_ORDER=.FALSE.
+	LOGICAL REVERSE
 !
 ! E, cursor, and continuum parameters.
 !
@@ -1188,10 +1190,10 @@ C
 	      CALL NEW_GEN_IN(STR_EXP(ISTR),'EXP')
 	      CALL NEW_GEN_IN(STR_COL(ISTR),'COL')
 	      CALL NEW_GEN_IN(STRING(ISTR),'STRING')
+	      STR=.TRUE.
 	    END IF
 	  END DO
 	  GOTO 1000
-	  STR=.TRUE.
 !
 	ELSE IF (ANS .EQ. 'SC')THEN
 	  INIT=.FALSE.          !Strings automatically initialized first time.
@@ -1956,9 +1958,9 @@ C
 	    DO J=1,MAXVAL(NPTS)
 	      DO IP=1,NPLTS
 	        IF(J .LE. NPTS(IP))THEN
-	          WRITE(30,'(2X,2ES14.6)',ADVANCE='NO')CD(IP)%XVEC(J),CD(IP)%DATA(J)
+	          WRITE(30,'(2X,ES14.7,ES14.6)',ADVANCE='NO')CD(IP)%XVEC(J),CD(IP)%DATA(J)
 	        ELSE
-	          WRITE(30,'(2X,2ES14.6)',ADVANCE='NO')0.0D0,0.0D0
+	          WRITE(30,'(2X,ES14.7,ES14.6)',ADVANCE='NO')0.0D0,0.0D0
 	        END IF
 	      END DO
 	      WRITE(30,'(A)')' '
@@ -1969,7 +1971,7 @@ C
 	    WRITE(30,*)NPTS(L)
 	    IP=L
 	    DO J=1,NPTS(IP)
-	      WRITE(30,*)CD(IP)%XVEC(J),CD(IP)%DATA(J)
+	      WRITE(30,'(2X,ES14.7,ES14.6)')CD(IP)%XVEC(J),CD(IP)%DATA(J)
 	    END DO
 	    WRITE(T_OUT,*)'One plot written to ',TRIM(FILNAME)
 	  END IF
@@ -1988,9 +1990,12 @@ C
 ! 
 !
 	ELSE IF(ANS .EQ. 'LAM')THEN
+	  LAM_OPTION=' '
+	  CALL NEW_GEN_IN(LAM_OPTION,'Species -- none, He2, HE')
+	  CALL SET_CASE_UP(LAM_OPTION,1,0)
 	  WRITE(6,*)RED_PEN
-	  WRITE(6,'(A,/)')' All wavelengths are vacuum'//BLUE_PEN
-	  CALL WRITE_LINE_LAMBDAS()
+	  WRITE(6,'(/,A,/)')' All wavelengths are vacuum'//BLUE_PEN
+	  CALL WRITE_LINE_LAMBDAS(LAM_OPTION)
 	  WRITE(6,*)DEF_PEN
 	  GOTO 1000
 !
@@ -2163,9 +2168,11 @@ C
 ! Perform simple Y-axis arithmetic.
 !
 	ELSE IF (ANS .EQ. 'YAR')THEN
-	  CALL NEW_GEN_IN(YAR_OPERATION,'Operation: *,+,-,/,LG,R[=1/Y],ALG[=10^y],ABS')
+	  CALL NEW_GEN_IN(YAR_OPERATION,'Operation: *,+,-,/,LG,R[=1/Y],ALG[=10^y],ABS,MX,DX')
 	  CALL SET_CASE_UP(YAR_OPERATION,IZERO,IZERO)
-	  IF(YAR_OPERATION .EQ. 'MX' .OR. YAR_OPERATION .EQ. 'DX')THEN
+	  IF(YAR_OPERATION .EQ. 'MX')YAR_OPERATION='*X'
+	  IF(YAR_OPERATION .EQ. 'DX')YAR_OPERATION='/X'
+	  IF(YAR_OPERATION .EQ. '*X' .OR. YAR_OPERATION .EQ. '/X')THEN
 	    YAR_VAL=0.5D0*(XPAR(1)+XPAR(2))
 	    CALL NEW_GEN_IN(YAR_VAL,'X normalization')
 	  ELSE IF( YAR_OPERATION .NE. 'LG' .AND. 
@@ -2219,11 +2226,19 @@ C
 	          CD(IP)%DATA(J)=1.0E+37
 	        END IF
 	      END DO
-	    ELSE IF(YAR_OPERATION .EQ. 'MX')THEN
+	    ELSE IF(YAR_OPERATION .EQ. '+X')THEN
+	      DO J=1,NPTS(IP)
+	       CD(IP)%DATA(J)=CD(IP)%DATA(J)+CD(IP)%XVEC(J)
+	      END DO
+	    ELSE IF(YAR_OPERATION .EQ. '-X')THEN
+	      DO J=1,NPTS(IP)
+	       CD(IP)%DATA(J)=CD(IP)%DATA(J)-CD(IP)%XVEC(J)
+	      END DO
+	    ELSE IF(YAR_OPERATION .EQ. '*X')THEN
 	      DO J=1,NPTS(IP)
 	       CD(IP)%DATA(J)=CD(IP)%DATA(J)*(CD(IP)%XVEC(J)/YAR_VAL)
 	      END DO
-	    ELSE IF(YAR_OPERATION .EQ. 'DX')THEN
+	    ELSE IF(YAR_OPERATION .EQ. '/X')THEN
 	      DO J=1,NPTS(IP)
 	        IF(CD(IP)%XVEC(J) .NE. 0.0D0)THEN
 	          CD(IP)%DATA(J)=CD(IP)%DATA(J)/(CD(IP)%XVEC(J)/YAR_VAL)
@@ -2263,9 +2278,14 @@ C
 !
 	ELSE IF (ANS .EQ. 'VAR')THEN
 	  CALL NEW_GEN_IN(VAR_PLT1,'Input plot 1?')
-	  CALL NEW_GEN_IN(VAR_OPERATION,'Operation: *,+,-,/')
+	  CALL NEW_GEN_IN(VAR_OPERATION,'Operation: *,+,-,/,c(opy)')
 	  CALL SET_CASE_UP(VAR_OPERATION,IZERO,IZERO)
-	  CALL NEW_GEN_IN(VAR_PLT2,'Input plot 2?')
+	  IF(VAR_OPERATION(1:1) .EQ. 'c' .OR. VAR_OPERATION(1:1) .EQ. 'C' )THEN
+	    VAR_OPERATION='C'
+	    VAR_PLT2=VAR_PLT1
+	  ELSE
+	    CALL NEW_GEN_IN(VAR_PLT2,'Input plot 2?')
+	  END IF
 	  VAR_PLT3=NPLTS+1
 	  CALL NEW_GEN_IN(VAR_PLT3,'Output plot?')
 	  TYPE_CURVE(VAR_PLT3)='L'
@@ -2289,10 +2309,13 @@ C
 	  GOTO 1000
 !
 	ELSE IF (ANS .EQ. 'CUM')THEN
+	  IP=1
 	  CALL NEW_GEN_IN(IP,'Input plot 1?')
 	  OP=NPLTS+1
 	  CALL NEW_GEN_IN(OP,'Output plot?')
 	  TYPE_CURVE(OP)='L'
+	  REVERSE=.FALSE.
+	  CALL NEW_GEN_IN(REVERSE,'Reverse integration direction?')
 	  IF(OP .NE. IP .AND. ALLOCATED(CD(OP)%XVEC))THEN
             DEALLOCATE (CD(OP)%XVEC)
             DEALLOCATE (CD(OP)%DATA)
@@ -2301,14 +2324,25 @@ C
 	    ALLOCATE (CD(OP)%XVEC(NPTS(IP)),STAT=IOS)
             IF(IOS .EQ. 0)ALLOCATE (CD(OP)%DATA(NPTS(IP)),STAT=IOS)
 	  END IF
-	  T1=CD(IP)%DATA(1)
-          CD(OP)%DATA(1)=0
-          DO I=2,NPTS(IP)
-	    T2=CD(IP)%DATA(I)
-	    CD(OP)%DATA(I)=CD(OP)%DATA(I-1)+0.5D0*(T1+T2)*
+	  IF(REVERSE)THEN
+	    T1=CD(IP)%DATA(NPTS(IP))
+            CD(OP)%DATA(NPTS(IP))=0
+            DO I=NPTS(IP)-1,1,-1
+	      T2=CD(IP)%DATA(I)
+	      CD(OP)%DATA(I)=CD(OP)%DATA(I+1)+0.5D0*(T1+T2)*
+	1              ABS(CD(IP)%XVEC(I)-CD(IP)%XVEC(I+1))
+	      T1=T2
+	    END DO
+	  ELSE
+	    T1=CD(IP)%DATA(1)
+            CD(OP)%DATA(1)=0
+            DO I=2,NPTS(IP)
+	      T2=CD(IP)%DATA(I)
+	      CD(OP)%DATA(I)=CD(OP)%DATA(I-1)+0.5D0*(T1+T2)*
 	1              ABS(CD(IP)%XVEC(I)-CD(IP)%XVEC(I-1))
-	    T1=T2
-	  END DO
+	      T1=T2
+	    END DO
+	  END IF
 	  IF(IP .NE. OP)CD(OP)%XVEC=CD(IP)%XVEC
 	  NPTS(OP)=NPTS(IP)
 	  ERR(OP)=.FALSE.

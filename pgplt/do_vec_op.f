@@ -7,6 +7,8 @@
 	  USE MOD_CURVE_DATA
 	  IMPLICIT NONE
 !
+! Altered 16-Apr-2017: Added c(opy) operation -- copy one plot into another slot.
+!                        Done by fewest prorgam changes -- not most efficient.
 ! Altered 15-May-2002: Bug fixed for unequally spaced data.
 !
 	  INTEGER IN1
@@ -165,7 +167,9 @@ C
 !
 	  IL=lOW_LIM
 	  IU=UP_LIM
-	  IF(OPERATION .EQ. '*')THEN
+	  IF(OPERATION .EQ. 'C')THEN
+	    YV(IL:IU)=CD(IN1)%DATA(IL:IU)
+	  ELSE IF(OPERATION .EQ. '*')THEN
 	    YV(IL:IU)=CD(IN1)%DATA(IL:IU)*YV(IL:IU)
 	  ELSE IF(OPERATION .EQ. '+')THEN
 	    YV(IL:IU)=CD(IN1)%DATA(IL:IU)+YV(IL:IU)

@@ -21,6 +21,7 @@
 	USE GEN_IN_INTERFACE
 	USE MOD_COLOR_PEN_DEF
 	USE READ_KEYWORD_INTERFACE
+	USE EDDFAC_REC_DEFS_MOD
 !
 	IMPLICIT NONE
 !
@@ -29,12 +30,22 @@
 	  INTEGER ND
 	  REAL*8, POINTER :: RJ(:,:)
 	  REAL*8, POINTER :: NU(:)
+	  REAL*8, POINTER :: R(:)
+	  REAL*8, POINTER :: V(:)
+	  REAL*8, POINTER :: ED(:)
+	  REAL*8, POINTER :: T(:)
+	  REAL*8, POINTER :: TAU_ES(:)
+	  REAL*8, POINTER :: LANG_COORD(:)
+	  REAL*8, POINTER :: XV(:)
+	  LOGICAL RV_PRES
+	  LOGICAL :: XV_SET=.FALSE.
 	  CHARACTER*10 DATA_TYPE
 	  CHARACTER*40 FILE_DATE
 	  CHARACTER*80 FILENAME
 	END TYPE MODEL_INTENSITY
 	TYPE (MODEL_INTENSITY) ZM(5)
 	INTEGER ND,NCF
+	INTEGER ND_MAX,NCF_MAX
 	INTEGER NUM_FILES
 	INTEGER ID
 !
@@ -66,8 +77,6 @@
 	REAL*8, ALLOCATABLE :: POPION(:)
 	REAL*8, ALLOCATABLE :: CLUMP_FAC(:)
 	REAL*8, ALLOCATABLE :: POPS(:,:)
-
-!
 !
 ! Vectors for passing data to plot package via calls to CURVE.
 !
@@ -78,6 +87,7 @@
 	CHARACTER*80 NAME		!Default title for plot
 	CHARACTER*80 XAXIS,XAXSAV	!Label for Abscissa
 	CHARACTER*80 YAXIS		!Label for Ordinate
+	CHARACTER*80 XDEPTH_LAB
 !
 	REAL*8 ANG_TO_HZ
 	REAL*8 KEV_TO_HZ
@@ -91,7 +101,6 @@
 	CHARACTER*10 NAME_CONVENTION
 !
         INTEGER ACCESS_F
-        INTEGER, PARAMETER :: EDD_CONT_REC=3
 !
 ! REC_SIZE     is the (maximum) record length in bytes.
 ! UNIT_SIZE    is the number of bytes per unit that is used to specify
@@ -108,6 +117,8 @@
 !
 	INTEGER IOS			!Used for Input/Output errors.
 	INTEGER I,J,K,L,ML,ISAV
+	INTEGER NINS
+	INTEGER NU_INDX
 	INTEGER ST_REC
 	INTEGER REC_LENGTH
 	INTEGER NEW_ND
@@ -116,7 +127,10 @@
 	REAL*8 DTDR
 	REAL*8 RADIUS
 	REAL*8 T1,T2,T3
+	REAL*8 RVAL
+	REAL*8 DELR
 	REAL*8 LAMC
+	REAL*8 FREQ_VAL
 	REAL*8 EDGE_FREQ
 	REAL*8 T_ELEC
 	REAL*8 SN_AGE
@@ -225,10 +239,18 @@
 	     WRITE(T_OUT,*)'IOS=',IOS
 	     GOTO 5
 	  END IF
-	  READ(LU_IN,REC=3)ST_REC,ZM(ID)%NCF,ZM(ID)%ND
+	  READ(LU_IN,REC=EDD_CONT_REC)ST_REC,ZM(ID)%NCF,ZM(ID)%ND
+	  WRITE(6,*)ST_REC
 	  ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
 	  ALLOCATE (ZM(ID)%RJ(ND,NCF))
 	  ALLOCATE (ZM(ID)%NU(NCF))
+	  ALLOCATE (ZM(ID)%R(ND)); ZM(ID)%R=0.0D0
+	  ALLOCATE (ZM(ID)%V(ND)); ZM(ID)%V=0.0D0
+	  ALLOCATE (ZM(ID)%LANG_COORD(ND)); ZM(ID)%LANG_COORD=0.0D0
+	  ALLOCATE (ZM(ID)%XV(ND))
+	  ALLOCATE (ZM(ID)%ED(ND));      ZM(ID)%ED=0.0D0
+	  ALLOCATE (ZM(ID)%T(ND));       ZM(ID)%T=0.0D0
+	  ALLOCATE (ZM(ID)%TAU_ES(ND));  ZM(ID)%TAU_ES=0.0D0
 	  DO ML=1,ZM(ID)%NCF
 	    READ(LU_IN,REC=ST_REC+ML-1,IOSTAT=IOS)(ZM(ID)%RJ(I,ML),I=1,ZM(ID)%ND),ZM(ID)%NU(ML)
 	    IF(IOS .NE. 0)THEN
@@ -237,10 +259,25 @@
 	      EXIT
 	    END IF
 	  END DO
-	CLOSE(LU_IN)
+	  READ(LU_IN,REC=RV_REC)ST_REC
+	  WRITE(6,*)'RECORD for reading R, V and SIGMA is',ST_REC
+	  IF(ST_REC .EQ. 0)THEN
+	    ZM(ID)%RV_PRES=.FALSE.
+	    ZM(ID)%R=0.0D0; ZM(ID)%V=0.0; ZM(ID)%LANG_COORD=0.0D0
+	  ELSE
+	    ZM(ID)%RV_PRES=.TRUE.
+	    READ(LU_IN,REC=ST_REC)ZM(ID)%R
+	    READ(LU_IN,REC=ST_REC+1)ZM(ID)%V
+	    READ(LU_IN,REC=ST_REC+2)ZM(ID)%LANG_COORD
+	    WRITE(6,*)ZM(ID)%R(1),ZM(ID)%R(ND)
+	    WRITE(6,*)ZM(ID)%V(1),ZM(ID)%V(ND)
+	    WRITE(6,*)ZM(ID)%LANG_COORD(1),ZM(ID)%LANG_COORD(ND)
+	  END IF
+	  CLOSE(LU_IN)
 	WRITE(T_OUT,*)'Successfully read in ',TRIM(ZM(ID)%FILENAME),' file as MODEL A (default)'
 	WRITE(T_OUT,*)'    Number of depth points is',ZM(ID)%ND
 	WRITE(T_OUT,*)'Number of frequencies read is',ZM(ID)%NCF
+	ND_MAX=ND; NCF_MAX=ZM(ID)%NCF
 !
 ! Set default data types
 !
@@ -270,7 +307,6 @@
 	END IF
 !
 !
-!
 ! *************************************************************************
 !
 ! Read in basic model [i.e. R, V, T, SIGMA etc ] from RVTJ file.
@@ -349,11 +385,31 @@
 	END IF
 	CLOSE(LU_IN)
 !
-	 IF(ND_ATM .NE. ZM(1)%ND)THEN
-	   WRITE(6,*)' ' 
-	   WRITE(6,*)' WARNING -- ND in RVTJ differs from that assoicated with main input file ' 
-	   WRITE(6,*)' ' 
-	 END IF
+	IF(ND_ATM .EQ. ZM(1)%ND)THEN
+          IF(ZM(1)%R(1) .EQ. 0.0D0)THEN
+	    WRITE(6,*)' Setting R and V to values in RVTJ'
+	    ZM(1)%R=R; ZM(1)%V=V
+	  END IF
+	ELSE IF( MOD(ZM(ID)%ND+1,ND_ATM) .EQ. 0)THEN
+	  NINS=(ZM(ID)%ND+1)/ND_ATM-1
+	  ZM(ID)%R(1)=R(1); ZM(ID)%V(1)=V(1)
+	  J=1
+	  DO I=1,ND_ATM-1
+	    DELR=LOG(R(I+1)/R(I))/K
+	    DO L=1,NINS
+	      J=J+1
+	      ZM(ID)%R(J)=ZM(ID)%R(J-1)*EXP(DELR)
+	    END DO
+	    J=J+1
+	    ZM(ID)%R(J)=R(I+1); ZM(ID)%V(J)=V(I+1)
+	  END DO
+	  WRITE(6,*)'Warning -- set R grin to RVTJ file wiyh interpolation'
+	  WRITE(6,*)'Use interp option to set other values.'
+	ELSE
+	  WRITE(6,*)' ' 
+	  WRITE(6,*)' WARNING -- ND in RVTJ differs from that assoicated with main input file ' 
+	  WRITE(6,*)' ' 
+	END IF
 !
 ! Now compute the important optical depth scales.
 !
@@ -477,6 +533,117 @@
 	     IF(AIR_LAM)LAMC=LAM_VAC(LAMC)
 	   END IF
 !
+	ELSE IF(X(1:5) .EQ.  'XLOGR')THEN
+	  T1=ZM(1)%R(ZM(1)%ND)
+	  XDEPTH_LAB='Log R/R(ND)'
+	  DO ID=2,NUM_FILES
+	    IF(ZM(1)%R(ZM(1)%ND) .NE. ZM(ID)%R(ZM(ID)%ND))THEN
+	      T1=1.0D0
+	      XDEPTH_LAB='Log R/10\ucm\d'
+	      EXIT
+	    END IF
+	  END DO
+	  DO ID=1,NUM_FILES
+	    ND=ZM(ID)%ND
+	    ZM(ID)%XV(1:ND)=LOG10(ZM(ID)%R(1:ND)/T1)
+	    ZM(ID)%XV_SET=.TRUE.
+	  END DO
+	ELSE IF(X(1:4) .EQ.  'XVEL')THEN
+	  T1=1.0D0
+	  XDEPTH_LAB='V(km/s)'
+	  IF(ZM(1)%V(1) .GT. 10000.0D0)THEN
+	    T1=1000.0D0
+	    XDEPTH_LAB='V(M/s)'
+	  END IF
+	  DO ID=1,NUM_FILES
+	    ND=ZM(ID)%ND
+	    ZM(ID)%XV(1:ND)=ZM(ID)%V(1:ND)/T1
+	    ZM(ID)%XV_SET=.TRUE.
+	    WRITE(6,*)ZM(ID)%V(1),ZM(ID)%V(ND)
+	  END DO
+	ELSE IF(X(1:5) .EQ.  'XLOGV')THEN
+	  T1=1.0D0
+	  XDEPTH_LAB='Log V(km/s)'
+	  IF(ZM(1)%V(1) .GT. 10000.0D0)THEN
+	    T1=1000.0D0
+	    XDEPTH_LAB='Log V(M/s)'
+	  END IF
+	  DO ID=1,NUM_FILES
+	    ND=ZM(ID)%ND
+	    ZM(ID)%XV(1:ND)=LOG10(ZM(ID)%V(1:ND)/T1)
+	    ZM(ID)%XV_SET=.TRUE.
+	  END DO
+	ELSE IF(X(1:5) .EQ.  'XLANG')THEN
+	  DO ID=1,NUM_FILES
+	    IF(ZM(ID)%LANG_COORD(ID) .EQ. ZM(ID)%LANG_COORD(ZM(ID)%ND))THEN
+	      WRITE(6,*)'Error - langrangian coordiante not avilable for at least one model'
+	      WRITE(6,*)'You must issue a NEW X-coordinate command'
+	      GOTO 1
+	    END IF
+	    ND=ZM(ID)%ND
+	    ZM(ID)%XV(1:ND)=ZM(ID)%LANG_COORD(1:ND)
+	    ZM(ID)%XV_SET=.TRUE.
+	  END DO
+	  XDEPTH_LAB='Langrangian coordinate'
+	ELSE IF(X(1:2) .EQ.  'XN')THEN
+	  XDEPTH_LAB='Index I'
+	  DO ID=1,NUM_FILES
+	    ND=ZM(ID)%ND
+	    DO I=1,ND
+	      ZM(ID)%XV(I)=I
+	    END DO
+	    ZM(ID)%XV_SET=.TRUE.
+	  END DO
+!
+	ELSE IF(X(1:6) .EQ. 'INTERP')THEN
+	  XDEPTH_LAB='Index I'
+	  DEALLOCATE (TA)
+	  ALLOCATE (TA(MAX(ND_ATM,ND_MAX)))
+	  DO ID=1,NUM_FILES
+	    IF(ZM(ID)%R(1) .NE. 0.0D0 .AND. ZM(ID)%ED(1) .EQ. 0.0D0)THEN
+	      ND=ZM(ID)%ND-2
+!
+              ZM(ID)%ED(1)=ED(1); ZM(ID)%ED(ND+2)=ED(ND_ATM)
+	      TA(1:ND_ATM)=LOG(ED)
+	      CALL MON_INTERP(ZM(ID)%ED(2),ND,IONE,ZM(ID)%R(2),ND,TA,ND_ATM,R,ND_ATM)
+              ZM(ID)%ED(2:ND)=EXP(ZM(ID)%ED(2:ND))
+!
+	      ZM(ID)%T(1)=T(1); ZM(ID)%T(ND+2)=T(ND_ATM)
+	      TA(1:ND_ATM)=LOG(T)
+              CALL MON_INTERP(ZM(ID)%T(2),ND,IONE,ZM(ID)%R(2),ND,TA,ND_ATM,R,ND_ATM)
+              ZM(ID)%T(2:ND)=EXP(ZM(ID)%T(2:ND))
+!
+              ZM(ID)%TAU_ES(1)=TAU_ES(1); ZM(ID)%TAU_ES(ND+2)=TAU_ES(ND_ATM)
+	      TA(1:ND_ATM)=LOG(TAU_ES)
+	      CALL MON_INTERP(ZM(ID)%TAU_ES(2),ND,IONE,ZM(ID)%R(2),ND,TA,ND_ATM,R,ND_ATM)
+              ZM(ID)%TAU_ES(2:ND)=EXP(ZM(ID)%TAU_ES(2:ND))
+!
+	    ELSE IF(ZM(ID)%ND .EQ. ND_ATM)THEN
+	      ZM(ID)%V=V; ZM(ID)%R=R
+	      ZM(ID)%ED=ED; ZM(ID)%T=T
+	      ZM(ID)%TAU_ES=TAU_ES
+	    ELSE
+	      WRITE(6,*)'Unable to obtain ED and T for odel set ',ID
+	      WRITE(6,*)' No R scale and ND does not match'
+	    END IF
+	  END DO
+!
+	ELSE IF(X(1:4) .EQ. 'ESEC')THEN
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  ND=ZM(1)%NCF
+	  ALLOCATE (XV(NCF))
+	  ALLOCATE (YV(NCF))
+	  CALL USR_OPTION(I,'Depth',' ','Depth index in model 1')
+	  XV=ZM(1)%NU
+	  YV=6.65D-15*ZM(1)%ED(I)
+	  WRITE(6,*)ED(1:4)
+	  WRITE(6,*)ZM(1)%ED(1:4)
+	  WRITE(6,*)YV(1:4)
+	  CALL DP_CNVRT_J_V2(XV,YV,NCF,LOG_X,LOG_Y,X_UNIT,Y_PLT_OPT,
+	1         ZM(1)%DATA_TYPE,LAMC,XAXIS,YAXIS,L_TRUE)
+	  CALL DP_CURVE(NCF,XV,YV)
+!
 ! Set Y axis plotting options.
 !
 	ELSE IF(X(1:2) .EQ. 'LY' .OR. X(1:4) .EQ. 'LOGY' .OR. 
@@ -508,6 +675,7 @@
 	  DO ID=1,NUM_FILES
 	    WRITE(T_OUT,'(A,I2,A,A)')' ID=',ID,'          ',TRIM(ZM(ID)%FILENAME)
 	  END DO
+!
 	ELSE IF(X(1:6) .EQ. 'RD_MOD')THEN
 	  NUM_FILES=NUM_FILES+1
 	  ID=NUM_FILES
@@ -522,10 +690,17 @@
 	       WRITE(T_OUT,*)'IOS=',IOS
 	       GOTO 50
 	    END IF
-	    READ(LU_IN,REC=3)ST_REC,ZM(ID)%NCF,ZM(ID)%ND
+	    READ(LU_IN,REC=EDD_CONT_REC)ST_REC,ZM(ID)%NCF,ZM(ID)%ND
 	    ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
 	    ALLOCATE (ZM(ID)%RJ(ND,NCF))
 	    ALLOCATE (ZM(ID)%NU(NCF))
+	    ALLOCATE (ZM(ID)%R(ND)); ZM(ID)%R=0.0D0
+	    ALLOCATE (ZM(ID)%V(ND)); ZM(ID)%V=0.0D0
+	    ALLOCATE (ZM(ID)%XV(ND))
+	    ALLOCATE (ZM(ID)%LANG_COORD(ND)); ZM(ID)%LANG_COORD=0.0D0
+	    ALLOCATE (ZM(ID)%ED(ND));      ZM(ID)%ED=0.0D0
+	    ALLOCATE (ZM(ID)%T(ND));       ZM(ID)%T=0.0D0
+	    ALLOCATE (ZM(ID)%TAU_ES(ND));  ZM(ID)%TAU_ES=0.0D0
 	    DO ML=1,ZM(ID)%NCF
 	      READ(LU_IN,REC=ST_REC+ML-1,IOSTAT=IOS)(ZM(ID)%RJ(I,ML),I=1,ZM(ID)%ND),ZM(ID)%NU(ML)
 	      IF(IOS .NE. 0)THEN
@@ -534,10 +709,38 @@
 	        EXIT
 	      END IF
 	    END DO
+	    READ(LU_IN,REC=RV_REC)ST_REC
+	    IF(ST_REC  .NE. 0)THEN
+	      READ(LU_IN,REC=ST_REC)ZM(ID)%R
+	      READ(LU_IN,REC=ST_REC+1)ZM(ID)%V
+	      READ(LU_IN,REC=ST_REC+2)ZM(ID)%LANG_COORD
+	    ELSE IF(ND_ATM .EQ. ZM(ID)%ND)THEN
+	      ZM(ID)%R=R; ZM(ID)%V=V; ZM(ID)%ED=ED
+	      ZM(ID)%T=T; ZM(ID)%TAU_ES=TAU_ES
+	      WRITE(6,*)'Setting R and V for model to values from RVTJ file'
+	    ELSE IF(MOD(ZM(ID)%ND+1,ND_ATM) .EQ. 0)THEN
+	      NINS=(ZM(ID)%ND+1)/ND_ATM-1
+	      ZM(ID)%R(1)=R(1)
+	      J=1
+	      DO I=1,ND_ATM-1
+	        DELR=LOG(R(I+1)/R(I))/K
+	        DO L=1,NINS
+	          J=J+1
+	          ZM(ID)%R(J)=ZM(ID)%R(J-1)*EXP(DELR)
+	        END DO
+	        J=J+1
+	        ZM(ID)%R(J)=R(I+1)
+	      END DO
+	      WRITE(6,*)'Warning -- set R grin to RVTJ file wiyh interpolation'
+	      WRITE(6,*)'Use interp option to set other values.'
+	    ELSE
+	      WRITE(6,*)'Warning -- no R grid available some options may cause code to crash'
+	    END IF
 	  CLOSE(LU_IN)
 	  WRITE(T_OUT,*)'Successfully read in ',TRIM(ZM(ID)%FILENAME),' file'
 	  WRITE(T_OUT,*)'Number of depth points is',ZM(ID)%ND
 	  WRITE(T_OUT,*)'Number of frequencies is ',ZM(ID)%NCF
+	  ND_MAX=MAX(ND,ND_MAX); NCF_MAX=MAX(NCF_MAX,ZM(ID)%NCF)
 !
 ! Set default data types
 !
@@ -565,15 +768,12 @@
 	      WRITE(6,*)'Invalid data type: Valid types are J, H, M(t), ETA and CHI'
 	     GOTO 200
 	  END IF
-	  IF(ZM(ID)%DATA_TYPE .EQ. 'H' .AND.  ND .EQ. ZM(ID)%ND)THEN
+	  IF(ZM(ID)%DATA_TYPE .EQ. 'H')THEN
 	    DO ML=1,NCF
 	      DO I=1,ND
-	       ZM(ID)%RJ(I,ML)=ZM(ID)%RJ(I,ML)/R(I)/R(I)
+	       ZM(ID)%RJ(I,ML)=ZM(ID)%RJ(I,ML)/ZM(ID)%R(I)/ZM(ID)%R(I)
 	      END DO
 	    END DO
-	  ELSE IF(ZM(ID)%DATA_TYPE .EQ. 'H')THEN
-	    WRITE(6,*)'Unable to comput H from R^2.H since R non-matching R grid'
-	    WRITE(6,*)'Be warned -- quantities may contain an extra factor of R^2'
 	  END IF
 !
 	ELSE IF(X(1:4) .EQ. 'EXTJ')THEN
@@ -727,34 +927,27 @@
 	  END IF
 !
 	ELSE IF(X(1:3) .EQ. 'R3J')THEN
-	  ID=1; ND=ZM(ID)%ND
-	  IF(ND .NE. ND_ATM)THEN
-	    WRITE(6,*)'Unable to plot r^3.J since ND is not equal to ND_ATM'
-	    GOTO 1
-	  END IF
 	  IF(ALLOCATED(XV))DEALLOCATE(XV)
 	  IF(ALLOCATED(YV))DEALLOCATE(YV)
-	  ALLOCATE (XV(ND))
-	  ALLOCATE (YV(ND))
+	  ALLOCATE (XV(ND_MAX))
+	  ALLOCATE (YV(ND_MAX))
 !
-	  CALL USR_OPTION(USE_V,'USE_V','F','Use V for x-axis (otherwise R)')
-	  IF(USE_V)THEN
-	    XV(1:ND)=V(1:ND)
-	    XAXIS='V(km/s)'
-	  ELSE
-	    XV(1:ND)=R(1:ND)
-	    XAXIS='R(10\u10\dcm)'
-	  END IF
-	  TA=0.0D0
-	  DO ML=1,NCF
-	    DO I=1,ND
-	      TA(I)=TA(I)+ZM(ID)%RJ(I,ML)
+	  XAXIS=XDEPTH_LAB
+	  DO ID=1,ND
+	    ND=ZM(ID)%ND
+	    XV(1:ND)=ZM(ID)%XV
+	    TA=0.0D0
+	    DO ML=1,NCF
+	      DO I=1,ND
+	        TA(I)=TA(I)+ZM(ID)%RJ(I,ML)
+	      END DO
 	    END DO
+	    YV(1:ND)=TA(1:ND)*(ZM(ID)%R(1:ND)**3)
+	    YV(1:ND)=YV(1:ND)
+	    CALL DP_CURVE(ND,XV,YV)
 	  END DO
-	  YV(1:ND)=TA(1:ND)*(R(1:ND)**3)
-	  YV(1:ND)=YV(1:ND)
-	  CALL DP_CURVE(ND,XV,YV)
 	  YAXIS='r\u3\dJ'
+!
 	ELSE IF(X(1:4) .EQ. 'PHOT')THEN
 	  IF(ALLOCATED(XV))DEALLOCATE(XV)
 	  IF(ALLOCATED(YV))DEALLOCATE(YV)
@@ -794,8 +987,8 @@
 	    END DO
 	    T1=1.6D+16*ATAN(1.0D0)*1/SPEED_OF_LIGHT()      !4*PI*1.0D+15
 	    YV(1:ND)=0.5D0*T1*YV(1:ND)
-	    YV(1:ND)=3.280D-03*YV(1:ND)*R(1:ND)*R(1:ND)    !(4*PI*Dex(+30)/L(sun)
-	    CALL LUM_FROM_ETA(YV,R,ND)
+	    YV(1:ND)=3.280D-03*YV(1:ND)*ZM(ID)%R(1:ND)*ZM(ID)%R(1:ND)    !(4*PI*Dex(+30)/L(sun)
+	    CALL LUM_FROM_ETA(YV,ZM(ID)%R,ND)
 	    DO I=ND-1,1,-1
 	      YV(I)=YV(I+1)+YV(I)
 	    END DO
@@ -827,28 +1020,55 @@
 !
 	ELSE IF(X(1:2) .EQ. 'JD' .OR. X(1:5) .EQ. 'RSQJD')THEN
 !
-	  CALL USR_OPTION(I,'Depth',' ','Depth index')
+	  CALL USR_OPTION(I,'Depth',' ','Depth index in model 1')
 	  ISAV=I
+	  RVAL=ZM(1)%R(ISAV)
+!
 	  SCALE_FAC=1.0D0
 	  PLOT_RSQJ=.FALSE.
 	  ZEROV=.FALSE.
 	  IF(X(1:5) .EQ. 'RSQJD')THEN
-	    IF(ND .NE. ND_ATM)THEN
-	      WRITE(6,*)'Unable to plot r^2.J since ND is not equal to ND_ATM'
-	      GOTO 1
-	    END IF
 	    PLOT_RSQJ=.TRUE.
 	    CALL USR_OPTION(ZEROV,'ZEROV','T','Correct wavelenghts to zero V')
 	  END IF
 	  CALL USR_HIDDEN(SCALE_FAC,'SCALE','1.0D0','Scale factor to prevent overflow')
+!
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  ALLOCATE (XV(NCF_MAX))
+	  ALLOCATE (YV(NCF_MAX))
+!
 	  DO ID=1,NUM_FILES
 	    ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
-	    I=ISAV
-	    IF(ID .NE. 1 .AND. ND .NE. ZM(1)%ND)CALL USR_OPTION(I,'Depth',' ','Depth index')
-	    IF(I .GT. ND)THEN
-	      WRITE(T_OUT,*)'Invalid depth; maximum value is',ND
-	      GOTO 1
+            IF(ZM(ID)%R(1) .LT. RVAL)THEN
+	      YV(1:NCF)=ZM(ID)%RJ(1,1:NCF)*SCALE_FAC
+            ELSE IF(ZM(ID)%R(ND) .GT. RVAL)THEN
+	      YV(1:NCF)=ZM(ID)%RJ(ND,1:NCF)*SCALE_FAC
+	    ELSE   
+	      I=ISAV
+	      IF(ID .NE. 1)I=GET_INDX_DP(RVAL,ZM(ID)%R,ND)
+	      J=MIN(I+1,ND)
+	      IF( ABS(ZM(ID)%R(I)/RVAL-1.0D0) .LT. 1.0D-06)THEN
+	        WRITE(6,'(A,I4,A,I3)')' Using depth',I,' for model ID=',ID
+	        YV(1:NCF)=ZM(ID)%RJ(I,1:NCF)*SCALE_FAC
+	      ELSE IF( ABS(ZM(ID)%R(J)/RVAL-1.0D0) .LT. 1.0D-06)THEN
+	        WRITE(6,'(A,I4,A,I3)')' Using depth',J,' for model ID=',ID
+	        YV(1:NCF)=ZM(ID)%RJ(J,1:NCF)*SCALE_FAC
+	      ELSE
+	        WRITE(6,'(A,I4,A,I4,A,I3)')'Using depths',I,' and',I+1,' for model ID=',ID
+	        WRITE(6,*)RVAL,ZM(ID)%R(I),ZM(ID)%R(I+1)
+	        T1=(RVAL-ZM(ID)%R(I))/(ZM(ID)%R(I+1)-ZM(ID)%R(I))
+	        DO ML=1,NCF
+	          IF(ZM(ID)%RJ(I,ML) .GT. 0 .AND. ZM(ID)%RJ(I,ML) .GT. 0)THEN
+	            YV(ML)=(1.0D0-T1)*LOG(ZM(ID)%RJ(I,ML))+T1*LOG(ZM(ID)%RJ(I+1,ML))
+	            YV(ML)=EXP(YV(ML))*SCALE_FAC
+	          ELSE
+	            YV(ML)=0.0D0
+	          END IF
+	        END DO    
+	      END IF
 	    END IF
+!
 	    IF(ID .EQ. 1 .AND. ND .EQ. ND_ATM)THEN
 	      CALL DERIVCHI(TB,T,R,ND,'LOGLOG')
 	      TEMP=T(I); DTDR=TB(I); RADIUS=R(I)
@@ -860,16 +1080,10 @@
 	      WRITE(T_OUT,'(X,A,1P,E14.6)')'  TAU_ES(I)=',TAU_ES(I)
 	    END IF
 !
-	    IF(ALLOCATED(XV))DEALLOCATE(XV)
-	    IF(ALLOCATED(YV))DEALLOCATE(YV)
-	    ALLOCATE (XV(NCF))
-	    ALLOCATE (YV(NCF))
-!
 	    XV(1:NCF)=ZM(ID)%NU(1:NCF)
-	    YV(1:NCF)=ZM(ID)%RJ(I,1:NCF)*SCALE_FAC
-	    IF(PLOT_RSQJ)YV(1:NCF)=YV(1:NCF)*R(I)*R(I)
+	    IF(PLOT_RSQJ)YV(1:NCF)=YV(1:NCF)*ZM(ID)%R(I)*ZM(ID)%R(I)
 	    IF(ZEROV)THEN
-	      T1=(1.0D0+V(I)/C_KMS)/(1.0-V(I)/C_KMS) 
+	      T1=(1.0D0+ZM(ID)%V(I)/C_KMS)/(1.0-ZM(ID)%V(I)/C_KMS) 
 	      XV(1:NCF)=XV(1:NCF)*SQRT(T1)
 	      YV(1:NCF)=YV(1:NCF)*T1
 	    END IF
@@ -902,47 +1116,41 @@
 	  END IF
 !
 	ELSE IF(X(1:3) .EQ. 'JNU')THEN
-	  CALL USR_OPTION(T1,'Lambda',' ','Vacuum wavelength in Ang (-ve for Hz)')
-	  IF(T1 .LE. 0)THEN
-	    T1=ABS(T1)
+	  DO ID=1,NUM_FILES
+	    IF(.NOT. ZM(ID)%XV_SET)THEN
+	      WRITE(6,*)RED_PEN
+	      WRITE(6,*)' Error -- first use XLOGR, XVEL etc to set X-axis option',DEF_PEN
+	      GOTO 1
+	    END IF
+	  END DO
+!
+	  CALL USR_OPTION(FREQ_VAL,'Lambda',' ','Vacuum wavelength in Ang (-ve for units of 10^15 Hz)')
+	  IF(FREQ_VAL .LE. 0)THEN
+	    FREQ_VAL=ABS(FREQ_VAL)
 	  ELSE
-	    T1=0.299794D+04/T1
+	    FREQ_VAL=0.299794D+04/FREQ_VAL
 	  END IF
 !
 	  SCALE_FAC=1.0D0
 	  PLOT_RSQJ=.FALSE.
 	  CALL USR_HIDDEN(SCALE_FAC,'SCALE','1.0D0','Scale factor to prevent overflow')
 	  CALL USR_HIDDEN(PLOT_RSQJ,'RSQJ','F','Plot r^2 Gamma J?')
-	  CALL USR_OPTION(USE_V,'USE_V','F','Use V for x-axis (otherwise R)')
 !
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  ALLOCATE (XV(ND_MAX))
+	  ALLOCATE (YV(ND_MAX))
 	  DO ID=1,NUM_FILES
 	    ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
+            I=GET_INDX_DP(FREQ_VAL,ZM(ID)%NU,NCF)
+	    IF(ZM(ID)%NU(I)-FREQ_VAL .GT. FREQ_VAL-ZM(ID)%NU(I+1))I=I+1
+	    NU_INDX=I
+	    WRITE(6,'(A,F12.6,A)')' Frequency being plotted is',ZM(ID)%NU(I),' x 10^15 Hz'
+	    T1=0.299794D+04/FREQ_VAL
+	    WRITE(6,'(A,F12.4,A)')'Wavelength being plotted is',T1,' Angstroms'
 !
-            I=GET_INDX_DP(T1,ZM(ID)%NU,NCF)
-	    IF(ZM(ID)%NU(I)-T1 .GT. T1-ZM(ID)%NU(I+1))I=I+1
-	    IF(ALLOCATED(XV))DEALLOCATE(XV)
-	    IF(ALLOCATED(YV))DEALLOCATE(YV)
-	    ALLOCATE (XV(ND))
-	    ALLOCATE (YV(ND))
-!
-	    IF(ND .EQ. ND_ATM)THEN
-	      IF(USE_V)THEN
-	        XV(1:ND)=V(1:ND)
-	        XAXIS='V(km\u \ds\u-1\d)'
-	      ELSE
-	        WRITE(6,*)'R(1)=',R(1)
-	        WRITE(6,*)'R(ND)=',R(ND)
-	        T2=R(ND)
-	        XV(1:ND)=DLOG10(R(1:ND)/T2)
-	        XAXIS='R/R(ND)'
-	      END IF
-	    ELSE
-	     WRITE(6,*)'Plotting against depth index since ND is not equal to ND_ATM'
-	      DO I=1,ND
-	        XV(I)=I
-	      END DO
-	      XAXIS='Depth index'
-	    END IF
+	    XV(1:ND)=ZM(ID)%XV(1:ND)
+	    XAXIS=XDEPTH_LAB
 	    YAXIS=ZM(ID)%DATA_TYPE
 	    IF(PLOT_RSQJ)THEN
 	      YAXIS='Log r\u2\d'//YAXIS
@@ -950,11 +1158,12 @@
 	      YAXIS='Log '//YAXIS
 	    END IF
 	    DO J=1,ND
-	      IF(ZM(ID)%RJ(J,I) .GT. 0)THEN
+	      IF(ZM(ID)%RJ(J,NU_INDX) .GT. 0)THEN
 	        IF(PLOT_RSQJ)THEN
-	          YV(J)=DLOG10(ZM(ID)%RJ(J,I)*R(J)*R(J)/SQRT(1.0D0-V(J)*V(J)/C_KMS/C_KMS))
+	          T1=ZM(ID)%R(J); T2=ZM(ID)%V(J)
+	          YV(J)=DLOG10(ZM(ID)%RJ(J,NU_INDX)*T1*T1/SQRT(1.0D0-T2*T2/C_KMS/C_KMS))
 	        ELSE
-	          YV(J)=DLOG10(ZM(ID)%RJ(J,I))
+	          YV(J)=DLOG10(ZM(ID)%RJ(J,NU_INDX))
 	        END IF
 	      ELSE
 	        YV(J)=-100.0
@@ -964,25 +1173,18 @@
           END DO
 !
 	ELSE IF(X(1:2) .EQ. 'MT')THEN
-	  CALL USR_OPTION(USE_V,'USE_V','T','Use V for x-axis (otherwise R)')
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  ALLOCATE (XV(ND_MAX))
+	  ALLOCATE (YV(ND_MAX))
+	  XAXIS=XDEPTH_LAB
 	  DO ID=1,NUM_FILES
 	    ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
 !
             I=GET_INDX_DP(T1,ZM(ID)%NU,NCF)
 	    IF(ZM(ID)%NU(I)-T1 .GT. T1-ZM(ID)%NU(I+1))I=I+1
-	    IF(ALLOCATED(XV))DEALLOCATE(XV)
-	    IF(ALLOCATED(YV))DEALLOCATE(YV)
-	    ALLOCATE (XV(ND))
-	    ALLOCATE (YV(ND))
 !
-	    IF(USE_V)THEN
-	      XAXIS='V(km/s)'
-	      XV(1:ND)=V(1:ND)
-	    ELSE
-	      XAXIS='R/R(ND)'
-	      T2=R(ND)
-	      XV(1:ND)=R(1:ND)/T2
-	    END IF
+	    XV(1:ND)=ZM(ID)%XV(1:ND)
 	    YV(1:ND)=ZM(ID)%RJ(1:ND,NCF)
 	    YAXIS='M(t)'
 	    CALL DP_CURVE(ND,XV,YV)
@@ -1033,14 +1235,14 @@
 !
 	ELSE IF(X(1:2) .EQ. 'CF')THEN
 !
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  IF(ALLOCATED(TA))DEALLOCATE(TA)
+	  ALLOCATE (XV(ND_MAX))
+	  ALLOCATE (YV(ND_MAX))
+	  ALLOCATE (TA(ND_MAX))
 	  DO ID=1,NUM_FILES
 	    ND=ZM(ID)%ND; NCF=ZM(ID)%NCF
-	    IF(ALLOCATED(XV))DEALLOCATE(XV)
-	    IF(ALLOCATED(YV))DEALLOCATE(YV)
-	    IF(ALLOCATED(TA))DEALLOCATE(TA)
-	    ALLOCATE (XV(ND))
-	    ALLOCATE (YV(ND))
-	    ALLOCATE (TA(ND))
 !
 	    TA(1:ND)=0.0D0
 	    DO ML=1,NCF-1
@@ -1051,7 +1253,7 @@
 	    END DO
 	    IF(ND .EQ. ND_ATM)THEN
 	      IF(ZM(ID)%DATA_TYPE .EQ. 'J' .OR. ZM(ID)%DATA_TYPE .EQ. 'H')THEN
-	        TA(1:ND)=TA(1:ND)*R(1:ND)*R(1:ND)
+	        TA(1:ND)=TA(1:ND)*ZM(ID)%R(1:ND)*ZM(ID)%R(1:ND)
 	        YAXIS='L/L(d=1)'
 	        IF(ZM(ID)%DATA_TYPE .EQ. 'J')YAXIS='R\u2\d/J/R\u2\dJ(d=1)'
 	      END IF
@@ -1178,14 +1380,14 @@
 ! For diagnostic purposes. Designed specifically to computes
 ! Int J dv & Int dJ/dlnv dv, and plot as a function of depth.
 !
+	  IF(ALLOCATED(XV))DEALLOCATE(XV)
+	  IF(ALLOCATED(YV))DEALLOCATE(YV)
+	  IF(ALLOCATED(ZV))DEALLOCATE(ZV)
+	  ALLOCATE (XV(ND_MAX),YV(ND_MAX),ZV(ND_MAX))
 	  DO ID=1,NUM_FILES
 	    ND=ZM(ID)%ND
-	    IF(ALLOCATED(XV))DEALLOCATE(XV)
-	    IF(ALLOCATED(YV))DEALLOCATE(YV)
-	    IF(ALLOCATED(ZV))DEALLOCATE(ZV)
-	    ALLOCATE (XV(ND),YV(ND),ZV(ND))
 !
-            XV(1:ND)=R(1:ND)/R(ND)
+            XV(1:ND)=ZM(ID)%XV
             YV(1:ND)=0.0D0; ZV(1:ND)=0.0D0
             DO ML=2,NCF-1
               DO I=1,ND
@@ -1198,7 +1400,7 @@
             CALL DP_CURVE(ND,XV,YV)
             CALL DP_CURVE(ND,XV,ZV)
           END DO
-	  XAXIS='R/R\d*\u'
+	  XAXIS=XDEPTH_LAB
 	  YAXIS='Int J dv; Int dJ/dlnv dv'
 !
 ! For testing and diagnostic purposes. Plots c.dNU/NU as a function on NU.

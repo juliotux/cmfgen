@@ -36,6 +36,7 @@ EXE   =  $(EXE_DIR)wr_f_to_s.exe\
          $(EXE_DIR)chk_phot.exe\
          $(EXE_DIR)pack_osc.exe\
          $(EXE_DIR)do_ng_v2.exe\
+         $(EXE_DIR)create_mod_sum.exe\
          $(EXE_DIR)extrap_scr.exe\
          $(EXE_DIR)guess_dc.exe\
          $(EXE_DIR)land_col_merge.exe\

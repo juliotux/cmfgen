@@ -323,6 +323,11 @@
 	  SUM_VAL=SUM(YV)
 	  IF(SUM _VAL .NE. 0.0D0)CALL DP_CURVE(ND,XV,YV)
 !
+	ELSE IF(XOPT .EQ. 'ADV_RATE')THEN
+	  YV=ADV_REC_RATE
+	  SUM_VAL=SUM(YV)
+	  IF(SUM _VAL .NE. 0.0D0)CALL DP_CURVE(ND,XV,YV)
+!
 	ELSE IF(XOPT .EQ. 'PHOT_RATE')THEN
 	  YV=TOT_PHOT_RATE
 	  SUM_VAL=SUM(YV)
@@ -339,28 +344,29 @@
         ELSE IF(XOPT .EQ. 'P' .OR. XOPT .EQ. 'GR')THEN
           CALL GRAMON_PGPLOT(XLABEL,YLABEL,' ',' ')
         ELSE IF(XOPT .EQ. 'HE' .OR. XOPT .EQ. 'HELP')THEN
-	  WRITE(6,'(A1)')' '
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'XR',BLUE_PEN,'Set X axis to R'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'XLOGR',BLUE_PEN,'Set X axis to Log(R)'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'XV',BLUE_PEN,'Set X axis to velocity'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'XLOGV',BLUE_PEN,'Set X axis to Log(velocity)'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'XN',BLUE_PEN,'Set X axis to depth index'
-	  WRITE(6,'(A1)')' '
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'COL_ION',BLUE_PEN,'Plot the collisional ionization rate'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'COL_ION',BLUE_PEN,'Plot the collisional recombination rate'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'PHOT_RATE',BLUE_PEN,'Plot the photoionization rate'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'REC_RATE',BLUE_PEN,'Plot the recombination rate'
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'NT',BLUE_PEN,'Plot the non-thermal ionization rate'
-	  WRITE(6,'(A1)')' '
-	  WRITE(6,'(1X,A1,A,A1,T20,A)')RED_PEN,'EX',BLUE_PEN,'Exit from porgram'
-	  WRITE(6,'(A1)')DEF_PEN
+	  WRITE(6,'(A)')' '
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'XR',BLUE_PEN,'Set X axis to R'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'XLOGR',BLUE_PEN,'Set X axis to Log(R)'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'XV',BLUE_PEN,'Set X axis to velocity'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'XLOGV',BLUE_PEN,'Set X axis to Log(velocity)'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'XN',BLUE_PEN,'Set X axis to depth index'
+	  WRITE(6,'(A)')' '
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'COL_ION',BLUE_PEN,'Plot the collisional ionization rate'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'COL_ION',BLUE_PEN,'Plot the collisional recombination rate'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'PHOT_RATE',BLUE_PEN,'Plot the photoionization rate'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'REC_RATE',BLUE_PEN,'Plot the recombination rate'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'ADV_RATE',BLUE_PEN,'Plot the advection recombination rate'
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'NT',BLUE_PEN,'Plot the non-thermal ionization rate'
+	  WRITE(6,'(A)')' '
+	  WRITE(6,'(1X,3A,T30,A)')RED_PEN,'EX',BLUE_PEN,'Exit from program'
+	  WRITE(6,'(A)')DEF_PEN
         ELSE IF(XOPT .EQ. 'EX')THEN
           STOP
         ELSE
           WRITE(6,*)'Option not recognized'
         END IF
 	IF(SUM_VAL .EQ. 0.0D0)THEN
-	   WRITE(6,*)'No call to CURVE as data values for requested option are zer'
+	   WRITE(6,*)'No call to CURVE as data values for requested option are zero'
 	END IF
         GOTO 3
 !

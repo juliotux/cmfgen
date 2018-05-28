@@ -28,6 +28,9 @@
 	REAL*8 RTMP(NMAX)
 	REAL*8 OLD_TAU(NMAX)
 	REAL*8 TAU_SAV(NMAX)
+	REAL*8 TAU(NMAX)
+	REAL*8 CHI_ROSS(NMAX)
+	REAL*8 CLUMP_FAC(NMAX)
 !
 	REAL*8 TMP_R(NMAX)
 	REAL*8 X1(NMAX)
@@ -42,6 +45,8 @@
 	REAL*8 NEW_RSTAR
 	REAL*8 T1,T2,T3
 	REAL*8 BETA
+	REAL*8 RP2
+	REAL*8 VEXT
 	REAL*8 BETA2
 	REAL*8 VINF
 	REAL*8 FAC
@@ -57,6 +62,8 @@
 	REAL*8 dVdR
 	REAL*8 MDOT
 	REAL*8 OLD_MDOT
+	REAL*8 LSTAR
+	REAL*8 OLD_LSTAR
 	REAL*8 TOP,BOT 
 	REAL*8 dTOPdR,dBOTdR 
 	REAL*8 ALPHA
@@ -121,7 +128,7 @@
 	WRITE(6,'(A)')'         EXTR: extend grid to larger radii'
 	WRITE(6,'(A)')'         FGOB: insert N points at outer boundary (to make finer grid)'
 	WRITE(6,'(A)')'         MDOT: change the mass-loss rate or velocity law'
-	WRITE(6,'(A)')'         NEWG: revise grid between two velocities'
+	WRITE(6,'(A)')'         NEWG: revise grid between two velocities or depth indicies'
 	WRITE(6,'(A)')'         SCLR: scale radius of star to new value'
 	WRITE(6,'(A)')'         SCLV: scale velocity law to new value'
 	WRITE(6,'(A)')'         PLOT: plot V and SIGMA from old RVSIG file'
@@ -136,22 +143,22 @@
 ! We use TAU_SAV for dTAU, and is used to increase the precision of the TAU
 ! scale (as insufficient digits may be print out).
 !
-	IF(OPTION .EQ. 'SPP')THEN
+	IF(OPTION .EQ. 'SPP' .OR. OPTION .EQ. 'TAU')THEN
 	  ROUND_ERROR=.FALSE.
 	  OPEN(UNIT=20,FILE='MEANOPAC',STATUS='OLD',ACTION='READ',IOSTAT=IOS)
 	    IF(IOS .EQ. 0)THEN
 	      READ(20,'(A)')STRING
-	      DO I=1,ND
-	        READ(20,*)RTMP(I),J,OLD_TAU(I),TAU_SAV(I)
+	      DO I=1,ND_OLD
+	        READ(20,*)RTMP(I),J,OLD_TAU(I),TAU_SAV(I),T1,CHI_ROSS(I)
 	        J=MAX(I,2)
-	        T1=R(J-1)-R(J)
+	        T1=OLD_R(J-1)-OLD_R(J)
 	        IF( ABS(RTMP(I)-R(I))/T1 .GT. 2.0D-03 .AND. .NOT. ROUND_ERROR)THEN
 	          WRITE(6,*)' '
 	          WRITE(6,*)'Possible eror with MEANOPAC -- inconsistent R grid'
 	          WRITE(6,*)'Error could simply be a lack of sig. digits in MEANOPAC'
 	          WRITE(6,*)' RMO(I)=',RTMP(I)
-	          WRITE(6,*)'   R(I)=',R(I)
-	          WRITE(6,*)' R(I+1)=',R(I+1)
+	          WRITE(6,*)'   R(I)=',OLD_R(I)
+	          WRITE(6,*)' R(I+1)=',OLD_R(I+1)
 	          ROUND_ERROR=.TRUE.
 	          CALL GEN_IN(ROUND_ERROR,'Continue as only rounding error?')
 	          IF(.NOT. ROUND_ERROR)STOP
@@ -161,11 +168,12 @@
                 OLD_TAU(I)=OLD_TAU(I+1)-TAU_SAV(I)
               END DO
 	      RD_MEANOPAC=.TRUE.
+	      WRITE(6,*)'Successfully read MEANOPAC'
 	    ELSE
 	      RD_MEANOPAC=.FALSE.
 	    END IF
 	    IF(ROUND_ERROR .AND. RD_MEANOPAC)THEN
-	      RTMP(1:ND)=R(1:ND)
+	      RTMP(1:ND_OLD)=OLD_R(1:ND_OLD)
 	    END IF 
 	  CLOSE(UNIT=20)
 	END IF
@@ -177,9 +185,89 @@
 	  WRITE(6,'(A)')'The VADAT file is also required'
 	END IF
 !
-	  
+	IF(OPTION .EQ. 'TAU')THEN
+	  WRITE(6,*)'Option still under development'
+	  I=7
+          CALL RD_SING_VEC_RVTJ(CLUMP_FAC,ND_OLD,'Clumping Factor','RVTJ',I,IOS)
+	  ND=ND_OLD
+	  CALL GEN_IN(ND,'Number of depth points')
+	  T1=MAXVAL(OLD_SIGMA(1:ND_OLD))
+	  WRITE(6,*)'Maximum value of SIGMA is',T1
+	  DO I=1,ND_OLD
+!	    X2(I)=CLUMP_FAC(I)*CHI_ROSS(I)*(0.5D0+OLD_SIGMA(I)/10.0D0)   !/(1.0D0+SQRT(OLD_V(I))) !*(1.0D0+OLD_SIGMA(I)/T1)
+	    X2(I)=CLUMP_FAC(I)*CHI_ROSS(I)*(1.0D0+(1.0D0+OLD_SIGMA(I)))
+!	    X2(I)=CLUMP_FAC(I)*CHI_ROSS(I)
+	  END DO
+	  X1(1)=X2(1)*OLD_R(1)
+	  DO I=2,ND_OLD
+	    X1(I)=X1(I-1)+ 0.5D0*(OLD_R(I-1)-OLD_R(I))*(X2(I-1)+X2(I))
+	  END DO
 !
-	IF(OPTION .EQ. 'NEW_ND')THEN
+!	  DO I=1,ND_OLD
+!	    T1=MIN(OLD_V(I),300.0D0)/0.1D0
+!	    X1(I)=X1(I)/MAX(1.0D0,SQRT(T1))
+!	  END DO
+!
+	  T1=EXP(LOG(X1(ND_OLD)/X1(1))/(ND-4))
+	  WRITE(6,*)'TAU step size ratio is',T1
+	  X2(1)=X1(1)
+	  X2(2)=X1(1)+0.02*X1(1)*(T1-1.0D0)
+	  X2(3)=X1(1)*T1
+	  DO I=4,ND-3
+	    X2(I)=X2(I-1)*T1
+	  END DO
+	  X2(ND-2)=X2(ND-3)*SQRT(T1)
+	  X2(ND-1)=X2(ND-2)*(T1**0.25D0)
+	  X2(ND)=X1(ND_OLD)
+	  WRITE(6,*)'Defined X2 grid'
+! 
+	  DO I=1,ND_OLD
+	    WRITE(6,*)I,OLD_R(I),X2(I)
+	  END DO
+	  CALL MON_INTERP(R,ND,IONE,X2,ND,OLD_R,ND_OLD,X1,ND_OLD)
+	  WRITE(6,*)'Defined new R grid by interpolation'
+	  DO I=1,ND
+	    WRITE(6,*)I,R(I),X2(I)
+	  END DO
+!
+! Now compute the revised SIGMA. V has already been computed.
+!
+	  ALLOCATE (COEF(ND_OLD,4))
+	  CALL MON_INT_FUNS_V2(COEF,OLD_V,OLD_R,ND_OLD)
+	  J=1
+	  I=1
+	  DO WHILE (I .LE. ND)
+	    IF(R(I) .GE. OLD_R(J+1))THEN
+	      T1=R(I)-OLD_R(J)
+	      V(I)=COEF(J,4)+T1*(COEF(J,3)+T1*(COEF(J,2)+T1*COEF(J,1)))
+	      SIGMA(I)=COEF(J,3)+T1*(2.0D0*COEF(J,2)+3.0*T1*COEF(J,1))
+	      SIGMA(I)=R(I)*SIGMA(I)/V(I)-1.0D0
+	      I=I+1
+	    ELSE
+	      J=J+1
+	    END IF
+	  END DO
+	  DEALLOCATE (COEF)
+	  WRITE(6,*)'Determined R and V on the new grid'
+	  CALL MON_INTERP(TAU,ND,IONE,R,ND,OLD_TAU,ND_OLD,OLD_R,ND_OLD)
+	  WRITE(6,*)'Determined TAU on the new grid'
+	  I=1
+	  WRITE(30,'(3X,A,6X,A,T28,A,T40,A,T53,A,T66,A,T78,A,T93,A,T101,A)')
+	1           'I','R','V','SIGMA','TAU','dTAU','dTRAT','X2','V(I)/V(I+1)'
+	  WRITE(30,'(1X,I3,F16.9,7ES13.4)')I,R(I),V(I),SIGMA(I),TAU(I),TAU(I+1)-TAU(I),T2,X2(I),V(I)/V(I+1)
+	  FLUSH(UNIT=30)
+	  T2=0.00
+	  DO I=2,ND-1
+	    T1=TAU(I+1)-TAU(I)
+	    T2=T1/(TAU(I)-TAU(I-1))
+	    WRITE(30,'(1X,I3,F16.9,7ES13.4)')I,R(I),V(I),SIGMA(I),TAU(I),T1,T2,X2(I),V(I)/V(I+1)
+	    FLUSH(UNIT=30)
+	  END DO
+	  I=ND
+	  WRITE(30,'(1X,I3,F16.9,6ES13.4)')I,R(I),V(I),SIGMA(I),TAU(I),0.0D0,0.0D0,X2(I)
+	  FLUSH(UNIT=30)
+!
+	ELSE IF(OPTION .EQ. 'NEW_ND')THEN
 	  WRITE(6,'(A)')' '
 	  WRITE(6,'(A)')'This option allows a new R grid to be output'
 	  WRITE(6,'(A)')'Grid spacing is similar to input grid.'
@@ -250,6 +338,7 @@
              X1(I)=I
            END DO
            CALL MON_INTERP(R,ND,IONE,X2,ND,OLD_R,ND_OLD,X1,ND_OLD)
+	   WRITE(6,*)'Done interpolation'
 !
 ! Now compute the revised V and SIGMA.
 !
@@ -353,50 +442,67 @@
 !
 	ELSE IF(OPTION .EQ. 'NEWG')THEN
 	  WRITE(6,'(A)')' '
-	  WRITE(6,'(A)')'This option allows the grid to be redeifined'
+	  WRITE(6,'(A)')'This option allows the grid to be redefined over a specified interval'
+	  WRITE(6,'(A)')'Originally defined for small ranges'
+	  WRITE(6,'(A)')'Data points in the requested interval are equally spaced on log r^2. V'
+	  WRITE(6,'(A)')' '
 !
-	  CALL GEN_IN(V_MAX,'Maximum velocity for grid refinement')
-	  CALL GEN_IN(V_MIN,'Initial velocity for grid refinement')
-	  IF(V_MAX .GE. OLD_V(1) .OR. V_MAX .LE. OLD_V(ND_OLD))THEN
-	    WRITE(6,*)'Error: can''t insert grid points outside velociy grid'
+	  CALL GEN_IN(V_MAX,'Maximum velocity for grid refinement (-ve for depth index)')
+	  CALL GEN_IN(V_MIN,'Initial velocity for grid refinement (-ve for depth index)')
+	  IF(V_MAX*V_MIN .LT. 0.0D0)THEN
+	    WRITE(6,*)'Error: either velocities of depth index but not mixture'
 	    STOP
 	  END IF
-	  IF(V_MIN .GE. OLD_V(1) .OR. V_MIN .LE. OLD_V(ND_OLD))THEN
-	    WRITE(6,*)'Error: can''t insert grid points outside velociy grid'
-	    STOP
-	  END IF
+!
+	  IF(V_MAX .LT. 0.0D0)THEN
+	    V_MAX=ABS(V_MAX); V_MIN=ABS(V_MIN)
+	    I_ST=NINT(MIN(V_MIN,V_MAX))
+	    I_END=NINT(MAX(V_MIN,V_MAX))
+	  ELSE
+	    IF(V_MAX .GE. OLD_V(1) .OR. V_MAX .LE. OLD_V(ND_OLD))THEN
+	      WRITE(6,*)'Error: can''t insert grid points outside velociy grid'
+	      STOP
+	    END IF
+	    IF(V_MIN .GE. OLD_V(1) .OR. V_MIN .LE. OLD_V(ND_OLD))THEN
+	      WRITE(6,*)'Error: can''t insert grid points outside velociy grid'
+	      STOP
+	    END IF
 !
 ! Find interval
 !
-	  DO I=1,ND_OLD-1
-	    IF(V_MAX .GT. OLD_V(I+1))THEN
-	      I_ST=I
-	      EXIT
-	    END IF
-	  END DO
-	  IF(V_MAX-OLD_V(I+1) .LT. OLD_V(I)-V_MAX)I_ST=I+1
+	    DO I=1,ND_OLD-1
+	      IF(V_MAX .GT. OLD_V(I+1))THEN
+	        I_ST=I
+	        EXIT
+	      END IF
+	    END DO
+	    IF(V_MAX-OLD_V(I+1) .LT. OLD_V(I)-V_MAX)I_ST=I+1
 !
-	  DO I=1,ND_OLD-1
-	    IF(V_MIN .GT. OLD_V(I+1))THEN
-	      I_END=I
-	      EXIT
-	    END IF
-	  END DO
-	  IF(V_MIN-OLD_V(I_END+1) .LT. OLD_V(I_END)-V_MIN)I_END=I_END+1
+	    DO I=1,ND_OLD-1
+	      IF(V_MIN .GT. OLD_V(I+1))THEN
+	        I_END=I
+	        EXIT
+	      END IF
+	    END DO
+	    IF(V_MIN-OLD_V(I_END+1) .LT. OLD_V(I_END)-V_MIN)I_END=I_END+1
+	  END IF
+!
 	  WRITE(6,*)' I_ST=',I_ST,OLD_V(I_ST)
 	  WRITE(6,*)'I_END=',I_END,OLD_V(I_END)
+	  V_MAX=OLD_V(I_ST); V_MIN=OLD_V(I_END)
 	  WRITE(6,*)'Current number of points in interval is',I_END-I_ST-1
 	  CALL GEN_IN(N_ADD,'Number of points in interval (exclusive)')
 !
+	  X1(1:ND_OLD)=OLD_V(1:ND_OLD)*OLD_R(1:ND_OLD)*OLD_R(1:ND_OLD)
 	  ND=N_ADD+ND_OLD-(I_END-I_ST-1)
-	  V(1:I_ST)=OLD_V(1:I_ST)
-	  T1=EXP(DLOG(V_MAX/V_MIN)/(N_ADD+1))
+	  X2(1:I_ST)=X1(1:I_ST)
+	  T1=EXP(DLOG(V_MAX*OLD_R(I_ST)*OLD_R(I_ST)/V_MIN/OLD_R(I_END)/OLD_R(I_END))/(N_ADD+1))
 	  DO I=I_ST+1,I_ST+N_ADD
-	   V(I)=V(I-1)/T1
+	   X2(I)=X2(I-1)/T1
 	  END DO
-	  V(I_ST+N_ADD+1:ND)=OLD_V(I_END:ND_OLD)
+	  X2(I_ST+N_ADD+1:ND)=X1(I_END:ND_OLD)
 !
-	  CALL MON_INTERP(R,ND,IONE,V,ND,OLD_R,ND_OLD,OLD_V,ND_OLD)
+	  CALL MON_INTERP(R,ND,IONE,X2,ND,OLD_R,ND_OLD,X1,ND_OLD)
 !
 ! Now compute the revised SIGMA. V has already been computed.
 !
@@ -407,7 +513,7 @@
 	  DO WHILE (I .LE. ND)
 	    IF(R(I) .GE. OLD_R(J+1))THEN
 	      T1=R(I)-OLD_R(J)
-!	      V(I)=COEF(J,4)+T1*(COEF(J,3)+T1*(COEF(J,2)+T1*COEF(J,1)))
+	      V(I)=COEF(J,4)+T1*(COEF(J,3)+T1*(COEF(J,2)+T1*COEF(J,1)))
 	      SIGMA(I)=COEF(J,3)+T1*(2.0D0*COEF(J,2)+3.0*T1*COEF(J,1))
 	      SIGMA(I)=R(I)*SIGMA(I)/V(I)-1.0D0
 	      I=I+1
@@ -552,11 +658,23 @@
 	  CALL GEN_IN(V_TRANS,'Connection velocity in km/s')
 	  CALL GEN_IN(OLD_MDOT,'Old mass-loss rate in Msun/yr')
 	  MDOT=OLD_MDOT
+!
+	  WRITE(6,*)RED_PEN
+	  WRITE(6,*)'The defaut mass assume Mdot/R^1.5 is to be preserved'
+	  WRITE(6,*)DEF_PEN
+	  MDOT=OLD_MDOT*(NEW_RSTAR/OLD_R(ND_OLD))**1.5D0
 	  CALL GEN_IN(MDOT,'New mass-loss rate in Msun/yr')
 !
+	  CALL GEN_IN(OLD_LSTAR,'Old stellar luminosity in Lsun')
+	  T1=OLD_LSTAR*(NEW_RSTAR/OLD_R(ND_OLD))**2
+	  WRITE(6,*)RED_PEN
+	  WRITE(6,'(A,ES14.4)')'New luminosity if Teff is to be preserved',T1
+	  WRITE(6,*)DEF_PEN
+!
 	  WRITE(6,'(A)')
-	  WRITE(6,'(A)')'Type 1: W(r).V(r) = 2V(t) + (Vinf-2V(t))*(1-r(t)/r))**BETA'
-	  WRITE(6,'(A)')'Type 2: W(r).V(r) = Vinf*(1-rx/r)**BETA'
+	  WRITE(6,'(A)')'Type 1: W(r).V(r) = Vinf*(1-rx/r)**BETA'
+	  WRITE(6,'(A)')'        with W(r) = 1.0D0+exp( (r(t)-r)/h )'
+	  WRITE(6,'(A)')'Type 2: W(r).V(r) = 2V(t) + (Vinf-2V(t))*(1-r(t)/r))**BETA'
 	  WRITE(6,'(A)')'        with W(r) = 1.0D0+exp( (r(t)-r)/h )'
 	  WRITE(6,'(A)')
 !
@@ -626,24 +744,35 @@
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  ELSE
-	    BETA2=BETA
-	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
 	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
 	    WRITE(6,*)'  Transition radius is',R_TRANS
 	    WRITE(6,*)'Transition velocity is',V_TRANS
 	    WRITE(6,*)'       Scale height is',SCALE_HEIGHT
+!
+	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
+	    WRITE(6,*)'  Transition radius is',R_TRANS
+	    WRITE(6,*)'Transition velocity is',V_TRANS
+	    WRITE(6,*)'       Scale height is',SCALE_HEIGHT
+	    ALPHA=2.0D0
+!	    IF(VEL_TYPE .EQ. 4)ALPHA=3.0D0
+	    BETA2=BETA
+	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
 	    DO I=1,TRANS_I-1
 	      T1=R_TRANS/R(I)
 	      T2=1.0D0-T1
-	      TOP = 2.0D0*V_TRANS + (VINF-2.0D0*V_TRANS) * T2**BETA
-	      BOT = 1.0D0 + exp( (R_TRANS-R(I))/SCALE_HEIGHT )
-	      V(I) = TOP/BOT
-                                                                                
+	      T3=BETA+(BETA2-BETA)*T2
+	      TOP = (VINF-ALPHA*V_TRANS) * T2**T3
+	      BOT = 1.0D0 + (ALPHA-1.0D0)*exp( (R_TRANS-R(I))/SCALE_HEIGHT )
+
 !NB: We drop a minus sign in dBOTdR, which is fixed in the next line.
-                                                                                
-	      dTOPdR = (VINF - 2.0D0*V_TRANS) * BETA * T1 / R(I) * T2**(BETA - 1.0D0)
-	      dBOTdR=  exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
+
+	      dTOPdR = (VINF - ALPHA*V_TRANS) * BETA * T1 / R(I) * T2**(T3-1.0D0) +
+	1                  T1*TOP*(BETA2-BETA)*(1.0D0+LOG(T2))/R(I)
+	      dBOTdR=  (ALPHA-1.0D0)*exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
+!
+	      TOP = ALPHA*V_TRANS + TOP
 	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
+	      V(I) = TOP/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  END IF
@@ -655,24 +784,43 @@
 	  CALL GEN_IN(OLD_MDOT,'Old mass-loss rate in Msun/yr')
 	  MDOT=OLD_MDOT
 	  CALL GEN_IN(MDOT,'New mass-loss rate in Msun/yr')
-	  CALL GEN_IN(VINF,'Velocity at infinity in km/s')
-	  CALL GEN_IN(BETA,'Beta for velocity law')
 !
 	  WRITE(6,*)' '
 	  WRITE(6,*)' If increasing Mdot, simply enter a number slightly smaller than the sound speed.'
 	  WRITE(6,*)' If decreasing Mdot, you may need to enter a smaller number,'
 	  WRITE(6,*)' since as you decrease Mdot, the extent of the photosphere increase'
-	  CALL GEN_IN(V_TRANS,'Connection velocity in km/s')
-	  V_TRANS=V_TRANS*OLD_MDOT/MDOT
 !
-	  WRITE(6,'(A)')
-	  WRITE(6,'(A)')'Type 1: W(r).V(r) = 2V(t) + (Vinf-2V(t))*(1-r(t)/r))**BETA'
-	  WRITE(6,'(A)')'Type 2: W(r).V(r) = Vinf*(1-rx/r)**BETA'
-	  WRITE(6,'(A)')'        with W(r) = 1.0D0+exp( (r(t)-r)/h )'
-	  WRITE(6,'(A)')
+	  WRITE(6,'(A)')RED_PEN
+	  WRITE(6,'(A)')'Type 1: W(r).V(r) with'
+	  WRITE(6,'(A)')'            W(r) = VINF*(1-rt/r)**BETA'
+	  WRITE(6,'(A)')'        and V(r) = 1.0D0+exp( (rt-r)/h )'
+	  WRITE(6,'(A)')BLUE_PEN
+	  WRITE(6,'(A)')'Type 2: W(r).V(r) with'
+	  WRITE(6,'(A)')'            W(r) = 2*VTRANS + (VINF-2*VTRANS)*(1-rt/r)**BETA'
+	  WRITE(6,'(A)')'        and V(r) = 1.0D0+exp( (rt-r)/h )'
+	  WRITE(6,'(A)')RED_PEN
+	  WRITE(6,'(A)')'Type 3: W(r).V(r) with'
+          WRITE(6,'(A)')'              X  = 1-rt/r'
+	  WRITE(6,'(A)')'            W(r) = 2*VTRANS + (VINF-2*VTRANS)*X**[BETA+(BETA2-BETA)*X]'
+	  WRITE(6,'(A)')'        and V(r) = 1.0D0+exp( (rt-r)/h )'
+	  WRITE(6,'(A)')BLUE_PEN
+	  WRITE(6,'(A)')'Type 4: W(r).V(r) with'
+          WRITE(6,'(A)')'              X  = 1-rt/r'
+	  WRITE(6,'(A)')'            W(r) = 3*VTRANS + (VINF-2*VTRANS)*X**[BETA+(BETA2-BETA)*X]'
+	  WRITE(6,'(A)')'        and V(r) = 1.0D0+exp( (rt-r)/h )'
+	  WRITE(6,'(A)')RED_PEN
+	  WRITE(6,'(A)')'Type 5: (W(r)+E(r))/V(r) with'
+	  WRITE(6,'(A)')'            W(r) = 2*VTRANS + (VINF-2*VTRANS)*(1-rt/r)**BETA'
+	  WRITE(6,'(A)')'            E(r)= VEXT*(1-RP2/r)**BETA2 '
+	  WRITE(6,'(A)')'        and V(r) = 1.0D0+2*exp( (rt-r)/h )'
+	  WRITE(6,'(A)')DEF_PEN
 !
 	  VEL_TYPE=2
-	  CALL GEN_IN(VEL_TYPE,'Velocity law to be used: 1, 2,3 or 4')
+	  CALL GEN_IN(VEL_TYPE,'Velocity law to be used: 1, 2, 3, 4 or 5')
+	  CALL GEN_IN(VINF,'Velocity at infinity in km/s')
+	  CALL GEN_IN(BETA,'Beta for velocity law')
+	  CALL GEN_IN(V_TRANS,'Connection velocity in km/s')
+	  V_TRANS=V_TRANS*OLD_MDOT/MDOT
 !
 ! Find conection velocity and index.
 !
@@ -769,6 +917,38 @@
 	      TOP = ALPHA*V_TRANS + TOP
 	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
 	      V(I) = TOP/BOT
+              SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
+	    END DO
+	  ELSE IF(VEL_TYPE .EQ. 5)THEN
+	    BETA2=BETA; VEXT=0.1D0*VINF; RP2=2.0D0
+	    CALL GEN_IN(VEXT,'Additonal V component (add to VINF)- VEXT')
+	    CALL GEN_IN(BETA2,'Beta2 for velocity law')
+	    CALL GEN_IN(RP2,'RP2 for velocity law (in terms of R(ND)')
+	    RP2=RP2*R(ND)
+	    SCALE_HEIGHT = V_TRANS / (2.0D0 * DVDR_TRANS)
+	    WRITE(6,*)'  '
+	    WRITE(6,*)'  Transition radius is',R_TRANS
+	    WRITE(6,*)'Transition velocity is',V_TRANS
+	    WRITE(6,*)'       Scale height is',SCALE_HEIGHT
+	    WRITE(6,*)'  '
+	    DO I=1,TRANS_I-1
+	      T1=R_TRANS/R(I)
+	      T2=1.0D0-T1
+	      TOP = 2.0D0*V_TRANS + (VINF-2.0D0*V_TRANS) * T2**BETA
+	      BOT = 1.0D0 + exp( (R_TRANS-R(I))/SCALE_HEIGHT )
+              IF(RP2/R(I) .LT. 1.0D0)THEN
+                 TOP=TOP+ VEXT*(1.0D0-RP2/R(I))**BETA2
+                 dTOPdR=(RP2/R(I)/R(I))*BETA2*VEXT*(1.0D0-RP2/R(I))**(BETA2-1)
+              ELSE
+                 dTOPdR=0.0D0
+	      END IF
+	      V(I) = TOP/BOT
+                                                                                
+!NB: We drop a minus sign in dBOTdR, which is fixed in the next line.
+                                                                                
+	      dTOPdR = dTOPdR + (VINF - 2.0D0*V_TRANS) * BETA * T1 / R(I) * T2**(BETA - 1.0D0)
+	      dBOTdR=  exp( (R_TRANS-R(I))/SCALE_HEIGHT ) / SCALE_HEIGHT
+	      dVdR = dTOPdR / BOT  + TOP*dBOTdR/BOT/BOT
               SIGMA(I)=R(I)*dVdR/V(I)-1.0D0
 	    END DO
 	  END IF
@@ -870,6 +1050,14 @@
 	      WRITE(10,'(A,ES14.6)')'! Beta for velocity law        =',BETA
 	      WRITE(10,'(A,I3)'    )'! Velocity law (type)          =',VEL_TYPE
 	      WRITE(10,'(A,ES14.6)')'! Transition velocity is       =',V_TRANS
+	      IF(VEL_TYPE .EQ. 5)THEN
+	        WRITE(10,'(A,ES14.6)')'! Beta for 2nd vel. component  =',BETA2
+	        WRITE(10,'(A,ES14.6)')'! VEXT for 2nd vel. component  =',VEXT
+	        WRITE(10,'(A,ES14.6)')'! RP2  for 2nd vel. component  =',RP2/R(ND)
+	        ELSE IF(VEL_TYPE .EQ. 3 .OR. VEL_TYPE .EQ. 3)THEN
+	      WRITE(10,'(A,ES14.6)')'! Beta in inner wind           =',BETA2
+	        WRITE(10,'(A,ES14.6)')'! ALPHA                        =',ALPHA
+	        END IF
 	      WRITE(10,'(A,ES14.6)')'! R(1)/R(ND)                   =',R(1)/R(ND)
 	    ELSE IF(OPTION .EQ. 'SCLR')THEN
 	      WRITE(10,'(A,ES14.6)')'! Old stellar radius           =',OLD_R(ND_OLD)
@@ -900,6 +1088,8 @@
 !
 	T1=R(ND)
 	R(1:ND)=R(1:ND)/T1
+	T1=OLD_R(ND_OLD)
+	OLD_R(1:ND_OLD)=OLD_R(1:ND_OLD)/T1
 	WRITE(6,*)'Plotting V versus R/R*'
 	CALL DP_CURVE(ND_OLD,OLD_R,OLD_V)
 	CALL DP_CURVE(ND,R,V)

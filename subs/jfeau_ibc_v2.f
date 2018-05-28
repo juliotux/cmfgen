@@ -114,9 +114,9 @@
 	CALL THOMAS(TA,TB,TC,RJ,ND,IONE)
 !
 	IF(MINVAL(RJ) .LE. 0)THEN
-	  WRITE(6,*)'Error in FQCOMP_IBC -- -ve mean intensities'
+	  WRITE(6,*)'Error in JFEAU_IBC_V2 -- -ve mean intensities'
 	  DO I=1,ND
-	     WRITE(6,'(I4,6ES14.6)')I,RJ(I),CHI(I),DTAU(I),ZETA(I),THETA(I),F(I),Q(I)
+	     WRITE(6,'(I5,7ES14.6)')I,RJ(I),CHI(I),DTAU(I),ZETA(I),THETA(I),F(I),Q(I)
 	  END DO
 	  STOP
 	END IF

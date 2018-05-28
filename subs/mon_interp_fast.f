@@ -53,7 +53,7 @@
 	IF( (SGN*QZR(1) .LT. SGN*R(1)) .OR.
 	1   (SGN*QZR(NX) .GT. SGN*R(ND)) )THEN
 	  LUER=ERROR_LU()
-	  WRITE(LUER,*)'Error in MON_INTERP - values outside range'
+	  WRITE(LUER,*)'Error in MON_INTERP_FAST - values outside range'
 	  WRITE(LUER,'(2(A,ES18.8))')'  New R(1)=',QZR(1),'   Old R(1)=',R(1)
 	  WRITE(LUER,'(2(A,ES18.8))')' New R(NX)=',QZR(NX),'  Old R(ND)=',R(ND)
 	  STOP

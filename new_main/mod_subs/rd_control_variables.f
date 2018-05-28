@@ -581,8 +581,8 @@ C
 	1           'Use previously computed J to evaluate ALL rates?')
 	  IF(USE_FIXED_J .AND. .NOT. RD_LAMBDA)THEN
 	    WRITE(LUER,'(A)')' Warning: RD_LAMBDA must be TRUE when USE_FIXED_J is TRUE.'
-	    WRITE(LUER,'(A)')' Setting RD_LAMBDA to TRUE.'
-	    RD_LAMBDA=.TRUE.
+	    WRITE(LUER,'(A)')' Please change the setting in IN_ITS which is read after each iteration'
+	    STOP
 	  END IF
 	  CALL RD_STORE_LOG(FLUX_CAL_ONLY,'FLUX_CAL_ONLY',L_TRUE,
 	1           'Compute the observers frame flux only ?')
@@ -1088,7 +1088,7 @@ C
 !
 	  CALL CLEAN_RD_STORE()
 !
-	CLOSE(UNIT=7)
+	CLOSE(UNIT=LUIN)
 !
 ! Check consistency of parameters.
 !

@@ -10,6 +10,7 @@
 	1              LST_ITERATION,BAND_FLUX,N_FLUXMEAN_BANDS,LU_OUT,ND)
 	IMPLICIT NONE
 !
+! Altered 08-Nov-2016 : Now output Gamma (e.s.) at photosphere.
 ! Altered 01-Jan-2015 : Turbulent pressure term added, and also output when non-zero.
 ! Altered 26-Jan-2014 : Changed ouput to TYPE_ATM and increased its length.
 ! Altered 06-Jan-2014 : Changed to V5 (inserted LOGG, ROSS_MEAN_OPAC and CLUMP_FAC in call).
@@ -91,6 +92,7 @@
 	REAL*8 RAD_CON
 	REAL*8 T1
 	REAL*8 RPHOT
+	REAL*8 GAM_ES_PHOT
 	REAL*8 GPHOT
 	REAL*8 ERROR_MAX
 	REAL*8 ERROR_SUM
@@ -133,6 +135,8 @@
         T1=LOG(POP_ATOM(5)/POP_ATOM(1))/LOG(R(1)/R(5))
         WRITE(TYPE_ATM(2:),'(ES10.3)')T1
 !
+! Compute photospheric radius and photospheric surface gravity.
+!
 	DO I=1,ND
 	  OPAC(I)=MAX(ROSS_MEAN_OPAC(I),ELEC_MEAN_OPAC(I))*CLUMP_FAC(I)
 	END DO
@@ -140,7 +144,23 @@
 	T1=0.6667D0
 	CALL MON_INTERP(RPHOT,IONE,IONE,T1,IONE,R,ND,TAU,ND)
 	IF(PLANE_PARALLEL .OR. PLANE_PARALLEL_NOV)RPHOT=R(ND)
-	GPHOT=GRAV_CON/RPHOT/RPHOT	
+	GPHOT=GRAV_CON/RPHOT/RPHOT
+!
+! Get Gamma due to e.s. at photosphere. TB is used as a temporary work vector
+! for G_ELEC.
+!
+	IF(PLANE_PARALLEL .OR. PLANE_PARALLEL_NOV)THEN
+	  DO I=1,ND
+	    TB(I)=RAD_CON*LUM_STAR(ND)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(ND)/R(ND)
+	  END DO
+	ELSE
+	  DO I=1,ND
+	    TB(I)=RAD_CON*LUM_STAR(ND)*ELEC_MEAN_OPAC(I)/POP_ATOM(I)/R(I)/R(I)
+	  END DO
+	END IF
+	T1=0.6667D0
+	CALL MON_INTERP(GAM_ES_PHOT,IONE,IONE,T1,IONE,TB,ND,TAU,ND)
+	GAM_ES_PHOT=GAM_ES_PHOT/GPHOT
 !                                              
 ! Output file header.
 !
@@ -165,7 +185,9 @@
 	  MOD_PRESSURE(I)=(POP_ATOM(I)+ED(I))*T(I)
 	END DO
 	CALL MON_INT_FUNS_V2(COEF,MOD_PRESSURE,R,ND)
-!	                                     
+!
+! Note: g_elec (for I=ND) is used late in the code.
+!
 	DO I=1,ND
 	  VdVdR=V(I)*V(I)*(SIGMA(I)+1.0D0)/R(I)
 	  dPdR_ON_ROH=dP_CON*COEF(I,3)/POP_ATOM(I)
@@ -243,8 +265,11 @@
 	1          '   Specified surface gravity is: ',10**LOGG,' (',LOGG,')'
 	WRITE(LU_OUT,'(1X,A,F8.2,A)')
 	1          '                  Stars mass is: ',STARS_MASS,' Msun'
+	WRITE(LU_OUT,'(1X,A,F8.5,A)')
+	1          'Edd. fac. (e.s.) at photosphere: ',GAM_ES_PHOT
+	WRITE(LU_OUT,'(1X,A,F8.5,A)')
+	1          'Edd. fac. (e.s.) at inner bound: ',g_elec*R(ND)*R(ND)/GRAV_CON
 	WRITE(LU_OUT,'(A,A)')' Power law exponent at outer boundary (TYPE_ATM)=',TRIM(TYPE_ATM(2:))
-
 !
 	RLUMST(:)=BAND_FLUX(:,N_FLUXMEAN_BANDS)
         DO J=N_FLUXMEAN_BANDS,2,-1

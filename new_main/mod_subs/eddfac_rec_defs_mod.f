@@ -1,0 +1,17 @@
+!
+! Created 23-Jan-2017
+!
+	MODULE EDDFAC_REC_DEFS_MOD
+!
+! These definitons are consistent with earlier versions. Record 2
+! was not in use. We keep records 6 through 9 for later use.
+!
+	INTEGER, PARAMETER :: DIE_CONT_REC=1
+	INTEGER, PARAMETER :: RV_REC=2
+	INTEGER, PARAMETER :: EDD_CONT_REC=3
+	INTEGER, PARAMETER :: LINE_CONT_REC=4
+	INTEGER, PARAMETER :: FINISH_REC=5
+	INTEGER, PARAMETER :: INITIAL_RV_REC=10
+	INTEGER, PARAMETER :: INITIAL_ACCESS_REC=15
+!
+	END MODULE EDDFAC_REC_DEFS_MOD

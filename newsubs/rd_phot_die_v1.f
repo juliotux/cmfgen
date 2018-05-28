@@ -607,7 +607,7 @@
 	    L2=INDEX(STRING,'-')-1
 	    IF( L2 .LE. 0 .OR. L2 .GE. L1)THEN
 	      WRITE(LUER,*)'Error reading in Level Names from '//FILENAME
-	      WRITE(2,'(A)')STRING
+	      WRITE(LUER,'(A)')TRIM(STRING)
 	      WRITE(LUER,*)'L2=',L2,'L1=',L1
 	      STOP
 	    END IF

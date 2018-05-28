@@ -1200,10 +1200,23 @@
 	  XAXSAV=XAXIS
 !
 	ELSE IF(XOPT .EQ. 'XLINR')THEN
-	  DO I=1,ND
-	    XV(I)=R(I)/R(ND)
-	  END DO
-	  XAXIS='r/R\d*\u'
+	  CALL USR_HIDDEN(FLAG,'NORM','T','Normalized X axis (def=T)')
+	  IF(FLAG)THEN
+	    DO I=1,ND
+	      XV(I)=R(I)/R(ND)
+	    END DO
+	    XAXIS='r/R\d*\u'
+	  ELSE
+	    T1=1.0D0
+	    XAXIS='r(10\u10 \dcm)'
+	    IF(R(ND) .GT. 1.0D+04)THEN
+	      T1=1.0D+04
+	      XAXIS='r(10\u14 \dcm)'
+	    END IF
+	    DO I=1,ND
+	      XV(I)=R(I)/T1
+	    END DO
+	  END IF
 	  XAXSAV=XAXIS
 !
 	ELSE IF(XOPT .EQ. 'XAU')THEN
@@ -1354,6 +1367,7 @@
 	  CALL USR_HIDDEN(T1,'VTH','10.0','Thermal doppler velocity (km/s)')
 	  DO I=1,ND
 	    T2=(SIGMA(I)+1.0D0)*V(I)/R(I)
+!	    XV(I)=DLOG10(6.65D-15*T1/T2)
 	    XV(I)=DLOG10(6.65D-15*ED(I)*CLUMP_FAC(I)*T1/T2)
 	  END DO
 	  XAXIS='Log(t)'
@@ -2723,7 +2737,7 @@
 	  CALL USR_HIDDEN(T1,'VTH','10.0','Thermal doppler velocity (km/s)')
 	  DO I=1,ND
 	    T2=(SIGMA(I)+1.0D0)*V(I)/R(I)
-	    YV(I)=DLOG10(6.65D-15*ED(I)*T1/T2)
+	    YV(I)=DLOG10(6.65D-15*ED(I)*CLUMP_FAC(I)*T1/T2)
 	  END DO
 	  CALL DP_CURVE(ND,XV,YV)
 	  YAXIS='Log(t)'
@@ -5892,17 +5906,27 @@ c
 !
 ! Assumes V_D=10kms.
 !
-	    T1=DLOG10(1.6914D-11/FREQ)
-	    DO I=1,ND
-	      IF(TA(I) .GT. 0)THEN
-	        YV(I)=T1+DLOG10(TA(I))
-	      ELSE IF(TA(I) .LT. 0)THEN
-	        YV(I)=T1+DLOG10(-TA(I))-20.0D0
-	      ELSE
-	        YV(I)=-30.0
-	      END IF
-	    END DO
-	    YAXIS='Log(\gt\dstat\u)'
+	    IF(MINVAL(YV(1:ND)) .LE. 0.0D0)THEN
+	      WRITE(6,*)'Negative optical depth encountered using linear plot'
+	      T1=1.6914D-11/FREQ
+	      DO I=1,ND
+	         YV(I)=T1*TA(I)
+		 WRITE(6,*)I,TA(I)
+	      END DO
+	      YAXIS='Log(\gt\dstat\u)'
+	    ELSE
+	      T1=DLOG10(1.6914D-11/FREQ)
+	      DO I=1,ND
+	        IF(TA(I) .GT. 0)THEN
+	          YV(I)=T1+DLOG10(TA(I))
+	        ELSE IF(TA(I) .LT. 0)THEN
+	          YV(I)=T1+DLOG10(-TA(I))-20.0D0
+	        ELSE
+	          YV(I)=-30.0
+	        END IF
+	      END DO
+	      YAXIS='Log(\gt\dstat\u)'
+	    END IF
 	  ELSE
 	    DO I=1,ND
 	      YV(I)=CHIL(I)*R(I)*2.998E-10/FREQ/V(I)

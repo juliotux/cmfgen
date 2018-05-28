@@ -11,6 +11,7 @@
 	USE CONTROL_VARIABLE_MOD
 	IMPLICIT NONE
 !
+! Altered:   18-Nov-2016 : Before doing AV, check NG acceleration was not done recently.
 ! Altered:   01-Apr-2015 : Changed ESTAU call to ESTAU_V2 to take clumping to account.
 ! Altered:   21-Jan-2014 : Changed to CALL SOLVEBA_V12 - now pass MAIN_COUNTER.
 ! Aleterd:   31-Dec-2013 : No longer set COMPUTE_BA=T when T_MIN_BA_EXTRAP is true. We may need to
@@ -357,6 +358,7 @@
 	END IF
 !
 	IF(AVERAGE_DO .AND. MAIN_COUNTER .GE. NEXT_AV
+	1             .AND. MAIN_COUNTER .GT. LAST_NG+NUM_OSC_AV
 	1             .AND. MAIN_COUNTER .GT. LAST_LAMBDA+NUM_OSC_AV+2 
 	1             .AND. (MAIN_COUNTER .LT. NEXT_NG-4 .OR. .NOT. NG_DO)
 	1             .AND. MAIN_COUNTER .GE. LAST_AV+ITS_PER_AV

@@ -12,6 +12,7 @@
 	USE MOD_FREQ_OBS
 	USE CMF_FLUX_CNTRL_VAR_MOD
 	USE MOD_LEV_DIS_BLK
+	USE EDDFAC_REC_DEFS_MOD
 	IMPLICIT NONE
 !
 ! Altered: 21-Sep-2016 : Error corrected -- I was writing out KAPPA from RVTJ rather than the from the CMF_FLUX
@@ -325,11 +326,8 @@
 !
 !
 ! ACESS_F is the current record we are writing in EDDFACTOR.
-! EDD_CONT_REC is the record in EDDFACTOR which points to the first
-! record containing the continuum values.
 !
 	INTEGER ACCESS_F
-	INTEGER, PARAMETER :: EDD_CONT_REC=3
 	CHARACTER(LEN=20) DA_FILE_DATE
 !
 	INTEGER NDEXT,NCEXT,NPEXT
@@ -337,7 +335,7 @@
 	REAL*8 COEF(0:3,NDMAX)
 	REAL*8 INBC,HBC_J,HBC_S			!Bound. Cond. for JFEAU
 !
-	REAL*8 REXT(NDMAX),PEXT(NPMAX),VEXT(NDMAX)
+	REAL*8 REXT(NDMAX),PEXT(NPMAX),VEXT(NDMAX),LANG_COORDEXT(NDMAX)
 	REAL*8 TEXT(NDMAX),SIGMAEXT(NDMAX)
 	REAL*8 CHIEXT(NDMAX),ESECEXT(NDMAX),ETAEXT(NDMAX)
 	REAL*8 CHI_RAY_EXT(NDMAX),CHI_SCAT_EXT(NDMAX)
@@ -728,7 +726,7 @@
 	1             VEC_ARAD(ML),VEC_C4(ML),TDOP,AMASS_DOP,VTURB_FIX,                !2: Garbage at present
 	1             DOP_PROF_LIMIT,VOIGT_PROF_LIMIT,V_PROF_LIMIT,MAX_PROF_ED,
 	1             SET_PROF_LIMS_BY_OPACITY)
-	          IF(ID .EQ. 1)THEN
+	          IF(SPECIES(SPECIES_LNK(ID)) .EQ. 'HYD')THEN
 	            IF(ATM(ID)%XzVLEVNAME_F(2) .NE. '2___' .AND. INDEX(PROF_TYPE(ML),'DOP') .EQ. 0)THEN
 	              WRITE(LUER,*)'Error in CMF_FLUX -- only Doppler profiles are implemented for split H levels'
 	              STOP
@@ -913,20 +911,29 @@
 ! a blanketed model spectrum to be divided by an unblanketed model
 ! spectrum.
 !
-	T1=NU(1)/(1.0D0+2.0D0*VINF/C_KMS)
-	NU_MAX_OBS=MIN(T1,NU(3))
-	T1=NU(NCF)*(1.0D0+2.0D0*VINF/C_KMS)
-	NU_MIN_OBS=MAX(NU(NCF-3),T1)
-	CALL INS_LINE_OBS_V4(OBS_FREQ,N_OBS,NCF_MAX,
+	CALL TUNE(1,'INS_LINE_OBS')
+	  WRITE(LUER,*)'Calling INS_LINE_OBS_V4'
+	  T1=NU(1)/(1.0D0+2.0D0*VINF/C_KMS)
+	  NU_MAX_OBS=MIN(T1,NU(3))
+	  T1=NU(NCF)*(1.0D0+2.0D0*VINF/C_KMS)
+	  NU_MIN_OBS=MAX(NU(NCF-3),T1)
+	  CALL INS_LINE_OBS_V4(OBS_FREQ,N_OBS,NCF_MAX,
 	1               VEC_FREQ,VEC_STRT_FREQ,VEC_VDOP_MIN,VEC_TRANS_TYPE,
 	1               N_LINE_FREQ,SOB_FREQ_IN_OBS,
 	1		NU_MAX_OBS,NU_MIN_OBS,VINF,
 	1               FRAC_DOP_OBS,dV_OBS_PROF,dV_OBS_WING,dV_OBS_BIG,
 	1               OBS_PRO_EXT_RAT,ES_WING_EXT,VTURB_MAX)
+	  WRITE(LUER,*)'Finished calling INS_LINE_OBS_V4'
+	CALL TUNE(2,'INS_LINE_OBS')
 !
+	CALL TUNE(1,'SET_PROF_STORE')
+	WRITE(LUER,*)'Setting pofile storage'
 	CALL GET_PROFILE_STORAGE_LIMITS(NLINES_PROF_STORE,NFREQ_PROF_STORE,
 	1         LINE_ST_INDX_IN_NU,LINE_END_INDX_IN_NU,PROF_TYPE,N_LINE_FREQ,NCF)
 	CALL INIT_PROF_MODULE(ND,NLINES_PROF_STORE,NFREQ_PROF_STORE)
+	WRITE(LUER,*)'Finished set profile storage'
+	CALL TUNE(2,'SET_PROF_STORE')
+	CALL TUNE(3,' ')
 !
 ! 
 ! Need to calculate impact parameters, and angular quadrature weights here
@@ -991,6 +998,7 @@
 	  CALL EXTEND_VTSIGMA(VEXT,TEXT,SIGMAEXT,COEF,INDX,NDEXT,
 	1         V,T,SIGMA,ND)
 	  CALL IMPAR(PEXT,REXT,RP,NCEXT,NDEXT,NPEXT)
+	  LANG_COORDEXT=0.0D0
 !
 	  ALLOCATE (AQWEXT(NDEXT,NPEXT),STAT=IOS)
 	  IF(IOS .EQ. 0)ALLOCATE (HQWEXT(NDEXT,NPEXT),STAT=IOS)
@@ -1126,38 +1134,11 @@
 ! we also write NU(ML) out.
 !
 	IF(ACCURATE .OR. EDD_CONT .OR. EDD_LINECONT)THEN
-	  I=WORD_SIZE*(NDEXT+1)/UNIT_SIZE
-	  CALL WRITE_DIRECT_INFO_V3(NDEXT,I,DA_FILE_DATE,'EDDFACTOR',LU_EDD)
-	  IF(.NOT. COMPUTE_EDDFAC)THEN
-	    OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',
-	1       ACCESS='DIRECT',STATUS='OLD',RECL=I,IOSTAT=IOS)
-	    IF(IOS .EQ. 0)THEN
-	      READ(LU_EDD,REC=5,IOSTAT=IOS)T1
-	      IF(T1 .EQ. 0 .OR. IOS .NE. 0)THEN
-	        WRITE(LUER,*)'Error --- All Eddfactors not'//
-	1                      ' computed - will compute new F'
-	        COMPUTE_EDDFAC=.TRUE.
-	      END IF
-	    ELSE
-	      WRITE(LUER,'(/,1X,A)')'Error opening EDDFACTOR - will compute new F'
-	        COMPUTE_EDDFAC=.TRUE.
-	    END IF
-	  END IF
-	  IF(COMPUTE_EDDFAC)THEN
-	      OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',
-	1       ACCESS='DIRECT',STATUS='NEW',RECL=I)
-	    WRITE(LU_EDD,REC=1)0
-	    WRITE(LU_EDD,REC=2)0
-	    WRITE(LU_EDD,REC=3)0
-	    WRITE(LU_EDD,REC=4)0
-!
-! We set record 5 to zero, to signify that the eddington factors are
-! currently being computed. A non zero value signifies that all values
-! have successfully been computed. (Consistent with old Eddfactor
-! format a EDD_FAC can never be zero : Reason write a real number).
-!
-	    T1=0.0
-	    WRITE(LU_EDD,REC=5)T1
+	  INQUIRE(UNIT=LU_EDD,OPENED=TMP_LOG)
+	  IF(.NOT. TMP_LOG)THEN
+	    CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1       REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1       ACCESS_F,L_TRUE,COMPUTE_EDDFAC,USE_FIXED_J,'EDDFACTOR',LU_EDD)
 	  END IF
 	END IF
 !
@@ -1527,6 +1508,13 @@
 	        CHI(I)=0.1D0*ETA(I)*(CHI_CONT(I)-ESEC(I))/ETA_CONT(I)
 	        NEG_OPACITY(I)=.TRUE.
 	        AT_LEAST_ONE_NEG_OPAC=.TRUE.
+	        IF(CHI(I) .LE. 0.0D0)THEN
+	          WRITE(6,*)'Possible error -- CHI still negative after correction'
+	          WRITE(6,'(A,I4,5X,A,ES16.10)')'Depth=',I,'Freq=',FL
+	          WRITE(6,'(5(8X,A))')'   ETA','ETA_CONT','    CHI','CHI_CONT','   ESEC'
+	          WRITE(6,'(5ES16.10)')ETA(I),ETA_CONT(I),CHI(I),CHI_CONT(I),ESEC(I)
+	          CHI(I)=0.1D0*ESEC(I)
+	         END IF
 	      ELSE IF(CHI(I) .LT. 0.1D0*ESEC(I))THEN
 	        CHI(I)=0.1D0*ESEC(I)
 	        NEG_OPACITY(I)=.TRUE.
@@ -1639,20 +1627,19 @@
 	     SOB(1:ND)=SOB(1:ND)*R(ND)*R(ND)
 	   END IF
 !
+! Since the flux has been interpolated back onto the original size grid,
+! we pass ND rather than NDEXT. The L_TRUE indicate NEW_MOD and
+! that we will open a new file. J is used for ACCESS_F.
+!
 	   IF(WRITE_FLUX .AND. ES_COUNTER .EQ. NUM_ES_ITERATIONS)THEN
 	     IF(ML .EQ. 1)THEN
-	       I=WORD_SIZE*(ND+1)/UNIT_SIZE
-	       CALL WRITE_DIRECT_INFO_V3(ND,I,DA_FILE_DATE,'FLUX_FILE',LU_FLUX)
-	       OPEN(UNIT=LU_FLUX,FILE='FLUX_FILE',FORM='UNFORMATTED',
-	1                 ACCESS='DIRECT',STATUS='NEW',RECL=I)
-	       WRITE(LU_FLUX,REC=1)0
-	       WRITE(LU_FLUX,REC=2)0
-	       WRITE(LU_FLUX,REC=3)0
-	       WRITE(LU_FLUX,REC=4)0
-	       WRITE(LU_FLUX,REC=EDD_CONT_REC)EDD_CONT_REC+1,NCF,ND
+	        CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1              REXT,VEXT,LANG_COORDEXT,ND,
+	1              J,L_TRUE,L_TRUE,L_FALSE,'FLUX_FILE',LU_FLUX)
 	     END IF
 	     TA(1:ND)=13.1986D0*SOB(1:ND)
-	     WRITE(LU_FLUX,REC=EDD_CONT_REC+ML)(SOB(I),I=1,ND),FL
+	     WRITE(LU_FLUX,REC=EDD_CONT_REC)INITIAL_ACCESS_REC,NCF,ND
+	     WRITE(LU_FLUX,REC=INITIAL_ACCESS_REC+ML-1)(SOB(I),I=1,ND),FL
 	   END IF
 !
 	   CALL COMP_OBS_V2(IPLUS,FL,
@@ -1677,12 +1664,14 @@
 !
 	IF(FL .LT. NU_FORCE .AND. LST_ITERATION .AND. WRITE_CMF_FORCE)THEN
 	  INQUIRE(UNIT=82,OPENED=TMP_LOG)
-	  K=5   					!ACCESS_F
+	  J=82
 	  IF(.NOT. TMP_LOG)THEN
-	    I=WORD_SIZE*(ND+1)/UNIT_SIZE; J=82
-	    CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'CMF_FORCE_DATA',J)
+	    CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1       REXT,VEXT,LANG_COORDEXT,ND,
+	1       K,L_TRUE,L_TRUE,L_FALSE,'CMF_FORCE_DATA',J)
 	    WRITE(82,REC=EDD_CONT_REC)K,N_FORCE,ND
 	  END IF
+	  K=INITIAL_ACCESS_REC
 	  WRITE(82,REC=K-1+ML_FORCE)( LINE_FLUXMEAN(I)/STARS_LUM/ESEC(I) ,I=1,ND),NU_FORCE
 	  ML_FORCE=ML_FORCE+1
 	  NU_FORCE=NU_FORCE*NU_FORCE_FAC
@@ -1778,26 +1767,39 @@
 	RJ_CMF_ST(1:ND,ML)=RJ(1:ND)
 !
 10000	CONTINUE
+	T1=1.0D0; WRITE(LU_EDD,REC=FINISH_REC)T1
 	CALL TUNE(ITWO,'MLCF')
 !
 ! NB: We use K here, rather than ACCESS_F, so that we don't corrupt EDDFACTOR if
 !      evaluate EW is set to TRUE.
 ! 
 	IF(WRITE_ETA_AND_CHI .AND. (ES_COUNTER .EQ. NUM_ES_ITERATIONS .OR. .NOT. COMPUTE_J))THEN
-	  K=5						!Use for ACCESS_F
-	  I=WORD_SIZE*(ND+1)/UNIT_SIZE
-	  J=82; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'ETA_DATA',J)
-	  J=83; CALL OPEN_DIR_ACC_V1(ND,I,DA_FILE_DATE,'CHI_DATA',J)
-	  WRITE(82,REC=EDD_CONT_REC)K,NCF,ND
-	  WRITE(83,REC=EDD_CONT_REC)K,NCF,ND
+	  CALL GET_LU(J,'ETA_DATA write')
+	  CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1              REXT,VEXT,LANG_COORDEXT,ND,
+	1              K,L_TRUE,L_TRUE,L_FALSE,'ETA_DATA',J)
+	  K=INITIAL_ACCESS_REC
+	  WRITE(J,REC=EDD_CONT_REC)K,NCF,ND
 	  DO ML=1,NCF
-	    WRITE(82,REC=K-1+ML)(ETA_CMF_ST(I,ML),I=1,ND),NU(ML)
-	    WRITE(83,REC=K-1+ML)(CHI_CMF_ST(I,ML),I=1,ND),NU(ML)
+	    WRITE(J,REC=K-1+ML)(ETA_CMF_ST(I,ML),I=1,ND),NU(ML)
 	  END DO
-	  CLOSE(UNIT=82)
-	  CLOSE(UNIT=83)
+	  CLOSE(UNIT=J)
+!
+	  CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1              REXT,VEXT,LANG_COORDEXT,ND,
+	1              K,L_TRUE,L_TRUE,L_FALSE,'CHI_DATA',J)
+	  K=INITIAL_ACCESS_REC
+	  WRITE(J,REC=EDD_CONT_REC)K,NCF,ND
+	  DO ML=1,NCF
+	    WRITE(J,REC=K-1+ML)(CHI_CMF_ST(I,ML),I=1,ND),NU(ML)
+	  END DO
+	  CLOSE(UNIT=J)
+!
 	END IF
-	IF(.NOT. COMPUTE_J)STOP
+	IF(.NOT. COMPUTE_J)THEN
+	  I=3; CALL TUNE(I,' ')
+	  STOP
+	END IF
 !
 	COMPUTE_EDDFAC=.FALSE.
 !
@@ -1808,10 +1810,14 @@
 !
 	COHERENT_ES=RD_COHERENT_ES
 	IF(.NOT. COHERENT_ES .AND. .NOT. USE_FIXED_J)THEN
-	   I=ND*ND
-	   CALL COMP_J_CONV_V2(WM,I,NU,TEXT,NDEXT,NCF,LU_EDD,
-	1         'EDDFACTOR',
+	  I=ND*ND
+	  CALL COMP_J_CONV_V2(WM,I,NU,TEXT,NDEXT,NCF,LU_EDD,'EDDFACTOR',
 	1          EDD_CONT_REC,L_FALSE,L_FALSE,LU_ES,'ES_J_CONV')
+          CALL OUT_RV_TO_EDDFACTOR(R,V,LANG_COORD,ND,
+	1        REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1        ACCESS_F,'ES_J_CONV',LU_ES)
+	  CLOSE(LU_ES)	
+!
 	END IF
 !
 	END DO		!ES_COUNTER
@@ -1998,6 +2004,16 @@
 	  NC_OBS=NC; NP_OBS=NP
 	  P_OBS(1:NP_OBS)=P(1:NP_OBS)
 	END IF
+!
+! Output R, V and the Langrangian coordiante to the EDDACTOR file.
+! If we adjust R, these values are consistent with the old grid --
+! not the current grid. These only need to be output heew we are
+! using an old EDDFACTOR file.
+!
+          CALL OUT_RV_TO_EDDFACTOR(R,V,LANG_COORD,ND,
+	1        REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1        ACCESS_F,'EDDFACTOR',LU_EDD)
+	  CLOSE(LU_EDD)	
 !
 ! ***************************************************************************
 ! ***************************************************************************

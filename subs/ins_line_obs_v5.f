@@ -7,6 +7,7 @@
 	1               OBS_PRO_EXT_RAT,ES_WING_EXT,V_DOP)
 	IMPLICIT NONE
 !
+! Altered 13-Apr-2017 : Limit the maximum extent of the red wing to 10,000 km/s.
 ! Altered 02-Jul-2000 : Complete rewrite. Changed from V3 to V4.
 !                       Routine now correctly handles the case where lines are
 !                       are ordered by the start frequency, rather than the
@@ -81,6 +82,7 @@
 	REAL*8 SPEED_OF_LIGHT
 	EXTERNAL ERROR_LU,SPEED_OF_LIGHT
 !
+	CALL TUNE(1,'INS_OBS')
 	C_KMS=1.0D-05*SPEED_OF_LIGHT()
 !
 ! Check parameters.
@@ -116,7 +118,12 @@
 ! Vinf is large (>> Velec) the "coherent" scattering will dominate, and
 ! the extent of the red wing will be determined by Vinf.
 !
-	MAX_RW_EXTENT = 1.0D0-(ES_WING_EXT+4.0D0*VINF)/C_KMS
+! For SN models using VINF sets the red wing to cover essentially the whole spectrum.
+! We now set a limit of 10000 km/s on the extent of the red wing.
+!
+	T1=10000.0D0
+	T1=MIN(T1,4.0D0*VINF)
+	MAX_RW_EXTENT = 1.0D0-(ES_WING_EXT+T1)/C_KMS
 	MAX_BW_EXTENT = 1.0D0+(ES_WING_EXT+VINF)/C_KMS
 !
 ! Ensures BW extent is bigger than profile extent.
@@ -152,6 +159,7 @@
 ! can have an extremely large VINF (19-June-2009).
 !
 !	DO WHILE( FREQ(INDX) .GT. NU_MIN/MAX_RW_EXTENT )
+!	CALL TUNE(1,'DO_WHILE')
 	DO WHILE( FREQ(INDX) .GT. 1.1D0*NU_MIN )
 !
 ! Continuum
@@ -162,7 +170,7 @@
 ! Electron scattering wings. Since dV_OBS_KMS is the same for all lines,
 ! we can exit once e.s. wing region is found.
 !
-	  CALL TUNE(1,'MAX_BW_EXT')
+!	  CALL TUNE(1,'MAX_BW_EXT')
 	  K=LN_INDX
 	  DO WHILE( K .LE. N_LINES .AND.
 	1               FREQ(INDX)-dNU .LT. 
@@ -178,14 +186,14 @@
 	    END IF
 	    K=K+1
 	  END DO
-	  CALL TUNE(2,'MAX_BW_EXT')
+!	  CALL TUNE(2,'MAX_BW_EXT')
 !  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      B'
 !
 ! Profile. As NU_STRT_LINE monotonically decreases, we can stop looking at
 !          line K when the next frequency is > NU_STRT_LINE(K). Since
 !          dV_OBS_PROF is the same for all lines, we can exit immediately.
 !
-	  CALL TUNE(1,'MAX_B_EXT')
+!	  CALL TUNE(1,'MAX_B_EXT')
 	  K=LN_INDX
 	  IF(K .LE. N_LINES)THEN
 	    DO WHILE(FREQ(INDX)-dNU .LT. NU_STRT_LINE(MIN(K,N_LINES))*MAX_B_EXTENT )
@@ -202,14 +210,14 @@
 	      K=K+1
 	    END DO
 	  END IF
-	  CALL TUNE(2,'MAX_B_EXT')
+!	  CALL TUNE(2,'MAX_B_EXT')
 !  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      C'
 !
 ! Doppler core. If FRAC_DOP_OBS is large, this section will be effectively
 !               ignored. This sections is primarily needed when we see
 !               photospheric lines (e.g. as for an O star).
 !
-	  CALL TUNE(1,'MAX_O_EXT')
+!	  CALL TUNE(1,'MAX_O_EXT')
 	  K=LN_INDX
 	  IF(K .LE. N_LINES)THEN
 	    DO WHILE(FREQ(INDX)-dNU .LT. NU_STRT_LINE(MIN(K,N_LINES)))
@@ -228,7 +236,7 @@
 	      IF(K .GT. N_LINES)EXIT
 	    END DO
 	  END IF
-	  CALL TUNE(2,'MAX_O_EXT')
+!	  CALL TUNE(2,'MAX_O_EXT')
 !  	  WRITE(139,'(2ES12.4,A)')dNU,C_KMS*dNU/FREQ(INDX),'      D'
 !  	  WRITE(149,'(2ES12.4,A)')FREQ(INDX),C_KMS*dNU/FREQ(INDX),'      D'
 !
@@ -266,6 +274,7 @@
 	  END IF
 !
 	END DO
+!	CALL TUNE(2,'DO_WHILE')
 !
 	IF(FREQ(INDX) .GT. NU_MIN)THEN
 	  INDX=INDX+1
@@ -296,6 +305,7 @@
 	1              FREQ(I),C_KMS*(1.0D0-FREQ(I+1)/FREQ(I))
 	  END DO
 	CLOSE(UNIT=77)
+	CALL TUNE(2,'INS_OBS')
 !
 	RETURN
 	END

@@ -11,6 +11,7 @@
 	1            DO_REL_CORRECTIONS,PLANE_PARALLEL)
 	IMPLICIT NONE
 !
+! Altered 19-Jan-2016 : Fixed bug for I=1 when computing dFR (bounds issue).
 ! Altered 16-Jan-2016 : Updated output for IP_DATA, RTAU_DATA and ZTAU_DATA. Now output correct
 !                         number of angles.
 !                       Also changed output for RTAU_DATA and ZTAU_DATA (MU at RMAX output).
@@ -1008,7 +1009,7 @@
 	    IF(WRITE_dFR .AND. INT_METHOD .EQ. 'ETAZ')THEN
 !
 	      T2=(ETA_VEC(1)-ETA_VEC(2))/dZ(1)
-	      DO I=1,IEND-1
+	      DO I=2,IEND-1
 	        T1=T2
 	        T2=(ETA_VEC(I-1)-ETA_VEC(I+1))*RECIP_DEL_Z(I)
 	        T3=HALF_DZ(I-1)*(ETA_VEC(I-1)+ETA_VEC(I))

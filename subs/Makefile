@@ -146,7 +146,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(phys_con.o)\
       $(LIB)(poptoion.o)\
       $(LIB)(prrr_sl_v6.o)\
-      $(LIB)(prrr_lowt_v1.o)\
+      $(LIB)(prrr_lowt_v2.o)\
       $(LIB)(qfromf.o)\
       $(LIB)(qkim.o)\
       $(LIB)(quad_x_gen_v5.o)\
@@ -186,7 +186,7 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(set_x_freq.o)\
       $(LIB)(set_gm_all.o)\
       $(LIB)(set_z_pop.o)\
-      $(LIB)(specify_it_cycle_v2.o)\
+      $(LIB)(specify_it_cycle_v3.o)\
       $(LIB)(simq.o)\
       $(LIB)(sobew.o)\
       $(LIB)(sobew_grad.o)\
@@ -250,7 +250,6 @@ OBJ = $(LIB)(add_par_to_full.o)\
       $(LIB)(writedc.o)\
       $(LIB)(writedc_v2.o)\
       $(LIB)(writedc_v3.o)\
-      $(LIB)(write_direct_info.o)\
       $(LIB)(write_direct_info_v3.o)\
       $(LIB)(write_vec.o)\
       $(LIB)(writv.o)\

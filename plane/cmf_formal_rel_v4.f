@@ -38,6 +38,8 @@
 	USE MOD_RAY_MOM_STORE
 	IMPLICIT NONE
 !
+! Altered 19-Nov-2016: CHI_COEF, ETA_COEF, and VDOP_VEC_EXT were not being deallocated.
+!                        Only reallocate vectors if ND_EXT changes.
 ! Altered 04-Apr-2013: Fixed bug. NP_LIMIT(not NP) is limit when THICK_OB=FALSE.
 ! Altered 08-Jan-2012: Changed to V4 -- added REXT_FAC to call.
 ! Altered 14-May-2009: Altered value of IDMAX (for ETA and CHI interpolaton).
@@ -83,7 +85,7 @@
 	LOGICAL THICK_OB
 !
 ! First frequency -- no frequency coupling.
-
+!
 	LOGICAL INITIALIZE
 !
 ! Upon leaving this routine the radiation field along each ray is stored. This
@@ -127,6 +129,7 @@
 	INTEGER ERROR_LU
 	EXTERNAL ERROR_LU, SPEED_OF_LIGHT
 	LOGICAL NEW_R_GRID
+	LOGICAL REALLOCATE_GRID
 !
 !
 !
@@ -166,14 +169,20 @@
 !
 	LUER=ERROR_LU()
 	NEW_R_GRID=.FALSE.
+	REALLOCATE_GRID=.FALSE.
 	IF(INITIALIZE .AND. .NOT. FIRST_TIME)THEN
-	  DO I=1,ND
-	    IF(R(I) .NE. R_EXT(ND_ADD+I))THEN
-	      NEW_R_GRID=.TRUE.
-	      WRITE(LUER,*)'Updating RGRID in FG_J_CMF_V10'
-	      EXIT
-	    END IF
-	  END DO
+	  IF(ND_EXT .NE. ND+ND_ADD)THEN
+	    NEW_R_GRID=.TRUE.
+	    REALLOCATE_GRID=.TRUE.
+	  ELSE
+	    DO I=1,ND
+	      IF(R(I) .NE. R_EXT(ND_ADD+I))THEN
+	        NEW_R_GRID=.TRUE.
+	        WRITE(LUER,*)'Updating RGRID in CMF_FORMAL_REL_V4'
+	        EXIT
+	      END IF
+	    END DO
+	  END IF
 	ELSE IF(INITIALIZE)THEN
 	  NEW_R_GRID=.TRUE.
 	END IF
@@ -182,7 +191,7 @@
 ! This option will only be used when testing, since in CMFGEN we will always use
 ! the same atmospheric structure.
 !
-	IF(ALLOCATED(R_EXT) .AND. NEW_R_GRID)THEN
+	IF(ALLOCATED(R_EXT) .AND. REALLOCATE_GRID)THEN
 	  DEALLOCATE ( R_EXT, STAT=IOS)
 	  IF(IOS .EQ. 0)DEALLOCATE ( LOG_R_EXT, STAT=IOS)
 	  IF(IOS .EQ. 0)DEALLOCATE ( V_EXT, STAT=IOS)
@@ -193,8 +202,11 @@
 	  IF(IOS .EQ. 0)DEALLOCATE ( LOG_ETA_EXT, STAT=IOS)
 	  IF(IOS .EQ. 0)DEALLOCATE ( LOG_CHI_EXT, STAT=IOS)
 	  IF(IOS .EQ. 0)DEALLOCATE ( TMP_VEC, STAT=IOS)
+	  IF(IOS .EQ. 0)DEALLOCATE ( VDOP_VEC_EXT, STAT=IOS)
+	  IF(IOS .EQ. 0)DEALLOCATE ( CHI_COEF, STAT=IOS)
+	  IF(IOS .EQ. 0)DEALLOCATE ( ETA_COEF, STAT=IOS)
 	  IF(IOS .NE. 0)THEN
-	    WRITE(6,*)'Error deallocating R_EXT etc in CMF_FORMA_REL_V3'
+	    WRITE(6,*)'Error deallocating R_EXT etc in CMF_FORMA_REL_V4'
 	    STOP
 	  END IF
 	END IF
@@ -208,20 +220,26 @@
           IF(THICK_OB)ND_ADD=ND_ADD_MAX
           ND_EXT=ND+ND_ADD
 !
-	  ALLOCATE ( R_EXT(ND_EXT) )
-	  ALLOCATE ( LOG_R_EXT(ND_EXT) )
-	  ALLOCATE ( V_EXT(ND_EXT) )
-	  ALLOCATE ( VDOP_VEC_EXT(ND_EXT) )
-	  ALLOCATE ( Z_EXT(ND_EXT) )
-	  ALLOCATE ( SIGMA_EXT(ND_EXT) )
-	  ALLOCATE ( ETA_EXT(ND_EXT) )
-	  ALLOCATE ( CHI_EXT(ND_EXT) )
-	  ALLOCATE ( LOG_ETA_EXT(ND_EXT) )
-	  ALLOCATE ( LOG_CHI_EXT(ND_EXT) )
-	  ALLOCATE ( TMP_VEC(ND_EXT) )
+	  ALLOCATE ( R_EXT(ND_EXT),STAT=IOS );          R_EXT=0.0D0
+	  IF(IOS .EQ. 0)ALLOCATE ( LOG_R_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( V_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( VDOP_VEC_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( Z_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( SIGMA_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( ETA_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( CHI_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( LOG_ETA_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( LOG_CHI_EXT(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( TMP_VEC(ND_EXT),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( CHI_COEF(ND_EXT,4),STAT=IOS )
+	  IF(IOS .EQ. 0)ALLOCATE ( ETA_COEF(ND_EXT,4),STAT=IOS )
+	  IF(IOS .NE. 0)THEN
+	    WRITE(6,*)'Error allocating memore in CMF_FORMAL_REL_V4'
+	    STOP
+	  END IF
+	END IF
 !
-	  ALLOCATE ( CHI_COEF(ND_EXT,4) )
-	  ALLOCATE ( ETA_COEF(ND_EXT,4) )
+	IF(NEW_R_GRID)THEN
 !
 ! Compute the extended R grid, excluding inserted points.
 !
@@ -370,6 +388,8 @@
 	1                 SQRT( (R(1)-P(IP))*(R(1)+P(IP)) )/R(1)
 	  END DO
 	  CLOSE(UNIT=7)
+	  IF( ALLOCATED(CHI_RAY) ) DEALLOCATE (CHI_RAY)
+	  IF( ALLOCATED(ETA_RAY) ) DEALLOCATE (ETA_RAY)
 	  ALLOCATE (CHI_RAY(J),ETA_RAY(J))
 	END IF
 !

@@ -188,7 +188,8 @@
 	  IF(IOS .EQ. 0)ALLOCATE ( CHI_COEF(ND_SM,4),STAT=IOS)
 	  IF(IOS .EQ. 0)ALLOCATE ( F_COEF(ND_SM,4),STAT=IOS)
 	  IF(IOS .NE. 0)THEN
-	     WRITE(2,*)'Unable to allocate COEF memory in MOM_J_CMF_V6'
+	     LUER=ERROR_LU()
+	     WRITE(LUER,*)'Unable to allocate COEF memory in MOM_J_PP_V1'
 	     STOP
 	  END IF
 !

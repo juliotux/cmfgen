@@ -10,6 +10,8 @@
 	USE GEN_IN_INTERFACE
 	IMPLICIT NONE
 !
+! Altered   07-Apr-2017 -  Allows for multiple files to be created.
+!                          The same plot format is used for all files.
 ! Finalized 29-May-1997
 !
 	CHARACTER*132 STRING
@@ -54,30 +56,37 @@
 	ELSE IF(NCOLS .EQ. 2 .AND. NROWS .EQ. 5)THEN
 	  HOR_OFFSET='4800'
 	  VER_OFFSET='2400'
+	ELSE IF(NCOLS .EQ. 1 .AND. NROWS .EQ. 4)THEN
+	  HOR_OFFSET='0'
+	  VER_OFFSET='3000'
 	END IF
 	CALL GEN_IN(HOR_OFFSET,'Horizontal offset')
 	CALL GEN_IN(VER_OFFSET,'Vertical offset')
 !
-	IREC=0
-	IOS=0
-	OUTF=' '
-	CALL GEN_IN(OUTF,'Output file')
-	CALL GEN_ASCI_OPEN(LU_OUT,OUTF,'NEW',' ',' ',IREC,IOS)
-	IF(IOS .NE. 0)THEN
-	  WRITE(6,*)'Unable to open ',TRIM(OUTF)
-	  WRITE(6,*)'Fille cannot exist already'
-	  STOP
-	END IF
-!
 	TEST=.FALSE.
 	FILE1='pgplot_1.ps'
-10	CALL GEN_IN(FILE1,'Top PGPLOT  file')
-	I=INDEX(FILE1,'(test)')
-	IF(I .NE. 0)THEN
-	  TEST=.TRUE.
-	  FILE1=FILE1(1:I-1)
-	END IF
-	CALL GEN_ASCI_OPEN(LU_IN,FILE1,'OLD',' ','READ',IREC,IOS)
+!
+	DO WHILE(1 .EQ. 1)
+!
+	  IREC=0
+	  IOS=0
+	  OUTF=' '
+	  CALL GEN_IN(OUTF,'Output file')
+	  IF(OUTF .EQ. ' ')STOP
+	  CALL GEN_ASCI_OPEN(LU_OUT,OUTF,'NEW',' ',' ',IREC,IOS)
+	  IF(IOS .NE. 0)THEN
+	    WRITE(6,*)'Unable to open ',TRIM(OUTF)
+	    WRITE(6,*)'Fille cannot exist already'
+	    STOP
+	  END IF
+!
+10	  CALL GEN_IN(FILE1,'Top PGPLOT  file')
+	  I=INDEX(FILE1,'(test)')
+	  IF(I .NE. 0)THEN
+	    TEST=.TRUE.
+	    FILE1=FILE1(1:I-1)
+	  END IF
+	  CALL GEN_ASCI_OPEN(LU_IN,FILE1,'OLD',' ','READ',IREC,IOS)
 	  IF(IOS .NE. 0)THEN
 	    WRITE(LU_TERM,*)'Error opening 1st input FILE:',FILE1
 	    GOTO 10
@@ -97,6 +106,8 @@
 	    WRITE(LU_OUT,'(A)')'  500 7100 translate'
 	  ELSE IF(NROWS .EQ. 3)THEN
 	    WRITE(LU_OUT,'(A)')'  500 8500 translate'
+	  ELSE IF(NROWS .EQ. 4 .AND. NCOLS .EQ. 1)THEN
+	    WRITE(LU_OUT,'(A)')' -200 9000 translate'
 	  ELSE IF(NROWS .EQ. 4)THEN
 	    WRITE(LU_OUT,'(A)')'  500 9700 translate'
 	  ELSE IF(NROWS .EQ. 5)THEN
@@ -113,7 +124,6 @@
 	  END DO
 100	  CONTINUE
 	CLOSE(UNIT=LU_IN)
-C
 !
 	DO NR=1,NROWS
 	  DO NC=1,NCOLS
@@ -127,6 +137,61 @@ C
 	    ELSE
 	      WRITE(LU_OUT,'(4A)')'  ',TRIM(HOR_OFFSET),'    0',' translate'
 	    END IF
+!
+! Update file name in a systematic way to save typing.
+!
+	    IF(.NOT. TEST)THEN
+	      K=INDEX(FILE1,'_')
+	      IF(K .NE. 0)K=INDEX(FILE1(K+1:),'_')+K
+	      IF(K .NE. 0)THEN
+	        J=K+1
+	        DO WHILE(FILE1(J:J) .GE. '0' .AND. FILE1(J:J) .LE. '9')
+	          J=J+1
+	        END DO
+	        IF(J .NE. K+1)THEN
+	          READ(FILE1(K+1:J-1),*)I
+	          I=I+1
+	          WRITE(TMP_STR,'(I6)')I
+	          TMP_STR=ADJUSTL(TMP_STR)
+	          FILE1=FILE1(1:K)//TRIM(TMP_STR)//FILE1(J:)
+	        END IF
+	      END IF
+	      CALL SET_CASE_LOW(FILE1,IZERO,IZERO)
+	      IF(FILE1 .EQ. 'pgplot.ps')FILE1='pgplot_2.ps'
+	    END IF
+!
+150	    CALL GEN_IN(FILE1,'Next PGPLOT file')
+	    IF(FILE1 .EQ. ' ')GOTO 1000
+	    CALL GEN_ASCI_OPEN(LU_IN,FILE1,'OLD',' ','READ',IREC,IOS)
+	    IF(IOS .NE. 0)THEN
+	      WRITE(LU_TERM,*)'Error opening input FILE:',FILE1
+	      GOTO 150
+	    END IF
+	     STRING=' '
+	    DO WHILE(INDEX(STRING,'%%Page: 1 1') .EQ. 0)
+	      READ(LU_IN,'(A)')STRING
+	    END DO
+	    DO WHILE(INDEX(STRING,' EP ') .EQ. 0)
+	      READ(LU_IN,'(A)')STRING
+	    END DO
+	    I=INDEX(STRING,' EP ')
+	    WRITE(LU_OUT,'(A)')TRIM(STRING(I+4:))
+	    DO WHILE(1 .EQ. 1)
+	      READ(LU_IN,'(A)')STRING
+	      IF(INDEX(STRING,'PGPLOT restore showpage') .NE. 0)THEN
+	        GOTO 200
+	      END IF
+	      WRITE(LU_OUT,'(A)')TRIM(STRING)
+	    END DO
+200	    CONTINUE
+	    CLOSE(UNIT=LU_IN)
+500	    CONTINUE
+	    END DO
+	  END DO
+!
+1000	  CONTINUE
+	  WRITE(LU_OUT,'(A)')STRING
+	  WRITE(LU_OUT,'(A)')'%%EOF'
 !
 ! Update file name in a systematic way to save typing.
 !
@@ -150,38 +215,7 @@ C
 	    IF(FILE1 .EQ. 'pgplot.ps')FILE1='pgplot_2.ps'
 	  END IF
 !
-150	  CALL GEN_IN(FILE1,'Next PGPLOT file')
-	  IF(FILE1 .EQ. ' ')GOTO 1000
-	  CALL GEN_ASCI_OPEN(LU_IN,FILE1,'OLD',' ','READ',IREC,IOS)
-	  IF(IOS .NE. 0)THEN
-	    WRITE(LU_TERM,*)'Error opening input FILE:',FILE1
-	    GOTO 150
-	  END IF
-	  STRING=' '
-	  DO WHILE(INDEX(STRING,'%%Page: 1 1') .EQ. 0)
-	    READ(LU_IN,'(A)')STRING
-	  END DO
-	  DO WHILE(INDEX(STRING,' EP ') .EQ. 0)
-	    READ(LU_IN,'(A)')STRING
-	  END DO
-	  I=INDEX(STRING,' EP ')
-	  WRITE(LU_OUT,'(A)')TRIM(STRING(I+4:))
-	  DO WHILE(1 .EQ. 1)
-	    READ(LU_IN,'(A)')STRING
-	    IF(INDEX(STRING,'PGPLOT restore showpage') .NE. 0)THEN
-	      GOTO 200
-	    END IF
-	    WRITE(LU_OUT,'(A)')TRIM(STRING)
-	  END DO
-200	  CONTINUE
-	  CLOSE(UNIT=LU_IN)
-500	  CONTINUE
-	  END DO
 	END DO
-C
-1000	CONTINUE
-	WRITE(LU_OUT,'(A)')STRING
-	WRITE(LU_OUT,'(A)')'%%EOF'
-C
+!
 	STOP
 	END

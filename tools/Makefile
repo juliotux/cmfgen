@@ -10,6 +10,7 @@ LIB=$(LIB_DIR)libtools.a
 # Entries for library
 #
 OBJ = $(LIB)(usr_option.o)\
+      $(LIB)(chk_little_endian.o)\
       $(LIB)(constants_mod.o)\
       $(LIB)(condit_string.o)\
       $(LIB)(count_occur.o)\

@@ -88,6 +88,7 @@
 	REAL*8 ANG_TO_HZ,SPEED_OF_LIGHT
 	REAL*8, PARAMETER :: RONE=1.0D0
 	LOGICAL DO_WAVE_PLT
+        LOGICAL PLOT_UNNORMALIZED
         LOGICAL PLOT_REL_TO_GS_EDGE
 	LOGICAL DO_RECOM
 	LOGICAL DO_ALL_RECOM
@@ -184,7 +185,7 @@
 	      READ(10,'(A)')STRING
 	    END DO
 	    K=INDEX(STRING,'  ')
-	    NAME_1(J)=STRING(1:K-1)
+	    NAME_1(J)=ADJUSTL(STRING(1:K-1))
 	    READ(10,*)TYPE_1(J)
 	    READ(10,*)NUM_VALS_1(J)
 	    WRITE(16,*)TRIM(NAME_1(J)),TYPE_1(J),NUM_VALS_1(J)
@@ -439,16 +440,15 @@
 	       DO I=1,NV
 	         WRITE(70,'(2ES12.4)')XV(I)*FREQ_SCL_FAC/EDGE,YV(I)
 	       END DO
-	    ELSE
-	      T1=EDGE+EXC_EN_1
-	      DO I=1,NT
-	        CALL RECOM_OPAC_V2(YV,XV,T1,FREQ_SCL_FAC,STAT_WEIGHT,GION_1,NV,NV,LEVEL_REC_VEC(I),TEMP_VEC(I))
-	        TOTAL_REC_VEC(I)=TOTAL_REC_VEC(I)+LEVEL_REC_VEC(I)
-	      END DO
-	      WRITE(6,'(A,T30,5ES11.3)')TRIM(NAME_1(INDX_1)),(LEVEL_REC_VEC(I),I=1,NT)
-	      WRITE(LUOUT,'(X,A,T30,5ES11.3)')TRIM(NAME_1(INDX_1)),(LEVEL_REC_VEC(I),I=1,NT)
-	      FLUSH(LUOUT)
 	    END IF
+	    T1=EDGE+EXC_EN_1
+	    DO I=1,NT
+	      CALL RECOM_OPAC_V2(YV,XV,T1,FREQ_SCL_FAC,STAT_WEIGHT,GION_1,NV,NV,LEVEL_REC_VEC(I),TEMP_VEC(I))
+	      TOTAL_REC_VEC(I)=TOTAL_REC_VEC(I)+LEVEL_REC_VEC(I)
+	    END DO
+	    WRITE(6,'(A,T30,5ES11.3)')TRIM(NAME_1(INDX_1)),(LEVEL_REC_VEC(I),I=1,NT)
+	    WRITE(LUOUT,'(X,A,T30,5ES11.3)')TRIM(NAME_1(INDX_1)),(LEVEL_REC_VEC(I),I=1,NT)
+	    FLUSH(LUOUT)
 	  END DO
 	  WRITE(6,'(A,T30,5ES11.3)')' Total Recom. Rate/ion=',(TOTAL_REC_VEC(I),I=1,NT)
 	  WRITE(LUOUT,'(A,T30,5ES11.3)')' Total Recom. Rate/ion=',(TOTAL_REC_VEC(I),I=1,NT)
@@ -478,11 +478,15 @@
 	DO_RECOM=.FALSE.;     CALL GEN_IN(DO_RECOM,'Compute recombination rate?')
 !
 	WRITE(6,*)BLUE_PEN
-	WRITE(6,*)'Plotting relative to the ground state photoianiozatiom limit only makes sense'
+	WRITE(6,*)'Plotting relative to the ground state photoionizatiom limit only makes sense'
 	WRITE(6,*)'for levels below the ionization limit.'
 	WRITE(6,*)DEF_PEN
+        PLOT_UNNORMALIZED=.FALSE.
+	CALL GEN_IN(PLOT_UNNORMALIZED,'Use raw frequency units')
         PLOT_REL_TO_GS_EDGE=.FALSE.
-	CALL GEN_IN(PLOT_REL_TO_GS_EDGE,'Use frequency in units of iomization energy to the ground state?')
+	IF(.NOT. PLOT_UNNORMALIZED)THEN
+	  CALL GEN_IN(PLOT_REL_TO_GS_EDGE,'Use frequency in units of ionization energy to the ground state?')
+	END IF
 !
 	LEVEL_NAME1=' '
 	DO_SEQ_PLTS=.FALSE.
@@ -605,6 +609,8 @@
 	  END IF
 	  IF(DO_WAVE_PLT)THEN
 	    XV(1:NV)=ANG_TO_HZ/FREQ_SCL_FAC/XV(1:NV)
+	  ELSE IF(PLOT_UNNORMALIZED)THEN
+	    XV(1:NV)=XV(1:NV)*FREQ_SCL_FAC
 	  ELSE IF(PLOT_REL_TO_GS_EDGE)THEN
 	    XV(1:NV)=XV(1:NV)*FREQ_SCL_FAC/EDGE
 	  END IF

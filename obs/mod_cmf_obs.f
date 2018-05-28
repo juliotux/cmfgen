@@ -6,6 +6,7 @@
 !
 	MODULE MOD_CMF_OBS
 !
+! Altered: 17-Jan-2017 : Added CMFGEN_TGREY and dE_RAD_DECAY.
 ! Altered: 19-Aug-2015 : Added MI, Max number of ions increased to 21
 ! Altered: 18-May-2015 : Changed GAM2, GAM4 to C4 and C6 (quadratic and Van der Waals 
 !                           interacton constants).
@@ -141,6 +142,7 @@
 	REAL*8, ALLOCATABLE :: SIGMA(:)		!dlnV/dlnR-1
 	REAL*8, ALLOCATABLE :: T(:)		!Temperature in units of 10^4 K
 	REAL*8, ALLOCATABLE :: ED(:)		!Electron density (#/cm^3)
+	REAL*8, ALLOCATABLE :: LANG_COORD(:)	!Langrangian coordinate
 !
 	REAL*8, ALLOCATABLE :: ROSS_MEAN(:)	!Rosseland mean opacity.
 	REAL*8, ALLOCATABLE :: FLUX_MEAN(:)	!Flux mean opacity
@@ -148,6 +150,8 @@
 	REAL*8, ALLOCATABLE :: DENSITY(:)	!Mass density (gm/cm^3)
 	REAL*8, ALLOCATABLE :: CLUMP_FAC(:)	!Volume filling factor for clumps
 	REAL*8, ALLOCATABLE :: POPION(:)	!Ion density
+	REAL*8, ALLOCATABLE :: CMFGEN_TGREY(:)	!Computed by CMFGEN (named consistently with DISPGEN)
+	REAL*8, ALLOCATABLE :: dE_RAD_DECAY(:)	!Computed by CMFGEN
 !
 	REAL*8 STARS_MASS			!In Msun
 	REAL*8 STARS_LUM			!In Lsun

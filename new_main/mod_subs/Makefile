@@ -15,6 +15,7 @@ MOD = $(LIB_MOD)(mod_cmfgen.o)\
       $(LIB_MOD)(chg_exch_mod_v3.o)\
       $(LIB_MOD)(cmf_sob_mod.o)\
       $(LIB_MOD)(control_variable_mod.o)\
+      $(LIB_MOD)(eddfac_rec_defs_mod.o)\
       $(LIB_MOD)(line_mod.o)\
       $(LIB_MOD)(line_vec_mod.o)\
       $(LIB_MOD)(mod_lev_dis_blk.o)\

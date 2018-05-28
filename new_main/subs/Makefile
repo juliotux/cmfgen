@@ -34,7 +34,7 @@ OBJ = $(LIB)(add_par_to_full_v2.o)\
       $(LIB)(do_ng_accel_band_v2.o)\
       $(LIB)(eval_adiabatic_v3.o)\
       $(LIB)(evalse_qwvj_v7.o)\
-      $(LIB)(evalse_lowt_v1.o)\
+      $(LIB)(evalse_lowt_v2.o)\
       $(LIB)(evalse_x_qwvj_v4.o)\
       $(LIB)(eval_temp_ddt_v2.o)\
       $(LIB)(fiddle_pop_corrections_v2.o)\
@@ -46,6 +46,7 @@ OBJ = $(LIB)(add_par_to_full_v2.o)\
       $(LIB)(get_non_loc_gamma_energy_v2.o)\
       $(LIB)(get_pops_at_prev_time_step_v5.o)\
       $(LIB)(old_grid_module.o)\
+      $(LIB)(open_rw_eddfactor.o)\
       $(LIB)(prevent_low_t.o)\
       $(LIB)(read_ba_data_v3.o)\
       $(LIB)(read_bcd_mat.o)\
@@ -91,6 +92,7 @@ DIS=$(LIB_MOD)(mod_lev_dis_blk.o)
 CONT=$(LIB_MOD)(control_variable_mod.o)
 NUC=$(LIB_MOD)(nuc_iso_mod.o)
 HYD=$(LIB_MOD)(cmf_hydro_module.o)
+EDD=$(LIB_MOD)(eddfac_rec_defs_mod.o)
 
 UP_MODS= $(LIB_DIR)libmod.a(mod_cmfgen.o)\
        $(LIB_DIR)libmod.a(control_variable_mod.o)\
@@ -130,6 +132,10 @@ $(LIB)(do_cmf_hydro_v2.o) : do_cmf_hydro_v2.f $(LIB)(old_grid_module.o) $(LIB)(c
 $(LIB)(eval_temp_ddt_v2.o) : eval_temp_ddt_v2.f $(STEQ) $(MOD)
 	$(F90) -c $(OPTION)  eval_temp_ddt_v2.f
 	ar ruv $(LIB) eval_temp_ddt_v2.o
+
+$(LIB)(open_rw_eddfactor.o) : open_rw_eddfactor.f $(EDD)
+	$(F90) -c $(OPTION)  open_rw_eddfactor.f
+	ar ruv $(LIB) open_rw_eddfactor.o
 
 $(LIB)(get_non_loc_gamma_energy.o) : get_non_loc_gamma_energy.f $(CONT) $(NUC)
 	$(F90) -c $(OPTION) get_non_loc_gamma_energy.f

@@ -55,7 +55,7 @@
 	IF( (SGN*QZR(1) .LT. SGN*R(1)) .OR.
 	1   (SGN*QZR(NX) .GT. SGN*R(ND)) )THEN
 	  LUER=ERROR_LU()
-	  WRITE(LUER,*)'Error in MON_INTERP - values outside range'
+	  WRITE(LUER,*)'Error in MON_INTERP_FAST_V2 - values outside range'
 	  WRITE(LUER,*)'IDENT='//TRIM(IDENT)
 	  WRITE(LUER,*)'Ranges shown below'
 	  WRITE(LUER,*)'R:',R(1),R(ND)

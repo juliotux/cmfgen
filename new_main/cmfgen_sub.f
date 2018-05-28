@@ -36,6 +36,7 @@
 	USE RADIATION_MOD
 	USE UPDATE_KEYWORD_INTERFACE
 	USE VAR_RAD_MOD
+	USE EDDFAC_REC_DEFS_MOD
 	IMPLICIT NONE
 !
 ! Aleterd 06-Sep-2016 : Output more R digits to MEANOPAC.
@@ -74,7 +75,7 @@
 	INTEGER NCF
 	LOGICAL, PARAMETER :: IMPURITY_CODE=.FALSE.
 !
-	CHARACTER(LEN=12), PARAMETER :: PRODATE='17-Oct-2016'		!Must be changed after alterations
+	CHARACTER(LEN=12), PARAMETER :: PRODATE='05-May-2017'		!Must be changed after alterations
 !
 ! 
 !
@@ -175,6 +176,7 @@
         INTEGER  L1,L2,U1,U2
 	INTEGER IT,MNT,NIV
 	INTEGER ISPEC
+	INTEGER GAMMA_ADD_SLOWLY_COUNTER
 !
 ! Main iteration loop variables.
 !
@@ -305,17 +307,12 @@
 	LOGICAL COMPUTE_EW,COMPUTE_JEW,COMPUTE_LAM,MID,FULL_ES
 !
 ! ACESS_F is the current record we are writing in EDDFACTOR.
-! EDD_CONT_REC is the record in EDDFACTOR which points to the first
-! record containing the continuum values.
 !
 	INTEGER ACCESS_F
-	INTEGER, PARAMETER :: EDD_CONT_REC=3
-!
 	INTEGER NDEXT,NCEXT,NPEXT
 !
 	REAL*8 CNM(NDMAX,NDMAX)		!For collisions cross-section in
 	REAL*8 DCNM(NDMAX,NDMAX)	!STEQGEN
-!
 !
 	INTEGER, PARAMETER :: N_FLUX_MEAN_BANDS=12
 	REAL*8     LAM_FLUX_MEAN_BAND_END(N_FLUX_MEAN_BANDS)
@@ -323,7 +320,6 @@
 	REAL*8     BAND_FLUX(ND,N_FLUX_MEAN_BANDS)
 	DATA LAM_FLUX_MEAN_BAND_END/100.0D0,150.0D0,200.0D0,227.83D0,258.90D0,300.0D0,504.25D0,911.75D0,
 	1                         1200.0D0,1500.0D0,2000.0D0,1.0D+08/
-!
 !
 ! Continuum frequency variables and arrays.
 !
@@ -462,7 +458,6 @@
 !
 	LUER=ERROR_LU()
 	LUWARN=WARNING_LU()
-	ACCESS_F=5
 	COMPUTE_LAM=.FALSE.
 	COMPUTE_EW=.TRUE.
 	FULL_ES=.TRUE.
@@ -471,11 +466,13 @@
         TREAT_NON_THERMAL_ELECTRONS=.FALSE.
 	INCL_RADIOACTIVE_DECAY=.FALSE.
 	ZERO_REC_COOL_ARRAYS=.TRUE.
+	GAMMA_ADD_SLOWLY_COUNTER=-1
 	I=12
 	FORMFEED=' '//CHAR(I)
 	CNT_FIX_BA=0
 	MAXCH_SUM=0.0D0
 	LST_ITERATION=.FALSE.
+	dE_RAD_DECAY=0.0D0 			!For non-SN models.
 !
 	DPTH_INDX=1
 	DPTH_INDX=MIN(DPTH_INDX,ND)		!Thus no problem if 84 > ND
@@ -1263,65 +1260,17 @@
 	    STOP
 	  END IF
 	ELSE
+	  
 	  IF(ACCURATE .OR. EDD_CONT .OR. EDD_LINECONT)THEN
 !
 ! NB: If not ACCURATE, NDEXT was set to ND. The +1 arises since we write
 ! NU on the same line as RJ. J is used to get the REC_LENGTH, while string
 ! will contain the date.
 !
-	    I=WORD_SIZE*(NDEXT+1)/UNIT_SIZE
-	    CALL READ_DIRECT_INFO_V3(K,J,STRING,'EDDFACTOR',LU_EDD,IOS)
-	    IF(IOS .NE. 0)THEN
-	      WRITE(LUER,*)'Error --- unable to open EDDFACTOR_INFO -- will compute new f'
-	      COMPUTE_EDDFAC=.TRUE.
-	      IOS=0
-	    ELSE IF(.NOT. COMPUTE_EDDFAC .AND. K .NE. ND)THEN
-	      WRITE(LUER,*)'Error with EDDFACTOR_INFO'
-	      WRITE(LUER,*)'Incompatible number of depth points'
-	      WRITE(LUER,*)'ND is',ND
-	      WRITE(LUER,*)'ND is EDDFACTOR_INFO is',K
-	      STOP
-	    END IF
-	    IF(.NOT. COMPUTE_EDDFAC)THEN
-	      OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',
-	1       ACCESS='DIRECT',STATUS='OLD',RECL=I,IOSTAT=IOS)
-	      IF(IOS .EQ. 0)THEN
-	        READ(LU_EDD,REC=5,IOSTAT=IOS)T1
-	        IF(T1 .EQ. 0.0D0 .OR. IOS .NE. 0)THEN
-	          WRITE(LUER,'(/,A)')' Warning --- All Eddfactors not'//
-	1                      ' computed - will compute new F'
-	          COMPUTE_EDDFAC=.TRUE.
-	        END IF
-	      ELSE
-	        IF(.NOT. NEWMOD)THEN
-	          WRITE(LUER,*)'Error opening EDDFACTOR - will compute new F'
-	        END IF
-	        COMPUTE_EDDFAC=.TRUE.
-	      END IF
-	    END IF
-	    IF(COMPUTE_EDDFAC)THEN
-	      IF(USE_FIXED_J)THEN
-	        WRITE(LUER,*)'Error in CMFGEN_SUB'
-	        WRITE(LUER,*)'Program will compute EDDFACTOR but this is'//
-	1                      ' incompatable with US_FIXED_J=T'
-	        STOP
-	      END IF
-              CALL WRITE_DIRECT_INFO_V3(NDEXT,I,'20-Aug-2000','EDDFACTOR',LU_EDD)
-	      OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',
-	1       ACCESS='DIRECT',STATUS='REPLACE',RECL=I)
-	      WRITE(LU_EDD,REC=1)0
-	      WRITE(LU_EDD,REC=2)0
-	      WRITE(LU_EDD,REC=3)0
-	      WRITE(LU_EDD,REC=4)0
+	    CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1     REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1     ACCESS_F,NEWMOD,COMPUTE_EDDFAC,USE_FIXED_J,'EDDFACTOR',LU_EDD)
 !
-! We set record 5 to zero, to signify that the eddington factors are
-! currently being computed. A non zero value signifies that all values
-! have successfully been computed. (Consistent with old Eddfactor
-! format a EDD_FAC can never be zero : Reason write a real number).
-!
-	      T1=0.0D0
-	      WRITE(LU_EDD,REC=5)T1
-	    END IF
 	  END IF
 	END IF
 !
@@ -1687,10 +1636,9 @@
 	EDDINGTON=EDD_LINECONT
 	IF(ACCURATE .OR. EDDINGTON)THEN
 	  IF(COMPUTE_EDDFAC)THEN
-	    ACCESS_F=6  		!First output record changed from
-	    WRITE(LU_EDD,REC=1)ACCESS_F     !5 to 6 on 16-Jan-1992.
+	    WRITE(LU_EDD,REC=DIE_CONT_REC)ACCESS_F
 	  ELSE
-	    READ(LU_EDD,REC=1)ACCESS_F
+	    READ(LU_EDD,REC=DIE_CONT_REC)ACCESS_F
 	  END IF
 	END IF
 !
@@ -1963,6 +1911,7 @@
 	    READ(LU_EDD,REC=EDD_CONT_REC)ACCESS_F
 	  END IF
 	END IF
+	WRITE(6,*)EDDINGTON,ACCESS_F,COMPUTE_EDDFAC	
 !
 ! Decide whether to use an file with old J values to provide an initial 
 ! estimate of J with incoherent electron scattering. The options
@@ -2296,7 +2245,9 @@
 	  CALL TUNE(ITWO,'EVALSE')
 	END IF
 !
-	CALL EVALSE_LOWT_V1(RJ,NU(ML),FQW(ML),COMPUTE_BA,NT,ND)
+	CALL TUNE(IONE,'LOWT')
+	CALL EVALSE_LOWT_V2(RJ,NU(ML),FQW(ML),COMPUTE_BA,NT,ND,FIRST_FREQ)
+	CALL TUNE(ITWO,'LOWT')
 !
 ! 
 ! Note that ATM(ID+2)%EQXzV is the ion equation. Since Auger ionization,
@@ -2355,7 +2306,7 @@
 	END IF 			!Only evaluate if last iteration.
 !
 	IF(LST_ITERATION)THEN
-	  CALL PRRR_LOWT_V1(RJ,NU(ML),FQW(ML),ND)
+	  CALL PRRR_LOWT_V2(RJ,NU(ML),FQW(ML),ND,FIRST_FREQ)
 	END IF
 !
 ! 
@@ -3080,9 +3031,9 @@
 	EDDINGTON=EDD_LINECONT
 	IF(ACCURATE .OR. EDDINGTON)THEN
 	  IF(COMPUTE_EDDFAC)THEN
-	    WRITE(LU_EDD,REC=4)ACCESS_F
+	    WRITE(LU_EDD,REC=LINE_CONT_REC)ACCESS_F
 	  ELSE
-	    READ(LU_EDD,REC=4)ACCESS_F
+	    READ(LU_EDD,REC=LINE_CONT_REC)ACCESS_F
 	  END IF
 	END IF
 	ACCESS_JEW=1
@@ -3669,12 +3620,20 @@
 	  WRITE(LU_HT,'(/,(1X,1P,5E12.4))')(TA(I), I=1,ND)
 	END IF
 !
+! Output R, V and the Langrangian coordiante to the EDDACTOR file.
+! If we adjust R, these values are consistent with the old grid --
+! not the current grid.
+!
+          CALL OUT_RV_TO_EDDFACTOR(R,V,LANG_COORD,ND,
+	1        REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1        ACCESS_F,'EDDFACTOR',LU_EDD)
+!
 ! Insure Eddington factor file is closed, and indicate all f's successfully
 ! computed. If COMPUTE_EDDFAC is true we can safely write to record 5
 ! as file must have new format.
 !
 	T1=1.0D0
-	IF(COMPUTE_EDDFAC)WRITE(LU_EDD,REC=5)T1
+	IF(COMPUTE_EDDFAC)WRITE(LU_EDD,REC=FINISH_REC)T1
 	FLUSH(UNIT=LU_EDD)
 	IF(.NOT. COHERENT_ES)CLOSE(UNIT=LU_ES)
 	COMPUTE_JEW=.FALSE.
@@ -4365,11 +4324,15 @@
 	  END IF
 !
 ! Adjust non-thermal decay energy scale factor. This is option is useful when adding non-thermal ioizations
-! to a thermal model.
+! to a thermal model. During the convergence process we typically increase DEC_NRG_SCL_FAC by a factor of 10.
+! If only 2 iterations were done, befores changing, we increase it by a factor of 100.
 !
 	  IF(TREAT_NON_THERMAL_ELECTRONS .AND. ADD_DEC_NRG_SLOWLY .AND. RD_LAMBDA .AND. MAXCH .LT. 100)THEN
 	    IF(DEC_NRG_SCL_FAC .NE. 1.0D0)THEN
 	      DEC_NRG_SCL_FAC=MIN(DEC_NRG_SCL_FAC*10.0D0,1.0D0)
+	      IF(GAMMA_ADD_SLOWLY_COUNTER .EQ. 2)THEN
+	        DEC_NRG_SCL_FAC=MIN(DEC_NRG_SCL_FAC*10.0D0,1.0D0)
+	      END IF
 	      WRITE(LUER,*)'Have adjusted radioactivity decay energy scale factor'
 	      WRITE(LUER,*)'New scale factor is',DEC_NRG_SCL_FAC
 	      CALL UPDATE_KEYWORD(DEC_NRG_SCL_FAC,'[DECNRG_SCLFAC_BEG]','VADAT',L_TRUE,L_TRUE,LUIN)
@@ -4377,6 +4340,9 @@
 	    ELSE
 	      CALL UPDATE_KEYWORD(L_FALSE,'[GAMMA_SLOW]','VADAT',L_TRUE,L_TRUE,LUIN)
 	    END IF
+	    GAMMA_ADD_SLOWLY_COUNTER=1
+	  ELSE IF(DEC_NRG_SCL_FAC .NE. 1.0D0)THEN
+	    GAMMA_ADD_SLOWLY_COUNTER=GAMMA_ADD_SLOWLY_COUNTER+1
 	  END IF
 !
 	  IF(SN_MODEL)THEN
@@ -4403,6 +4369,7 @@
 	    IF(USE_FIXED_J .AND. DO_LAMBDA_AUTO .AND. RD_LAMBDA .AND. MAXCH .LT. 50.0D0)THEN
 	       USE_FIXED_J=.FALSE.
 	       CALL UPDATE_KEYWORD(L_FALSE,'[USE_FIXED_J]','VADAT',L_TRUE,L_TRUE,LUIN)
+	       COMPUTE_EDDFAC=.TRUE.
 	       IF(DO_GREY_T_AUTO)THEN
 	         CALL GREY_T_ITERATE(POPS,Z_POP,NU,NU_EVAL_CONT,FQW,
 	1               LUER,LUIN,NC,ND,NP,NT,NCF,N_LINE_FREQ,MAX_SIM)
@@ -4411,14 +4378,16 @@
 	1               LAST_NG,WRITE_RVSIG,NT,ND,LUSCR,NEWMOD)
 	       END IF
 	       I=WORD_SIZE*(NDEXT+1)/UNIT_SIZE
-	       CALL WRITE_DIRECT_INFO_V3(NDEXT,I,'20-Aug-2000','EDDFACTOR',LU_EDD)
-	       COMPUTE_EDDFAC=.TRUE.
+!
+! NB: If not ACCURATE, NDEXT was set to ND. The +1 arises since we write
+! NU on the same line as RJ. J is used to get the REC_LENGTH, while string
+! will contain the date.
+!
+	       CALL OPEN_RW_EDDFACTOR(R,V,LANG_COORD,ND,
+	1             REXT,VEXT,LANG_COORDEXT,NDEXT,
+	1             ACCESS_F,L_TRUE,COMPUTE_EDDFAC,L_FALSE,'EDDFACTOR',LU_EDD)
 	       CALL INIT_GET_J_FOR_TWO_PHOT
-	       OPEN(UNIT=LU_EDD,FILE='EDDFACTOR',FORM='UNFORMATTED',ACCESS='DIRECT',STATUS='REPLACE',RECL=I)
-	       WRITE(LU_EDD,REC=1)0; WRITE(LU_EDD,REC=2)0
-	       WRITE(LU_EDD,REC=3)0; WRITE(LU_EDD,REC=4)0
-	       T1=0.0D0
-	       WRITE(LU_EDD,REC=5)T1
+	       T1=0.0D0; WRITE(LU_EDD,REC=FINISH_REC)T1
 	       COHERENT_ES=.TRUE.
 !
 ! If DONE_HYDRO_REVISION is TRUE, we do a LAMBDA iteration immediately afterwoods.
@@ -4436,7 +4405,7 @@
 	       LAMBDA_ITERATION=.FALSE.
 	       FIXED_T=RD_FIX_T
 	    END IF
-	    CALL SPECIFY_IT_CYCLE_V2(MAIN_COUNTER,COMPUTE_BA,LAMBDA_ITERATION,FIXED_T)
+	    CALL SPECIFY_IT_CYCLE_V3(MAIN_COUNTER,COMPUTE_BA,LAMBDA_ITERATION,FIXED_T,NEXT_NG,NEXT_AV)
 !
 ! Check to see if the user has changed IN_ITS to modify the number of iterations being
 ! undertaken. If the file has not been modified, no action will be taken. The use may

@@ -160,8 +160,13 @@
 	      LUER=ERROR_LU()
 	      CALL GET_LU(LU,'FQCOMP_IBC_V2')
 	      WRITE(LUER,*)'Error in FQCOM_IBC_V2-- -ve intensities'
-	      WRITE(LUER,*)'See unit LU'
+	      WRITE(LUER,*)'See unit ',LU
 	      WRITE(LU,*)'LS=',LS
+	      WRITE(LU,*)'ND=',ND
+	      WRITE(LU,*)'INNER_BND_METH=',TRIM(INNER_BND_METH)
+	      IF(INNER_BND_METH .EQ. 'DIFFUSION')THEN
+	        WRITE(LU,*)'DBB & DBC =',DBB, DBC
+	      END IF
 	      WRITE(LU,'(6(10X,A))')'    XM','     Z','   CHI','dCHIdR','DTAU','SOURCE'
 	      DTAU(NI)=0.0D0   !Set to zero as not used and not set.
 	      DO J=1,NI

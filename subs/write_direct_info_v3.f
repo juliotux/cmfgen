@@ -7,6 +7,8 @@
 !                         the transfer of DIRECT access files between PENTIUM and
 !                         ALPHA systems transparent.
 ! Modified 18-Aug-2003: UNIT_SIZE and WORD_SIZE output to INFO file.
+! Modified 12-Apr-2017: INT_SIZE and ENDIAN type now output to INFO file.
+!                         At present, no change to READ_DIRECT_INFO_V3 (except date modification).
 !
 	SUBROUTINE WRITE_DIRECT_INFO_V3(ND,RECL,FILE_DATE,FILENAME,LU_EDD)
 	IMPLICIT NONE
@@ -23,6 +25,9 @@
 	INTEGER WORD_SIZE
 	INTEGER UNIT_SIZE
 	INTEGER MAX_NUM_REC
+	INTEGER INT_SIZE
+	LOGICAL CHK_LITTLE_ENDIAN
+	EXTERNAL CHK_LITTLE_ENDIAN
 !
 	CHARACTER*(*) FILENAME
 	CHARACTER*(*) FILE_DATE
@@ -38,12 +43,13 @@
 ! ND is a USE dependent integer. e.g., # of numbers written out.
 ! RECL is the length of the file in system units.
 !
+	INT_SIZE=KIND(INT_SIZE)
 	NEW_FILENAME=TRIM(FILENAME)//'_INFO'
         OPEN(UNIT=LU_EDD,FILE=NEW_FILENAME,STATUS='REPLACE')
-          WRITE(LU_EDD,'(X,A,39X,A)')'18-Aug-2003','!INFO format date'
+          WRITE(LU_EDD,'(X,A,39X,A)')'12-Apr-2017','!INFO format date'
           WRITE(LU_EDD,'(X,A,39X,A)')TRIM(FILE_DATE),'!File format date'
-          WRITE(LU_EDD,'(4(6X,I6))')ND,RECL,WORD_SIZE,UNIT_SIZE
-          WRITE(LU_EDD,'(4(3X,A))')'       ND','     RECL','WORD_SIZE','UNIT_SIZE'
+          WRITE(LU_EDD,'(5(6X,I6),11X,1L)')ND,RECL,WORD_SIZE,UNIT_SIZE,INT_SIZE,CHK_LITTLE_ENDIAN()
+          WRITE(LU_EDD,'(6(3X,A))')'       ND','     RECL','WORD_SIZE','UNIT_SIZE',' INT_SIZE','  LIT_END'
         CLOSE(LU_EDD)
 !
 	RETURN
@@ -116,7 +122,7 @@
             IER=2; READ(STRING,*,ERR=100,IOSTAT=IOS)ND,RECL
 	    FILE_DATE='Unavailable'
 	  ELSE
-	    IF(INDEX(STRING,'18-Aug-2003') .NE. 0)THEN
+	    IF(INDEX(STRING,'18-Aug-2003') .NE. 0 .OR. INDEX(STRING,'12-Apr-2017') .NE. 0)THEN
 	      IER=3; READ(LU_EDD,'(A)',ERR=100,IOSTAT=IOS)STRING
 	      IER=4; IF(INDEX(STRING,'File format date') .EQ. 0)GOTO 100
 	      FILE_DATE=STRING(1:INDEX(STRING,'  '))

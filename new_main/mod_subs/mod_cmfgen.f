@@ -202,6 +202,7 @@
 	REAL*8, ALLOCATABLE :: SIGMA(:)		!dlnV/dlnR-1
 	REAL*8, ALLOCATABLE :: T(:)		!Temperature in units of 10^4 K
 	REAL*8, ALLOCATABLE :: ED(:)		!Electron density (#/cm^3)
+	REAL*8, ALLOCATABLE :: LANG_COORD(:)    !Lagrangian coordinate
 !
 	REAL*8, ALLOCATABLE :: ROSS_MEAN(:)	!Rosseland mean opacity.
 	REAL*8, ALLOCATABLE :: PLANCK_MEAN(:)	!Planck mean opacity.

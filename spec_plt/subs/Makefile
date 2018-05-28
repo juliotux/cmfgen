@@ -40,6 +40,7 @@ OBJ    = $(LIB)(convolve.o)\
          $(LIB)(recom_opac_v2.o)\
          $(LIB)(rd_row_data.o)\
          $(LIB)(rd_xy_data_usr.o)\
+         $(LIB)(rd_monte_line.o)\
          $(LIB)(rd_obs_data_v2.o)
   
 all : $(LIB)

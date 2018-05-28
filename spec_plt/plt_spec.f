@@ -842,6 +842,60 @@ C
 !
 ! 
 !
+	ELSE IF(X(1:8) .EQ. 'RD_MONTE')THEN
+	  FILENAME=' '  
+	  CALL USR_OPTION(FILENAME,'File',' ',' ')
+	  CALL USR_HIDDEN(OVER,'OVER','F','Overwrite existing model (buffer) data')
+	  CALL USR_HIDDEN(SCALE_FAC,'SCALE','1.0D0',' ')
+	  CALL USR_HIDDEN(XFAC,'XFAC','1.0D0',' ')
+	  CALL USR_HIDDEN(RAD_VEL,'RAD_VEL','0.0D0','Radial velocity(km/s) of star')
+	  IF(XFAC .NE. 1.0D0 .AND. RAD_VEL .NE. 0.0D0)THEN
+	    WRITE(6,*)'Only one of XFAC and RAD_VEL can be changed from their default values of 1 and 0'
+	    GOTO 1
+	  ELSE IF(RAD_VEL .NE. 0.0D0)THEN
+	    XFAC=(1.0D0+1.0D+05*RAD_VEL/C_CMS)
+	  END IF
+!
+	 IF(OVER)THEN
+!
+! This option allows all normal model options to be done on the data
+! (e.g. redenning).
+!
+	    CALL RD_MONTE_LINE(NU,OBSF,NCF_MAX,NCF,FILENAME,IOS)
+	    IF(IOS .NE. 0)THEN
+	       WRITE(T_OUT,*)'Error reading model data -- no data read'
+	       GOTO 1		!Get another option
+	    END IF
+	    OVER=.FALSE.
+!
+	    IF(SCALE_FAC .NE. 1.0D0 .OR. XFAC .NE. 1.0D0)THEN
+	      OBSF(1:NCF)=OBSF(1:NCF)*SCALE_FAC
+	      NU(1:NCF)=NU(1:NCF)*XFAC
+	      WRITE(T_OUT,*)'Model has been scaled!'
+	    ELSE
+	      WRITE(T_OUT,*)'No scaling done with new model data'
+	    END IF
+! 
+	    WRITE(T_OUT,*)'New model data replaces old data'
+	    WRITE(T_OUT,*)'No plots done with new model data'
+	  ELSE
+!
+! This option is now similar to RD_CONT
+! 
+	    CALL RD_MONTE_LINE(NU_CONT,OBSF_CONT,NCF_MAX,NCF_MOD,FILENAME,IOS)
+	    IF(IOS .NE. 0)THEN
+	       WRITE(T_OUT,*)'Error reading model data -- no data read'
+	       GOTO 1		!Get another option
+	    END IF
+	    DO I=1,NCF_MOD
+	      XV(I)=NU_CONT(I)*XFAC
+	      YV(I)=OBSF_CONT(I)*SCALE_FAC
+	    END DO
+	    CALL CNVRT(XV,YV,NCF_MOD,LOG_X,LOG_Y,X_UNIT,Y_PLT_OPT,
+	1                 LAMC,XAXIS,YAXIS,L_FALSE)
+	    CALL CURVE(NCF_MOD,XV,YV)
+	  END IF
+!
 	ELSE IF(X(1:5) .EQ. 'ISABS') THEN
 	  CALL USR_OPTION(T_IN_K,'T_IN_K','100d0','Temp. in Kelvin')
 	  CALL USR_OPTION(V_TURB,'V_TURB','10d0','Turbulent Velocity (km/s)')

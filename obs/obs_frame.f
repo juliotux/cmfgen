@@ -6,6 +6,7 @@ C
 	PROGRAM OBS_FRAME
 	IMPLICIT NONE
 C
+C Altered 13-Apr-2017 --- Updated one call to WRITE_DIRECT_INFO_V3 (RJ call, was orig.)
 C Altered 06-Jan-1999 --- Now call OBS_FRAME_SUB_V2.
 C                         TAU_MAX, ES_DTAU, and INT_METHOD included.
 C Altered 03-Jan-1999 --- MAX_DEL_V_RES_ZONE was being incorrectly computed.
@@ -235,7 +236,7 @@ C interpolated onto the ETA (and CHI) frequency grid.
 C
 C ***************************************************************************
 C
-	CALL READ_DIRECT_INFO(I,RECL,'RJ_DATA',LUIN)
+	CALL READ_DIRECT_INFO_V3(I,RECL,FILE_DATE,'RJ_DATA',LUIN,IOS)
 	OPEN(UNIT=LUIN,FILE='RJ_DATA',STATUS='OLD',
 	1      ACCESS='DIRECT',FORM='UNFORMATTED',ACTION='READ')
 	READ(LUIN,REC=CONT_REC)INIT_REC,NCF_RJ,ND_RD

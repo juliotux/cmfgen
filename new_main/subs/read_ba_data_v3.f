@@ -3,7 +3,7 @@
 ! this version is passed via a data module. Unlike earlier routines,
 ! STEQ is NOT written out. 
 !
-	SUBROUTINE READ_BA_DATA_V3(LU,NION,NUM_BNDS,ND,COMPUTE_BA,FIXED_T,STATUS,DESC)
+	SUBROUTINE READ_BA_DATA_V3(LU,NION,NUM_BNDS,ND,COMPUTE_BA,FIXED_T,SUCCESSFUL_READ,DESC)
 	USE STEQ_DATA_MOD
 	IMPLICIT NONE
 !
@@ -20,7 +20,7 @@
         INTEGER LU                    !Input unit for BA and STEQ
 	LOGICAL COMPUTE_BA  		!Indicates whether BA is being computed.
 	LOGICAL FIXED_T                 !Indicates whether T is to be held fixed.
-	LOGICAL STATUS                  !Indicates whether BA/STEQ read successful
+	LOGICAL SUCCESSFUL_READ                  !Indicates whether BA/STEQ read successful
 	CHARACTER DESC*(*)              !Used for filename
 !
 ! Local Variables and external functions.
@@ -33,11 +33,17 @@
 	LOGICAL COMPUTE_BA_RD
 	INTEGER, PARAMETER :: IZERO=0
 !
+	SUCCESSFUL_READ=.FALSE.
+!
+! If we are still computing the BA matrix, there is no need to read it in.
+! 
+	IF(COMPUTE_BA)RETURN
+!
 	LUER=ERROR_LU()
 	CALL GEN_ASCI_OPEN(LU,DESC//'PNT','OLD',' ','READ',IZERO,IOS)
 	IF(IOS .NE. 0)GOTO 300
-	  READ(LU,*,ERR=400,IOSTAT=IOS)STATUS
-	  IF(.NOT. STATUS)THEN
+	  READ(LU,*,ERR=400,IOSTAT=IOS)SUCCESSFUL_READ
+	  IF(.NOT. SUCCESSFUL_READ)THEN
 	    WRITE(LUER,*)'Previous store of '//DESC,
 	1                ' was not completed succesfully'
 	    CLOSE(UNIT=LU)
@@ -56,13 +62,9 @@
 	  WRITE(LUER,*)'  Read vales:',NION_RD,NUM_BNDS_RD,ND_RD
 	  WRITE(LUER,*)'Actual vales:',NION,NUM_BNDS,ND
 	  CLOSE(UNIT=LU)
-          STATUS=.FALSE.
+          SUCCESSFUL_READ=.FALSE.
 	  RETURN
 	END IF
-!
-! If we are still computing the BA matrix, there is no need to read it in.
-! 
-	IF(COMPUTE_BA)RETURN
 !
 	OPEN(UNIT=LU,FORM='UNFORMATTED',FILE=DESC,IOSTAT=IOS,ERR=500,
 	1             ACCESS='SEQUENTIAL',STATUS='OLD',ACTION='READ')
@@ -76,42 +78,42 @@
 !
 300	WRITE(LUER,*)'Error opening '//DESC//'PNT in READBA'
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
 !
 400	WRITE(LUER,*)'Error reading from '//DESC//'PNT in READBA'
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
 !
 500	WRITE(LUER,*)'Error opening logical unit to recall :',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
 !
 600	WRITE(LUER,*)'Error on reading SE(ID)%BA in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
 !
 605	WRITE(LUER,*)'Error on reading BA_ED in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN
 !
 610	WRITE(LUER,*)'Error on reading BA_T in READ_BA_DATA_V2: ',DESC
         WRITE(LUER,*)'IOSTAT=',IOS
-	STATUS=.FALSE.
+	SUCCESSFUL_READ=.FALSE.
 	INQUIRE(UNIT=LU,OPENED=FILE_OPEN)
 	IF(FILE_OPEN)CLOSE(UNIT=LU)
 	RETURN

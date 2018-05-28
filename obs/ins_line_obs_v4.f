@@ -7,6 +7,7 @@
 	1               OBS_PRO_EXT_RAT,ES_WING_EXT,V_DOP)
 	IMPLICIT NONE
 !
+! Altered 13-Apr-2017 : Limit the maximum extent of the red wing to 10,000 km/s.
 ! Altered 02-Jul-2000 : Complete rewrite. Changed from V3 to V4.
 !                       Routine now correctly handles the case where lines are
 !                       are ordered by the start frequency, rather than the
@@ -113,7 +114,12 @@
 ! Vinf is large (>> Velec) the "coherent" scattering will dominate, and
 ! the extent of the red wing will be determined by Vinf.
 !
-	MAX_RW_EXTENT = 1.0D0-(ES_WING_EXT+4.0D0*VINF)/C_KMS
+! For SN models using VINF sets the red wing to cover essentially the whole spectrum.
+! We now set a limit of 10000 km/s on the extent of the red wing.
+!
+	T1=10000.0D0
+	T1=MIN(T1,4.0D0*VINF)
+	MAX_RW_EXTENT = 1.0D0-(ES_WING_EXT+T1)/C_KMS
 	MAX_BW_EXTENT = 1.0D0+(ES_WING_EXT+VINF)/C_KMS
 !
 ! Ensures BW extent is bigger than profile extent.

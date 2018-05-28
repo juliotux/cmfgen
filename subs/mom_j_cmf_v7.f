@@ -341,7 +341,7 @@
 	  IF(IOS .EQ. 0)ALLOCATE ( G_COEF(ND_SM,4),STAT=IOS)
 	  IF(IOS .EQ. 0)ALLOCATE ( RSQN_ON_RSQJ_COEF(ND_SM,4),STAT=IOS)
 	  IF(IOS .NE. 0)THEN
-	     WRITE(2,*)'Unable to allocate COEF memory in MOM_J_CMF_V7'
+	     WRITE(6,*)'Unable to allocate COEF memory in MOM_J_CMF_V7'
 	     STOP
 	  END IF
 !
